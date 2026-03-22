@@ -350,7 +350,7 @@ async function testConnectivity(type: string, data: any): Promise<{ ok: boolean;
                 if (txtRecords && txtRecords[0]) {
                   const txt = txtRecords[0].join('');
                   const rsMatch = txt.match(/replicaSet=([^&]+)/);
-                  if (rsMatch) replicaSet = rsMatch[1];
+                  if (rsMatch?.[1]) replicaSet = rsMatch[1];
                 } else if (srvHost === 'cluster0.s00ue4f.mongodb.net') {
                   replicaSet = 'atlas-7ea4tc-shard-0';
                 }
