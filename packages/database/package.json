@@ -1,0 +1,25 @@
+{
+  "name": "@repo/database",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "db:generate": "drizzle-kit generate:pg --config=drizzle.config.ts",
+    "db:push": "drizzle-kit push:pg --config=drizzle.config.ts",
+    "db:setup": "node scripts/db-setup.js",
+    "db:studio": "drizzle-kit studio --config=drizzle.config.ts"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.30.0",
+    "postgres": "^3.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.4",
+    "dotenv": "^16.3.1",
+    "drizzle-kit": "^0.20.14",
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "^5.3.3"
+  }
+}

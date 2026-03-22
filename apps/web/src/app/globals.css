@@ -1,0 +1,166 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Design Tokens ─────────────────────────────────────── */
+:root {
+  /* warewe Light - Sophisticated Off-White & Cream */
+  --background: #fdfdf5; 
+  --foreground: #111111;
+  --card: #ffffff;
+  --card-border: #eeede0;
+  --muted: #666666;
+  --primary: #d4ff3f;    /* warewe Lime */
+  --primary-rgb: 212, 255, 63;
+  --primary-foreground: #000000;
+  --accent: #f5f4e8;
+  --accent-foreground: #111111;
+  --border: #e8e6d1;
+  --sidebar: #fdfdf5;
+  --sidebar-border: #e8e6d1;
+  --radius: 2rem;   
+  --radius-lg: 2.5rem;
+  --radius-md: 1.25rem;
+  --radius-sm: 0.5rem;
+}
+
+.dark {
+  /* warewe Dark - Charcoal & Lime */
+  --background: #0d0d0d; 
+  --foreground: #f8f9fa;
+  --card: #141414;      
+  --card-border: #1f1f1f;
+  --muted: #8c8c8c;     
+  --primary: #d4ff3f;    /* warewe Lime */
+  --primary-rgb: 212, 255, 63;
+  --primary-foreground: #000000;
+  --accent: #1a1a1a;    
+  --accent-foreground: #f8f9fa;
+  --border: #1f1f1f;
+  --sidebar: #0a0a0a;
+  --sidebar-border: #1f1f1f;
+}
+
+/* ─── Base Styles ────────────────────────────────────────── */
+* {
+  border-color: var(--border);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ─── Tailwind Utility Classes tied to CSS variables ──────── */
+@layer utilities {
+  .bg-background { background-color: var(--background); }
+  .bg-card { background-color: var(--card); }
+  .bg-sidebar { background-color: var(--sidebar); }
+  .bg-primary { background-color: var(--primary); }
+  .bg-accent { background-color: var(--accent); }
+
+  .text-foreground { color: var(--foreground); }
+  .text-primary { color: var(--primary); }
+  .text-primary-foreground { color: var(--primary-foreground); }
+  .text-muted { color: var(--muted); }
+  .text-accent { color: var(--accent); }
+
+  .border-border { border-color: var(--border); }
+  .border-card-border { border-color: var(--card-border); }
+  .border-sidebar-border { border-color: var(--sidebar-border); }
+  .border-accent { border-color: var(--accent); }
+  .border-input { border-color: var(--input-border); }
+
+  /* Opacity variants */
+  .bg-foreground\/5 { background-color: color-mix(in srgb, var(--foreground) 5%, transparent); }
+  .bg-foreground\/10 { background-color: color-mix(in srgb, var(--foreground) 10%, transparent); }
+  .bg-accent\/10 { background-color: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .bg-accent\/20 { background-color: color-mix(in srgb, var(--accent) 20%, transparent); }
+  .border-accent\/20 { border-color: color-mix(in srgb, var(--accent) 20%, transparent); }
+  .border-foreground\/10 { border-color: color-mix(in srgb, var(--foreground) 10%, transparent); }
+
+  /* Text balance */
+  .text-balance { text-wrap: balance; }
+
+  /* Hide scrollbar */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Animations */
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-out forwards;
+  }
+  .animate-fade-in-up {
+    animation: fadeInUp 0.4s ease-out forwards;
+  }
+}
+
+/* Removal of glass and morph animations */
+
+/* ─── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 0px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ─── Animations ─────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.2s ease-in-out 0s 2;
+}
+
+/* ─── React Flow warewe mode ───────────────────────────────── */
+.react-flow__background { background: transparent !important; }
+
+.react-flow .react-flow__node {
+  border-radius: var(--radius);
+  border: 1px solid var(--card-border);
+  background: var(--card);
+  color: var(--foreground);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 11px;
+  box-shadow: none;
+}
+
+.react-flow .react-flow__controls button {
+  background: var(--card);
+  border-color: var(--card-border);
+  color: var(--foreground);
+}
+
+.react-flow .react-flow__controls button:hover {
+  background: var(--background);
+}
+
+/* ─── Select element theming ─────────────────────────────── */
+select {
+  color-scheme: inherit;
+}
+
+.dark select option {
+  background: #1a1a1a;
+  color: #fff;
+}
