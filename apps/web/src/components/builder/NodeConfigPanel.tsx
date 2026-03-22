@@ -577,7 +577,7 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
                               })()}
                             </div>
                             
-                            {tool.credentialTypes && tool.credentialTypes.length > 0 && !tool.credentialTypes[0].includes('oauth') && (
+                            {tool.credentialTypes?.[0] && !tool.credentialTypes[0]?.includes('oauth') && (
                               <div className="flex items-center gap-2 pt-2">
                                 <button
                                   onClick={handleAddCred}
