@@ -18,11 +18,16 @@ import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 
 // Shared handler for all MCP platforms (GitHub, Slack, etc.)
 const platformMcpHandler: ToolHandler = async (ctx) => {
-  const { config, credentials } = ctx;
+  const { config, credentials, execKey } = ctx;
   const mcpUrl = config.mcpUrl || 'http://localhost:3000/sse';
-  const platform = config.platform;
+  let platform = config.platform;
   const resource = config.resource;
   const operation = config.operation;
+
+  // Robust derivation: If platform is missing from Architect/Config, derive from ID or Label
+  if (!platform) {
+    platform = ctx.label?.toLowerCase() || 'unknown platform';
+  }
 
   // Real enforcement: If no credential, fail the node
   const token = credentials?.accessToken || credentials?.apiKey || credentials?.botToken;

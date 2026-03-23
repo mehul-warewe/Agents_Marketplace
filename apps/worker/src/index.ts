@@ -197,6 +197,9 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
       return n.id;
     });
 
+    let hasFailed = false;
+    let failureReason = '';
+    
     while (queue.length > 0) {
       const nodeId = queue.shift()!;
       const incomingData = pendingInputs.get(nodeId) || {};
@@ -287,7 +290,10 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
               userId: job.data.userId,
               credentials: nodeCredentials,
               render,
-              logNodeStatus
+              logNodeStatus,
+              nodeId,
+              execKey,
+              label: nodeLabel,
             };
             nodeResult = await handler(toolContext);
             if (nodeResult && nodeResult._activeHandle) {
@@ -334,9 +340,9 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
 
         if (isFailed && !nodeResult?.__toolDefinition) {
            console.error(`[Flow] Node "${nodeLabel}" FAILED:`, nodeResult.error);
-           // ABORT PROPAGATION: When a node fails, we don't start any more nodes from here.
-           await db.update(agentRuns).set({ logs, status: 'failed', endTime: new Date() }).where(eq(agentRuns.id, runId));
-           return; 
+           hasFailed = true;
+           failureReason = nodeResult.error || 'Node execution failed.';
+           break; // Stop the flow
         }
 
         // Enqueue children
@@ -388,15 +394,20 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
       await db.update(agentRuns).set({ logs }).where(eq(agentRuns.id, runId));
     }
 
+    // 5. Finalize Run Record
     await db
       .update(agentRuns)
       .set({
-        status:  'completed',
+        status:  hasFailed ? 'failed' : 'completed',
         endTime: new Date(),
         logs,
-        output:  { finalResult: ctx.report ?? ctx.text ?? ctx.result ?? ctx.objective },
+        output:  hasFailed 
+          ? { error: failureReason, failed: true }
+          : { finalResult: ctx.report ?? ctx.text ?? ctx.result ?? ctx.objective },
       })
       .where(eq(agentRuns.id, runId));
+
+    console.log(`[Flow] Run ${runId} finalized as ${hasFailed ? 'FAILED' : 'COMPLETED'}.`);
 
   } catch (err: any) {
     console.error(`Run ${runId} failed:`, err.message);

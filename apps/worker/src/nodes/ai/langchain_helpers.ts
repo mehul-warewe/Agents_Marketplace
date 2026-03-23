@@ -150,7 +150,10 @@ export function getLangChainTools(
               ...context, 
               config: mergedConfig, 
               credentials: toolCredentials,
-              incomingData: {} 
+              incomingData: {},
+              execKey: def.executionKey,
+              nodeId: def.nodeId,
+              label: def.label,
             });
 
             const isFailed = result?.status === 'failed' || !!result?.error;
