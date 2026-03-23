@@ -38,18 +38,8 @@ export async function getLangChainModel(config: any, userId: string) {
       baseURL = 'https://openrouter.ai/api/v1';
     }
   } else {
-    // Fallback to Env variables if no credential
-    if (modelName.includes('gemini') || modelName.startsWith('google/')) {
-      provider = 'google';
-      apiKey = process.env.GOOGLE_API_KEY || '';
-    } else if (modelName.includes('claude') || modelName.startsWith('anthropic/')) {
-      provider = 'anthropic';
-      apiKey = process.env.ANTHROPIC_API_KEY || '';
-    } else {
-      provider = 'openai';
-      apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || '';
-      baseURL = process.env.OPENAI_API_KEY ? 'https://api.openai.com/v1' : 'https://openrouter.ai/api/v1';
-    }
+    // FALLBACK REMOVED: Force user selection
+    throw new Error(`No credentials selected for "${modelName}". Please connect your account in the model settings to run this node.`);
   }
 
   const commonParams = {
@@ -163,8 +153,13 @@ export function getLangChainTools(
               incomingData: {} 
             });
 
+            const isFailed = result?.status === 'failed' || !!result?.error;
             if (def.nodeId) {
-              await context.logNodeStatus(def.nodeId, 'completed', result);
+              await context.logNodeStatus(def.nodeId, isFailed ? 'failed' : 'completed', result);
+            }
+
+            if (isFailed) {
+              throw new Error(result?.error || 'Tool execution failed');
             }
 
             console.log(`Done ✅`);

@@ -18,7 +18,6 @@ const runLimiter = rateLimit({
   message: { error: 'Too many agent runs. Please wait a minute.' }
 });
 
-
 const openai = new OpenAI({ 
     apiKey: process.env.OPENROUTER_API_KEY,
     baseURL: "https://openrouter.ai/api/v1",
@@ -132,7 +131,6 @@ ENSURE ALL HANDLES MATCH CASE: Agent(Input, Model, Tools, Memory, Parser).`;
     }
 });
 
-
 router.get('/', async (req, res) => {
   try {
     const allAgents = await db.select().from(agents)
@@ -229,6 +227,13 @@ router.post('/', async (req: any, res) => {
 router.patch('/:id', async (req: any, res) => {
   try {
     const { name, description, workflow, price, category, isPublished } = req.body;
+    
+    // Ownership check
+    const existing = await db.select().from(agents).where(eq(agents.id, req.params.id));
+    if (!existing[0] || existing[0].creatorId !== req.user.id) {
+       return res.status(403).json({ error: 'Unauthorized' });
+    }
+
     const updatedAgent = await db.update(agents).set({
       name, description, workflow, price, category, isPublished
     }).where(eq(agents.id, req.params.id)).returning();
@@ -238,12 +243,80 @@ router.patch('/:id', async (req: any, res) => {
   }
 });
 
+router.post('/:id/publish', async (req: any, res) => {
+  try {
+    const { published, price, category } = req.body;
+    const existing = await db.select().from(agents).where(eq(agents.id, req.params.id));
+    
+    if (!existing[0] || existing[0].creatorId !== req.user.id) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const updated = await db.update(agents)
+      .set({ 
+        isPublished: published === undefined ? existing[0].isPublished : !!published,
+        price: price === undefined ? existing[0].price : parseFloat(price),
+        category: category === undefined ? existing[0].category : category
+      })
+      .where(eq(agents.id, req.params.id))
+      .returning();
+    
+    res.json(updated[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to publish' });
+  }
+});
+
+router.post('/:id/acquire', async (req: any, res) => {
+  try {
+    const marketplaceAgent = await db.select().from(agents).where(eq(agents.id, req.params.id));
+    const agent = marketplaceAgent[0];
+    
+    if (!agent || !agent.isPublished) {
+      return res.status(404).json({ error: 'Marketplace agent not found' });
+    }
+
+    const acquired = await db.insert(agents).values({
+      name: agent.name,
+      description: agent.description,
+      workflow: agent.workflow,
+      category: agent.category,
+      price: 0,
+      creatorId: req.user.id,
+      isPublished: false,
+      originalId: agent.id
+    }).returning();
+
+    res.json(acquired[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to acquire agent' });
+  }
+});
+
+router.delete('/:id', async (req: any, res) => {
+  try {
+    const existing = await db.select().from(agents).where(eq(agents.id, req.params.id));
+    if (!existing[0] || existing[0].creatorId !== req.user.id) {
+       return res.status(403).json({ error: 'Unauthorized' });
+    }
+    await db.delete(agentRuns).where(eq(agentRuns.agentId, req.params.id));
+    await db.delete(agents).where(eq(agents.id, req.params.id));
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    res.status(500).json({ error: 'Delete failed' });
+  }
+});
+
 router.post('/:id/run', runLimiter, async (req: any, res) => {
   try {
     const { inputData, triggerNodeId } = req.body;
     const agentRows = await db.select().from(agents).where(eq(agents.id, req.params.id));
     const agent = agentRows[0];
     if (!agent) return res.status(404).json({ error: 'Agent not found' });
+
+    if (agent.creatorId !== req.user.id) {
+       return res.status(403).json({ error: 'Unauthorized' });
+    }
 
     const runRows = await db.insert(agentRuns).values({
       agentId: agent.id, userId: req.user.id, status: 'pending',

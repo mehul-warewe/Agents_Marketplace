@@ -326,9 +326,18 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
 
         // Update Log
         const currentLog = logs[logs.length - 1];
-        currentLog.status = nodeResult?.__toolDefinition ? 'pending' : 'completed';
+        const isFailed = nodeResult?.failed === true || !!nodeResult?.error || nodeResult?.status === 'failed';
+        
+        currentLog.status = nodeResult?.__toolDefinition ? 'pending' : (isFailed ? 'failed' : 'completed');
         currentLog.result = nodeResult;
         currentLog.endTime = new Date();
+
+        if (isFailed && !nodeResult?.__toolDefinition) {
+           console.error(`[Flow] Node "${nodeLabel}" FAILED:`, nodeResult.error);
+           // ABORT PROPAGATION: When a node fails, we don't start any more nodes from here.
+           await db.update(agentRuns).set({ logs, status: 'failed', endTime: new Date() }).where(eq(agentRuns.id, runId));
+           return; 
+        }
 
         // Enqueue children
         const outgoingEdges = edges.filter((e: any) => e.source === nodeId);
