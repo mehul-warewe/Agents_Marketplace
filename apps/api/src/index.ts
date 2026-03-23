@@ -16,6 +16,9 @@ import { rateLimit } from 'express-rate-limit';
 const app = express();
 const port = process.env.PORT || 3001;
 
+// Trust Railway's reverse proxy so rate-limiting & IP detection work correctly
+app.set('trust proxy', 1);
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -26,7 +29,10 @@ const limiter = rateLimit({
 });
 
 app.use(limiter);
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true,
+}));
 app.use(morgan('dev'));
 
 
