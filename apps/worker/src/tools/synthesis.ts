@@ -4,6 +4,7 @@ import { ToolContext } from './types.js';
 import { getLangChainModel, getLangChainTools } from '../nodes/ai/langchain_helpers.js';
 import { WORKER_NODES } from '../nodes/index.js';
 import { TOOL_SCHEMAS } from './toolSchemas.js';
+import { AgentAction } from '@langchain/core/agents';
 
 export async function synthesis(context: ToolContext) {
   try {
@@ -38,6 +39,13 @@ Your goal is to fulfill the user's objective autonomously using the tools provid
       const hist = item.history || item.memory || item.context || '';
       if (hist) recalledMemory += `${hist}\n`;
     });
+
+    // Smart Truncation mapping (approx 12000 chars = 3000 tokens)
+    const MAX_MEMORY_CHARS = 12000;
+    if (recalledMemory.length > MAX_MEMORY_CHARS) {
+      recalledMemory = recalledMemory.slice(-MAX_MEMORY_CHARS);
+      recalledMemory = "...[older memory truncated]...\n" + recalledMemory;
+    }
 
     if (recalledMemory) {
       systemMessage += `\n\nRECALLED_CONTEXT:\n${recalledMemory.trim()}\nConsider the above history/memory when deciding your next action.`;
@@ -122,7 +130,23 @@ ARCHITECTURE_CONTEXT:
 
     console.log(`[Agent Task]: ${userMessage.substring(0, 150).replace(/\n/g, ' ')}${userMessage.length > 150 ? '...' : ''}`);
 
-    // 3. Build LangChain Agent
+    // 3. Build LangChain Agent with Callbacks
+    let totalTokens = 0;
+    const actionLogs: any[] = [];
+
+    const callbackHandler = {
+      handleLLMEnd(output: any) {
+        const usage = output.llmOutput?.tokenUsage || output.llmOutput?.estimatedTokenUsage;
+        if (usage) totalTokens += (usage.totalTokens || 0);
+      },
+      handleAgentAction(action: AgentAction) {
+        actionLogs.push({ type: 'action', tool: action.tool, input: action.toolInput, log: action.log, time: new Date().toISOString() });
+      },
+      handleToolEnd(output: string) {
+        actionLogs.push({ type: 'tool_result', result: output.substring(0, 500) + (output.length > 500 ? '...' : ''), time: new Date().toISOString() });
+      }
+    };
+
     const model = await getLangChainModel(finalModelConfig, userId);
 
     // If no tools connected, do a standard LLM call
@@ -130,8 +154,14 @@ ARCHITECTURE_CONTEXT:
       const response = await model.invoke([
         { role: 'system', content: systemMessage },
         { role: 'user', content: userMessage }
-      ]);
-      return { report: response.content, text: response.content, content: response.content };
+      ], { callbacks: [callbackHandler] });
+      return { 
+        report: response.content, 
+        text: response.content, 
+        content: response.content,
+        _actionLogs: actionLogs,
+        _tokenUsage: totalTokens
+      };
     }
 
     const tools = getLangChainTools(toolDefinitions, WORKER_NODES, context) as any[];
@@ -152,9 +182,10 @@ ARCHITECTURE_CONTEXT:
       tools, 
       verbose: false,
       maxIterations: 10,
+      handleParsingErrors: true,
     });
 
-    const result = await executor.invoke({ input: userMessage });
+    const result = await executor.invoke({ input: userMessage }, { callbacks: [callbackHandler] });
     console.log(`[Agent Result]: ${result.output.substring(0, 100).replace(/\n/g, ' ')}${result.output.length > 100 ? '...' : ''}`);
 
     return {
@@ -163,6 +194,8 @@ ARCHITECTURE_CONTEXT:
       content: result.output,
       output: result.output, // Match Port Name for easy templating
       model: finalModelConfig.model || 'unknown',
+      _actionLogs: actionLogs,
+      _tokenUsage: totalTokens
     };
   } 
   catch (err: any) {

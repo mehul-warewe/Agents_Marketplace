@@ -8,6 +8,7 @@ import { youtubeNodes } from './definitions/youtube';
 import { logicNodes } from './definitions/logic';
 import { outputParserNodes } from './definitions/output_parser';
 import { dataNodes } from './definitions/data';
+import { agentCallerNodes } from './definitions/agent_caller';
 import type { NodeDefinition } from './types';
 
 /**
@@ -26,6 +27,7 @@ export const NODE_REGISTRY: NodeDefinition[] = [
   ...logicNodes,
   ...outputParserNodes,
   ...dataNodes,
+  ...agentCallerNodes,
 ];
 
 /** All unique executionKeys in the registry (used for worker validation). */
@@ -33,4 +35,4 @@ export const EXECUTION_KEYS: Set<string> = new Set(
   NODE_REGISTRY.map((n) => n.executionKey),
 );
 
-export { triggers, aiNodes, modelNodes, googleNodes, youtubeNodes, logicNodes, outputParserNodes, dataNodes };
+export { triggers, aiNodes, modelNodes, googleNodes, youtubeNodes, logicNodes, outputParserNodes, dataNodes, agentCallerNodes };

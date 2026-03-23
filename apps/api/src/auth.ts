@@ -52,10 +52,8 @@ passport.use(
     },
     async (payload, done) => {
       try {
-        console.log('JWT Auth Attempt - Payload:', payload);
         const userRows = await db.select().from(users).where(eq(users.id, payload.sub));
         const user = userRows[0];
-        console.log('JWT Auth Success - User found:', user ? user.email : 'No user');
         if (user) return done(null, user);
         return done(null, false);
       } catch (err) {

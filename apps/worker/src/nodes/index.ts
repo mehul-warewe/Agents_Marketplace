@@ -9,6 +9,8 @@ import { logicIf } from '../tools/logic.js';
 import { dataEdit, mongodbAtlas, redis } from '../tools/data.js';
 import * as googleLegacy from '../tools/google.js';
 import { memory_buffer, memory_mongodb, memory_redis } from './ai/memory.js';
+import { agentCaller } from '../tools/agent_caller.js';
+import { logicCode } from '../tools/logic_code.js';
 
 export const WORKER_NODES: Record<string, ToolHandler> = {
   // ── Triggers ────────────────────────────────────────────────────────────────
@@ -25,7 +27,9 @@ export const WORKER_NODES: Record<string, ToolHandler> = {
   'memory_redis':         memory_redis,
 
   // ── Logic ───────────────────────────────────────────────────────────────────
-  'logic_if': logicIf,
+  'logic_if':          logicIf,
+  'tool_agent_caller': agentCaller,
+  'logic_code':        logicCode,
 
   // ── Google (modular routers) ─────────────────────────────────────────────────
   'google_gmail':     gmail.handler,

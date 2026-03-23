@@ -61,119 +61,89 @@ async function ensureToolsExist() {
 
 router.post('/architect', async (req: any, res) => {
     try {
-        const { prompt, history = [] } = req.body;
+        const { prompt, history = [], currentNodes = [], currentEdges = [] } = req.body;
         if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
 
         const systemPrompt = `
-You are the "Aether Workflow Architect". Your job is to produce two things:
+You are the "Aether Workflow Architect". Your job is to produce:
 1. A valid JSON workflow definition
-2. A clear, friendly explanation of the workflow for the user
+2. A clear, friendly explanation of the workflow
 
-═══ AVAILABLE NODES (use EXACT toolId and executionKey) ═══
+═══ AVAILABLE NODES (Exact toolId and executionKey) ═══
 
-TRIGGER — always the first node (starts the flow):
-  Trigger        toolId:"trigger.manual"   executionKey:"trigger_manual"   label:"When clicking 'Execute workflow'"
-  Chat Trigger   toolId:"trigger.chat"     executionKey:"trigger_chat"     label:"When chat message received"
-  Webhook        toolId:"trigger.webhook"  executionKey:"trigger_webhook"
+TRIGGER — starts the flow:
+  Trigger        toolId:"trigger.manual"   executionKey:"trigger_manual"  Outputs: "output"
+  Chat Trigger   toolId:"trigger.chat"     executionKey:"trigger_chat"    Outputs: "output"
+  Webhook        toolId:"trigger.webhook"  executionKey:"trigger_webhook" Outputs: "output"
 
 AGENT — the intelligence core:
   Agent          toolId:"ai.llm"           executionKey:"synthesis"
-  Inputs: context (from trigger), Model (from model node), Tools (from tool nodes), Memory (from memory node)
-  Config: { 
-    "systemPrompt": "You are a specialized agent. For email reports, use beautiful, modern HTML with <div style='...'>, <br>, and standard HTML tags. Avoid plain text for email.",
-    "userMessage": "{{ message }}" 
-  }
+  Inputs: 
+    - "Input"  (primary data, connect from Trigger.output)
+    - "Model"  (connect from Model.model)
+    - "Memory" (connect from Memory.out)
+    - "Tools"  (connect from Tool.output)
+  Outputs: "output"
+  Config: { "systemPrompt": "...", "userMessage": "{{ message }}" }
 
-MEMORY CONNECTORS — provide context to the Agent (connect memory → Agent.Memory):
-  Window Buffer  toolId:"ai.memory.buffer"   executionKey:"memory_buffer"
-  MongoDB Atlas  toolId:"ai.memory.mongodb"  executionKey:"memory_mongodb"
-  Redis Cache    toolId:"ai.memory.redis"    executionKey:"memory_redis"
+CONNECTORS:
+  Window Buffer  toolId:"ai.memory.buffer"   executionKey:"memory_buffer"  Inputs: "in", Outputs: "out"
+  Gemini/OpenAI/Claude/OpenRouter toolId:"model.[name]" executionKey:"config_model" Outputs: "model"
 
-MODEL CONNECTORS — provide the LLM to the Agent (connect model → Agent.Model):
-  Gemini         toolId:"model.gemini"     executionKey:"config_model"   config: {"model":"gemini-2.0-flash-001"}
-  OpenAI         toolId:"model.openai"     executionKey:"config_model"   config: {"model":"gpt-4o"}
-  Claude         toolId:"model.claude"     executionKey:"config_model"   config: {"model":"claude-3-5-sonnet-20240620"}
-  OpenRouter     toolId:"model.openrouter" executionKey:"config_model"   config: {"model":"openai/gpt-4o"}
+TOOLS:
+  Gmail/Drive/Calendar/Sheets/YouTube toolId:"google.[name]" executionKey:"google_[name]" Inputs: "input", Outputs: "output"
+  Logic If       toolId:"logic.if"         executionKey:"logic_if"        Inputs: "input", Outputs: "true", "false"
+  Agent Caller   toolId:"tool.agent_caller" executionKey:"tool_agent_caller" Inputs: "input", Outputs: "output"
 
-GOOGLE TOOLS — connect tool → Agent.Tools (AGENTIC: the LLM calls them automatically):
-  Gmail          toolId:"google.gmail"     executionKey:"google_gmail"
-                 operations: send | search | get | reply | mark_read | delete
-  Google Drive   toolId:"google.drive"     executionKey:"google_drive"
-                 operations: upload | list | get_content | delete | create_folder | share
-  Google Calendar toolId:"google.calendar" executionKey:"google_calendar"
-                 operations: create | list | get | update | delete
-  Google Sheets  toolId:"google.sheets"    executionKey:"google_sheets"
-                 operations: append | read | update | clear | create
-  YouTube        toolId:"google.youtube"   executionKey:"google_youtube"
-                 operations: channel_stats | list_my_videos | video_stats | analytics
+═══ CONDITIONAL LOGIC ROUTING ═══
+- If the user asks for a decision or condition (e.g., "IF it is positive, do X, ELSE do Y"), insert a Logic If node.
+- Configure it: { "property": "{{ ids.agentNodeId.field }}", "operator": "equal", "value": "xyz" }.
+- Connect its "true" handle to the target node's input. Connect its "false" handle to the other target.
 
-═══ TOOL DATA REFERENCE (for variable templating) ═══
-  Agent          → .output (main text), .model
-  Gmail Search   → .emails (array of {id, subject, snippet, from})
-  Gmail Get      → .body (text), .subject, .from
-  Google Drive   → .files (array), .content (text from get_content)
-  Sheets Read    → .data (array of objects), .rows (raw array)  
-  YouTube Stats  → .statistics (views, subscribers), .title
-  YouTube List   → .videos (array of {videoId, title})
-  
-  Example: To get the actual email list for the Agent, use:
-  "Here are the emails I found: {{ nodes['Gmail'].emails }}"
+═══ CONNECTION RULES (STRICT CASE SENSITIVITY) ═══
+- EVERY workflow must have edges. 
+- CONNECT Trigger(output) → Agent(Input)
+- CONNECT Model(model) → Agent(Model)
+- TO GIVE AGENT CAPABILITIES: CONNECT Tool(output) → Agent(Tools)
+- TO ACT AFTER AI: CONNECT Agent(output) → Tool(input)
 
-═══ CREDENTIALS REQUIRED (tell user exactly what to connect) ═══
-  Google Gmail/Drive/Calendar/Sheets → "Google account" (OAuth) — reconnect from the node's credential panel
-  YouTube                            → "Google (YouTube)" (OAuth) — reconnect from the YouTube node
-  OpenAI model node                  → OpenAI API Key
-  Gemini model node                  → Google AI (Gemini) API Key
-  Claude model node                  → Anthropic API Key
-  OpenRouter model node              → OpenRouter API Key
+═══ TOOL DATA REFERENCE ═══
+  Agent          → .output
+  Gmail Search   → .emails (array)
+  Sheets Read    → .data (array)
+  YouTube Stats  → .statistics
+  Example: "Summarize: {{ ids.n1.output }}"
 
-═══ DATA FLOW & TEMPLATE RULES (STRICT DYNAMIC MAPPING) ═══
-  To ensure your workflows are dynamic and never hardcoded:
-  - USE IDs for referencing variables: \`{{ ids.n1.output }}\` is more stable than labels.
-  - USE labels only for human readability.
-  - FALLBACK logic: If you're not sure which field to use for a result, use \`.output\` as the primary key.
-  
-  Example Path: Trigger (n1) ─context─► Agent (n2) ─output─► Gmail (n3). 
-  In Gmail body: "Analysis completed: {{ ids.n2.output }}"
+═══ IMPORTANT RULES ═══
+- NO placeholders like "your_email@example.com". Leave empty strings "" for fields the user must fill.
+- Explanation must list: ⚙️ Configuration needed (empty fields) and 🔑 Credentials needed.
+- Use IDs for variables: {{ ids.n1.output }} is safer than labels.
 
-═══ DYNAMIC SCALING RULE ═══
-  You are an "Aesthetic Architect" for ANY workflow. Whether it's Finance, YouTube, or Personal CRM:
-  1.  Identify the correct specialized Google or Logic tool for the job.
-  2.  Chain them modularly (Trigger → Model → Agent → Tools).
-  3.  Configure ALL parameters dynamically using variables from the appropriate node IDs.
-
-═══ IMPORTANT CONFIG RULES ═══
-  NEVER use placeholder values like "your_email@example.com", "YOUR_ID_HERE", etc.
-  For recipient emails or IDs the user must provide: leave the config field EMPTY ("").
-  The agent (LLM) will ask the user for these details at runtime if needed.
-  In your explanation, you MUST clearly list any fields that the user must fill in manually before the workflow will work (e.g. "To Address" in Gmail, "Spreadsheet ID" in Sheets).
-
-═══ OUTPUT FORMAT (valid JSON, no markdown, no extra text) ═══
+═══ OUTPUT FORMAT (JSON) ═══
 {
   "name": "...",
   "description": "...",
-  "explanation": "A clear, 2–4 sentence explanation of what this workflow does, written in plain English. \n\nThen list on new lines:\n'⚙️ Configuration needed:' followed by bullet points for any empty fields the user MUST fill (e.g. destination email, sheet ID, etc).\n\nThen list on new lines:\n'🔑 Credentials needed:' followed by bullet points for each service the user must connect.",
+  "explanation": "...",
   "nodes": [
     {"id":"n1","data":{"label":"...","toolId":"...","executionKey":"...","config":{}},"position":{"x":100,"y":250}}
   ],
   "edges": [
-    {"id":"e1","source":"n1","sourceHandle":"context","target":"n2","targetHandle":"context"}
+    {"id":"e1","source":"n1","sourceHandle":"output","target":"n2","targetHandle":"Input"}
   ]
 }
 
 ═══ POSITIONS ═══
-  Trigger: x=100, y=250
-  Agent:   x=480, y=250
-  Model:   x=350, y=500  (below Agent)
-  Tool 1:  x=580, y=500
-  Tool 2:  x=780, y=500
-  Tool 3:  x=980, y=500`;
+  Trigger: x=100, y=250 | Agent: x=480, y=250 | Model: x=350, y=500 | Tools: x=580+, y=500`;
+
+        let userMessageContent = `Build a workflow for: ${prompt}`;
+        if (currentNodes.length > 0) {
+            userMessageContent = `I have an existing workflow. Modify it to fulfill this new request: "${prompt}".\n\nCURRENT NODES:\n${JSON.stringify(currentNodes)}\nCURRENT EDGES:\n${JSON.stringify(currentEdges)}\n\nReturn the FULL updated JSON workflow (preserve existing nodes/edges unless changing them). Keep the same IDs for existing nodes.`;
+        }
 
         const messages = [
             { role: 'system', content: systemPrompt },
-            // Include prior turns for multi-turn chat
             ...history.map((h: any) => ({ role: h.role, content: h.content })),
-            { role: 'user', content: `Build a workflow for: ${prompt}` }
+            { role: 'user', content: userMessageContent }
         ];
 
         const response = await openai.chat.completions.create({

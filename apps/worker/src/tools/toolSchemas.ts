@@ -410,6 +410,19 @@ export const TOOL_SCHEMAS: Record<string, { name: string; description: string; p
   },
   
   // ── Logic Nodes ───────────────────────────────────────────────────────────
+  tool_agent_caller: {
+    name: 'agent_caller',
+    description: 'Call another published AI agent to perform a sub-task or delegation.',
+    parameters: {
+      type: 'object',
+      properties: {
+        agentId: { type: 'string', description: 'The UUID of the target published agent.' },
+        inputData: { type: 'string', description: 'The objective, request, or raw data to send to the sub-agent.' },
+      },
+      required: ['agentId'],
+    },
+  },
+
   logic_code: {
     name: 'execute_js_code',
     description: 'Execute custom JavaScript code to transform data or perform logic.',
