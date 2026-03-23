@@ -74,14 +74,17 @@ ${sidebarModules}
 
 ═══ SPECIAL RULES ═══
 - ALL platform tools (GitHub, Slack, etc.) use the ".mcp" suffix (e.g., github.mcp).
-- AI Agent (ai.llm) is the core. Connect Model/Memory/Tools to its sockets.
-- ALWAYS include a Manual Trigger (trigger.manual) if the user doesn't specify another trigger.
+- ALWAYS include ONE "trigger.manual" (unless user specified another).
+- PATTERN: Use ONE "ai.llm" node. Connect all platform tools to its "Tools" port.
+- CASE SENSITIVE HANDLES: 
+  - Agent: Input, Model, Tools, Memory, Parser (TitleCase)
+  - Tools/Triggers/Models: input, output, model (lowercase)
 
-═══ CONNECTION RULES (STRICT) ═══
-A. TRIGGER -> AGENT: Source: Trigger.output | Target: Agent.Input
-B. MODEL -> AGENT: Source: Model.model | Target: Agent.Model
-C. CAPABILITY: Tool.output → Agent.Tools
-D. ACTION: Agent.output → Tool.input
+═══ CONNECTION RULES ═══
+A. Trigger.output -> Agent.Input
+B. Model.model -> Agent.Model
+C. Tool.output -> Agent.Tools
+D. Agent.output -> Tool.input
 
 ═══ POSITIONING (LEFT-TO-RIGHT) ═══
 1. COL 1 (Triggers): x: 100, y: 300 + (index * 250)
