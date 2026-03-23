@@ -46,6 +46,15 @@ const platformMcpHandler: ToolHandler = async (ctx) => {
   delete args.operation;
   delete args.accessToken;
 
+  // AUTO-CONFIG: Inject platform-specific credentials if needed by the MCP server
+  if (platform === 'supabase' && credentials?.projectRef && !args.url && !args.SUPABASE_URL) {
+    args.url = `https://${credentials.projectRef}.supabase.co`;
+  }
+  
+  if (platform === 'slack' && credentials?.teamId && !args.teamId) {
+    args.teamId = credentials.teamId;
+  }
+
   console.log(`[MCP] Connecting to ${platform} server at ${mcpUrl}...`);
 
   const transport = new SSEClientTransport(new URL(mcpUrl), {

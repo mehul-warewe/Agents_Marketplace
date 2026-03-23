@@ -460,6 +460,14 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
               </div>
               
               <div className="space-y-6">
+                {/* ── All Notices (Help/Info) up front ── */}
+                {tool.configFields.filter((f: any) => f.type === 'notice').map((field: any) => (
+                  <div key={field.key} className="px-5 py-4 bg-blue-500/[0.04] border border-blue-500/10 rounded-2xl flex items-start gap-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500">
+                    <Info size={18} className="text-blue-500 shrink-0 mt-0.5 opacity-60" />
+                    <p className="text-[11px] font-bold text-blue-500/80 leading-relaxed tracking-tight">{field.label}</p>
+                  </div>
+                ))}
+
                 {allowedTypes && allowedTypes.length > 0 && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between px-1">
@@ -735,11 +743,11 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
                   );
                 })() : (
                   /* ── Regular configFields (Agent, Models, Triggers) ── */
-                  (tool.configFields as any).map((field: any) => (
+                  (tool.configFields as any)
+                   .filter((f: any) => f.type !== 'notice' && f.type !== 'hidden')
+                   .map((field: any) => (
                     <div key={field.key} className="space-y-2">
-                       {field.type !== 'notice' && (
-                        <label className="text-[10px] font-bold text-muted/60 uppercase ml-1">{field.label}</label>
-                      )}
+                       <label className="text-[10px] font-bold text-muted/60 uppercase ml-1 font-inter tracking-tight">{field.label}</label>
                       {field.type === 'select' ? (
                         <CustomSelect
                           value={values[field.key] ?? ''}

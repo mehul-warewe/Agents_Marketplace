@@ -208,22 +208,77 @@ function AgentBuilderInner() {
   const router = useRouter();
   const toast = useToast();
 
+  // ── Save ──────────────────────────────────────────────────────────────────
+  const handleSave = useCallback(async (options: { silent?: boolean, nodesOverride?: any[] } = {}) => {
+    // Priority: 1. override, 2. current state
+    const nodesToSave = options.nodesOverride || nodes;
+
+    // Strip out injected handlers AND execution statuses before saving
+    const cleanNodes = nodesToSave.map(({ data: { onTrigger, onAddConnect, status, result, ...rest }, ...n }: any) => ({ 
+      ...n, 
+      data: rest 
+    }));
+    const payload = {
+      name,
+      description,
+      workflow: { nodes: cleanNodes, edges, model },
+      category: 'Automation',
+    };
+
+    try {
+      if (agentId) {
+        const result = await (updateAgent as any).mutateAsync({ id: agentId, agentData: payload });
+        if (!options.silent) {
+          router.push('/agents');
+        }
+        return result;
+      } else {
+        const result = await (createAgent as any).mutateAsync(payload);
+        if (!options.silent) {
+          router.push('/agents');
+        }
+        return result;
+      }
+    } catch (err) {
+      console.error("Save failed:", err);
+      throw err;
+    }
+  }, [nodes, edges, name, description, model, agentId, updateAgent, createAgent, router]);
+
   const handleTrigger = useCallback(async (nodeId?: string, inputDataOverride?: any) => {
     if (isRunning) return;
     
-    if (!agentId || agentId === 'undefined') {
+    // Reset all node statuses immediately on click
+    const freshNodes = nodes.map(n => ({ ...n, data: { ...n.data, status: null, result: null } }));
+    setActiveRunId(null);
+    setNodes(freshNodes);
+    setEdges(es => es.map(e => ({ ...e, animated: false, style: { ...e.style, stroke: (e.targetHandle || '').toLowerCase().includes('tool') ? '#bbb' : '#777', strokeWidth: 1.5 } })));
+
+    // 1. Auto-save current state before running (and get the ID if it's new)
+    let currentAgentId = agentId;
+    try {
+      const savedAgent = await handleSave({ silent: true, nodesOverride: freshNodes }) as any;
+      if (savedAgent?.id) currentAgentId = savedAgent.id;
+    } catch (err) {
+      toast.error('Failed to save workflow before running.');
+      return;
+    }
+
+    if (!currentAgentId || currentAgentId === 'undefined') {
       toast.error('Please save your workflow at least once before running it.');
       return;
     }
 
-    // 1. Resolve which node is starting code (default to manual trigger if global run)
+    // 2. Resolve which node is starting code
     let targetId = nodeId;
     if (!targetId) {
+      // Priority: Manual Trigger > Any other trigger > First node
       const manualNode = nodes.find(n => n.data?.toolId === 'trigger.manual' || n.data?.executionKey === 'trigger_manual');
-      targetId = manualNode?.id;
+      const anyTrigger = nodes.find(n => n.data?.isTrigger || n.data?.toolId?.startsWith('trigger.'));
+      targetId = manualNode?.id || anyTrigger?.id || nodes[0]?.id;
     }
 
-    // 2. Extract specific input data
+    // 3. Extract specific input data
     let inputData: any = inputDataOverride || {};
     if (targetId && !inputDataOverride) {
       const node = nodes.find(n => n.id === targetId);
@@ -232,17 +287,9 @@ function AgentBuilderInner() {
         inputData = { message: config.test_input };
       }
     }
-    // Reset all node statuses immediately on click
-    const freshNodes = nodes.map(n => ({ ...n, data: { ...n.data, status: null, result: null } }));
-    setActiveRunId(null);
-    setNodes(freshNodes);
-    setEdges(es => es.map(e => ({ ...e, animated: false, style: { ...e.style, stroke: (e.targetHandle || '').toLowerCase().includes('tool') ? '#bbb' : '#777', strokeWidth: 1.5 } })));
 
-    // Auto-save current state before running (PASS CLEAN NODES DIRECTLY)
-    await handleSave({ silent: true, nodesOverride: freshNodes });
-
-    console.log("[Builder] Triggering run for Agent:", agentId, "Start Node:", targetId, "Input:", inputData);
-    runAgent({ agentId: agentId as string, triggerNodeId: targetId, inputData }, {
+    console.log("[Builder] Triggering run for Agent:", currentAgentId, "Start Node:", targetId, "Input:", inputData);
+    runAgent({ agentId: currentAgentId as string, triggerNodeId: targetId, inputData }, {
       onSuccess: (res: any) => {
         setActiveRunId(res.runId);
         setIsRunning(true);
@@ -251,7 +298,7 @@ function AgentBuilderInner() {
         toast.error('Failed to start the run: ' + (err?.response?.data?.error || err.message || 'Unknown error'));
       }
     });
-  }, [agentId, isRunning, runAgent, setNodes, nodes, edges, name, description, model]);
+  }, [agentId, isRunning, runAgent, setNodes, nodes, edges, name, description, model, handleSave]);
 
   // Sync Node Statuses from Polling Run Data
   useEffect(() => {
@@ -506,45 +553,6 @@ function AgentBuilderInner() {
       },
       onError: (err: any) => {
         setTimeout(() => (window as any).__architectAddMsg?.('Failed to generate workflow. Please try rephrasing.', 'error'), 100);
-      }
-    });
-  };
-
-  // ── Save ──────────────────────────────────────────────────────────────────
-  const handleSave = async (options: { silent?: boolean, nodesOverride?: any[] } = {}) => {
-    // Priority: 1. override, 2. current state
-    const nodesToSave = options.nodesOverride || nodes;
-
-    // Strip out injected handlers AND execution statuses before saving
-    const cleanNodes = nodesToSave.map(({ data: { onTrigger, onAddConnect, status, result, ...rest }, ...n }: any) => ({ 
-      ...n, 
-      data: rest 
-    }));
-    const payload = {
-      name,
-      description,
-      workflow: { nodes: cleanNodes, edges, model },
-      category: 'Automation',
-    };
-
-    return new Promise((resolve, reject) => {
-      const callbacks = {
-        onSuccess: (data: any) => {
-          if (!options.silent) {
-            router.push('/agents');
-          }
-          resolve(data);
-        },
-        onError: (err: any) => {
-          console.error("Save failed:", err);
-          reject(err);
-        }
-      };
-
-      if (agentId) {
-        updateAgent({ id: agentId, agentData: payload }, callbacks);
-      } else {
-        createAgent(payload, callbacks);
       }
     });
   };

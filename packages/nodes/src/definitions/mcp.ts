@@ -19,6 +19,7 @@ export const mcpNodes: NodeDefinition[] = [
     border: 'border-[#24292e]/20',
     credentialTypes: ['github_pat'],
     configFields: [
+      { key: 'auth_notice', label: 'Note: Ensure your PAT has "repo" and "workflow" scopes.', type: 'notice' },
       { key: 'platform', label: 'Platform', type: 'hidden', default: 'github' },
       { key: 'mcpUrl', label: 'MCP Server URL', type: 'text', placeholder: 'http://localhost:3001/sse', default: 'http://localhost:3001/sse' },
       { key: 'resource', label: 'Resource', type: 'select', options: ['issue', 'repository', 'pullRequest'], default: 'issue' },
@@ -121,6 +122,7 @@ export const mcpNodes: NodeDefinition[] = [
     border: 'border-[#000000]/20',
     credentialTypes: ['notion_integration_token'],
     configFields: [
+      { key: 'auth_notice', label: 'Note: You MUST "Add Connection" to each page/database in Notion menu.', type: 'notice' },
       { key: 'platform', label: 'Platform', type: 'hidden', default: 'notion' },
       { key: 'mcpUrl', label: 'MCP Server URL', type: 'text', placeholder: 'http://localhost:3004/sse', default: 'http://localhost:3004/sse' },
       { key: 'resource', label: 'Resource', type: 'select', options: ['page', 'database', 'block'], default: 'page' },

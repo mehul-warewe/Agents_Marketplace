@@ -75,6 +75,7 @@ ${sidebarModules}
 ═══ SPECIAL RULES ═══
 - ALL platform tools (GitHub, Slack, etc.) use the ".mcp" suffix (e.g., github.mcp).
 - AI Agent (ai.llm) is the core. Connect Model/Memory/Tools to its sockets.
+- ALWAYS include a Manual Trigger (trigger.manual) if the user doesn't specify another trigger.
 
 ═══ CONNECTION RULES (STRICT) ═══
 A. TRIGGER -> AGENT: Source: Trigger.output | Target: Agent.Input
