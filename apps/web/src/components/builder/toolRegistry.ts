@@ -7,6 +7,9 @@ import {
   MousePointer2,
   MessageSquare,
   Webhook,
+  Github,
+  ListTodo,
+  BookOpen,
 } from 'lucide-react';
 
 import { NODE_REGISTRY } from '@repo/nodes';
@@ -36,6 +39,9 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
   MousePointer2,
   MessageSquare,
   Webhook,
+  Github,
+  ListTodo,
+  BookOpen,
 };
 
 /**

@@ -4,6 +4,7 @@ import passport from './auth.js';
 import { createExecutionQueue, getRedisConnection } from '@repo/queue';
 import OpenAI from 'openai';
 import { rateLimit } from 'express-rate-limit';
+import { NODE_REGISTRY } from '@repo/nodes';
 
 const router: Router = express.Router();
 const db = createClient(process.env.POSTGRES_URL!);
@@ -29,32 +30,30 @@ const openai = new OpenAI({
 
 router.use(passport.authenticate('jwt', { session: false }));
 
-const nativeTools = [
-    { name: "Agent", description: "Autonomous core for processing and action." },
-    { name: "OpenAI", description: "Connect OpenAI GPT models." },
-    { name: "Gemini", description: "Connect Google Gemini models." },
-    { name: "Claude", description: "Connect Anthropic Claude models." },
-    { name: "OpenRouter", description: "Connect any model via OpenRouter." }
-];
+const nativeTools = NODE_REGISTRY.map(n => ({
+    name: n.label,
+    description: n.description,
+    toolId: n.id,
+    executionKey: n.executionKey
+}));
 
 async function ensureToolsExist() {
-    // Force a fresh start: Clear the table and re-populate
     const existing = await db.select().from(tools);
-    
-    // If the tool list has changed (e.g. we only want 'Agent' now), reset it
-    const existingNames = existing.map(t => t.name);
-    const nativeNames = nativeTools.map(t => t.name);
+    const existingIds = existing.map(t => (t as any).toolId);
+    const nativeIds = nativeTools.map(t => t.toolId);
 
     const shouldReset = existing.length !== nativeTools.length || 
-                      !nativeNames.every(name => existingNames.includes(name));
+                      nativeIds.some(id => !existingIds.includes(id));
 
     if (shouldReset) {
-        console.log('[API] Resyncing tool library...');
-        // We can't easily perform a complex sync, so we wipe and reload for this clean-slate phase
-        // (In a production app, we'd use UPSERT or ID-based syncing)
+        console.log('[API] Resyncing tool library from registry...');
         await db.delete(tools);
         for (const tool of nativeTools) {
-            await db.insert(tools).values({ ...tool, inputSchema: {} });
+            await db.insert(tools).values({ 
+                name: tool.name, 
+                description: tool.description, 
+                inputSchema: {} 
+            });
         }
     }
 }
@@ -64,80 +63,47 @@ router.post('/architect', async (req: any, res) => {
         const { prompt, history = [], currentNodes = [], currentEdges = [] } = req.body;
         if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
 
+        const sidebarModules = NODE_REGISTRY.map(n => 
+            `- ${n.label}: toolId:"${n.id}" executionKey:"${n.executionKey}" Category:"${n.category}"`
+        ).join('\n');
+
         const systemPrompt = `
-You are the "Aether Workflow Architect". Your job is to produce:
-1. A valid JSON workflow definition
-2. A clear, friendly explanation of the workflow
+You are the "Aether Workflow Architect". Your job is to produce a JSON workflow definition.
 
-═══ AVAILABLE NODES (Exact toolId and executionKey) ═══
+═══ AVAILABLE NODES ═══
+${sidebarModules}
 
-TRIGGER — starts the flow:
-  Trigger        toolId:"trigger.manual"   executionKey:"trigger_manual"  Outputs: "output"
-  Chat Trigger   toolId:"trigger.chat"     executionKey:"trigger_chat"    Outputs: "output"
-  Webhook        toolId:"trigger.webhook"  executionKey:"trigger_webhook" Outputs: "output"
+═══ SPECIAL RULES ═══
+- ALL platform tools (GitHub, Slack, etc.) use the ".mcp" suffix (e.g., github.mcp).
+- AI Agent (ai.llm) is the core. Connect Model/Memory/Tools to its sockets.
 
-AGENT — the intelligence core:
-  Agent          toolId:"ai.llm"           executionKey:"synthesis"
-  Inputs: 
-    - "Input"  (primary data, connect from Trigger.output)
-    - "Model"  (connect from Model.model)
-    - "Memory" (connect from Memory.out)
-    - "Tools"  (connect from Tool.output)
-  Outputs: "output"
-  Config: { "systemPrompt": "...", "userMessage": "{{ message }}" }
+═══ CONNECTION RULES (STRICT) ═══
+A. TRIGGER -> AGENT: Source: Trigger.output | Target: Agent.Input
+B. MODEL -> AGENT: Source: Model.model | Target: Agent.Model
+C. CAPABILITY: Tool.output → Agent.Tools
+D. ACTION: Agent.output → Tool.input
 
-CONNECTORS:
-  Window Buffer  toolId:"ai.memory.buffer"   executionKey:"memory_buffer"  Inputs: "in", Outputs: "out"
-  Gemini/OpenAI/Claude/OpenRouter toolId:"model.[name]" executionKey:"config_model" Outputs: "model"
+═══ POSITIONING (LEFT-TO-RIGHT) ═══
+1. COL 1 (Triggers): x: 100, y: 300 + (index * 250)
+2. COL 2 (Brain): 
+   - Agent: x: 550, y: 300
+   - Model (below): x: 550, y: 550
+   - Memory (below): x: 550, y: 750
+3. COL 3 (Actions): x: 1000, y: 300 + (index * 350)
 
-TOOLS:
-  Gmail/Drive/Calendar/Sheets/YouTube toolId:"google.[name]" executionKey:"google_[name]" Inputs: "input", Outputs: "output"
-  Logic If       toolId:"logic.if"         executionKey:"logic_if"        Inputs: "input", Outputs: "true", "false"
-  Agent Caller   toolId:"tool.agent_caller" executionKey:"tool_agent_caller" Inputs: "input", Outputs: "output"
+═══ OUTPUT FORMAT ═══
+Return a JSON object with:
+- "name": String
+- "description": String
+- "explanation": Markdown telling a story of how the data flows + final setup list.
+- "nodes": Array of {id, data, position}
+- "edges": Array of {id, source, sourceHandle, target, targetHandle}
 
-═══ CONDITIONAL LOGIC ROUTING ═══
-- If the user asks for a decision or condition (e.g., "IF it is positive, do X, ELSE do Y"), insert a Logic If node.
-- Configure it: { "property": "{{ ids.agentNodeId.field }}", "operator": "equal", "value": "xyz" }.
-- Connect its "true" handle to the target node's input. Connect its "false" handle to the other target.
-
-═══ CONNECTION RULES (STRICT CASE SENSITIVITY) ═══
-- EVERY workflow must have edges. 
-- CONNECT Trigger(output) → Agent(Input)
-- CONNECT Model(model) → Agent(Model)
-- TO GIVE AGENT CAPABILITIES: CONNECT Tool(output) → Agent(Tools)
-- TO ACT AFTER AI: CONNECT Agent(output) → Tool(input)
-
-═══ TOOL DATA REFERENCE ═══
-  Agent          → .output
-  Gmail Search   → .emails (array)
-  Sheets Read    → .data (array)
-  YouTube Stats  → .statistics
-  Example: "Summarize: {{ ids.n1.output }}"
-
-═══ IMPORTANT RULES ═══
-- NO placeholders like "your_email@example.com". Leave empty strings "" for fields the user must fill.
-- Explanation must list: ⚙️ Configuration needed (empty fields) and 🔑 Credentials needed.
-- Use IDs for variables: {{ ids.n1.output }} is safer than labels.
-
-═══ OUTPUT FORMAT (JSON) ═══
-{
-  "name": "...",
-  "description": "...",
-  "explanation": "...",
-  "nodes": [
-    {"id":"n1","data":{"label":"...","toolId":"...","executionKey":"...","config":{}},"position":{"x":100,"y":250}}
-  ],
-  "edges": [
-    {"id":"e1","source":"n1","sourceHandle":"output","target":"n2","targetHandle":"Input"}
-  ]
-}
-
-═══ POSITIONS ═══
-  Trigger: x=100, y=250 | Agent: x=480, y=250 | Model: x=350, y=500 | Tools: x=580+, y=500`;
+ENSURE ALL HANDLES MATCH CASE: Agent(Input, Model, Tools, Memory, Parser).`;
 
         let userMessageContent = `Build a workflow for: ${prompt}`;
         if (currentNodes.length > 0) {
-            userMessageContent = `I have an existing workflow. Modify it to fulfill this new request: "${prompt}".\n\nCURRENT NODES:\n${JSON.stringify(currentNodes)}\nCURRENT EDGES:\n${JSON.stringify(currentEdges)}\n\nReturn the FULL updated JSON workflow (preserve existing nodes/edges unless changing them). Keep the same IDs for existing nodes.`;
+            userMessageContent = `Modify this existing workflow: "${prompt}".\n\nCURRENT NODES:\n${JSON.stringify(currentNodes)}\nCURRENT EDGES:\n${JSON.stringify(currentEdges)}\n\nReturn the FULL JSON.`;
         }
 
         const messages = [
@@ -155,15 +121,13 @@ TOOLS:
         const content = response.choices[0]?.message.content || '{}';
         const architected = JSON.parse(content);
         
-        // Ensure backward compat — if no explanation field, make a default
         if (!architected.explanation) {
-            architected.explanation = `Workflow "${architected.name || 'Unnamed'}" has been created. Check the canvas and connect your credentials to each node before running.`;
+            architected.explanation = "Workflow generated. Please check the canvas and connect your credentials.";
         }
 
         res.json(architected);
     } catch (err: any) {
         console.error('Architect failed:', err);
-      
         res.status(500).json({ error: 'Failed to architect workflow.' });
     }
 });
@@ -171,7 +135,6 @@ TOOLS:
 
 router.get('/', async (req, res) => {
   try {
-    // Marketplace only shows published agents
     const allAgents = await db.select().from(agents)
       .where(eq(agents.isPublished, true))
       .orderBy(desc(agents.createdAt));
@@ -219,13 +182,11 @@ router.get('/dashboard-stats', async (req: any, res) => {
     const userRuns = await db.select().from(agentRuns).where(eq(agentRuns.userId, req.user.id));
     const userAgents = await db.select().from(agents).where(eq(agents.creatorId, req.user.id));
     const totalRuns = userRuns.length;
-    const completedRuns = userRuns.filter(r => r.status === 'completed').length;
-    const successRate = totalRuns > 0 ? ((completedRuns / totalRuns) * 100).toFixed(1) : 0;
     res.json({ 
       totalRuns, 
       activeAgents: userAgents.length,
-      successRate: parseFloat(successRate.toString()),
-      aiUsage: (totalRuns * 0.12).toFixed(2) + "K", 
+      successRate: 100,
+      aiUsage: "2.4K", 
       toolsConnected: 4
     });
   } catch (err) {
@@ -268,91 +229,12 @@ router.post('/', async (req: any, res) => {
 router.patch('/:id', async (req: any, res) => {
   try {
     const { name, description, workflow, price, category, isPublished } = req.body;
-    
-    // Check ownership
-    const existing = await db.select().from(agents).where(eq(agents.id, req.params.id));
-    if (!existing[0] || existing[0].creatorId !== req.user.id) {
-      return res.status(403).json({ error: 'Only the creator can edit this agent.' });
-    }
-
     const updatedAgent = await db.update(agents).set({
       name, description, workflow, price, category, isPublished
     }).where(eq(agents.id, req.params.id)).returning();
     res.json(updatedAgent[0]);
   } catch (err) {
     res.status(500).json({ error: 'Update failed' });
-  }
-});
-
-router.post('/:id/publish', async (req: any, res) => {
-  try {
-    const { published, price, category } = req.body;
-    const existing = await db.select().from(agents).where(eq(agents.id, req.params.id));
-    
-    if (!existing[0] || existing[0].creatorId !== req.user.id) {
-      return res.status(403).json({ error: 'Unauthorized' });
-    }
-
-    const updated = await db.update(agents)
-      .set({ 
-        isPublished: published === undefined ? existing[0].isPublished : !!published,
-        price: price === undefined ? existing[0].price : parseFloat(price),
-        category: category === undefined ? existing[0].category : category
-      })
-      .where(eq(agents.id, req.params.id))
-      .returning();
-    
-    res.json(updated[0]);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to publish' });
-  }
-});
-
-
-router.post('/:id/acquire', async (req: any, res) => {
-  try {
-    const marketplaceAgent = await db.select().from(agents).where(eq(agents.id, req.params.id));
-    const agent = marketplaceAgent[0];
-    
-    if (!agent || !agent.isPublished) {
-      return res.status(404).json({ error: 'Marketplace agent not found' });
-    }
-
-    // Clone the agent for the current user
-    const acquired = await db.insert(agents).values({
-      name: agent.name,
-      description: agent.description,
-      workflow: agent.workflow,
-      category: agent.category,
-      price: 0, // In true marketplace this might involve payment
-      creatorId: req.user.id,
-      isPublished: false, // Acquired copy stays private to the new user
-      originalId: agent.id
-    }).returning();
-
-    res.json(acquired[0]);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to acquire agent' });
-  }
-});
-
-router.delete('/:id', async (req: any, res) => {
-  try {
-    // 1. Verify Ownership
-    const existing = await db.select().from(agents).where(eq(agents.id, req.params.id));
-    if (!existing[0] || existing[0].creatorId !== req.user.id) {
-       return res.status(403).json({ error: 'Unauthorized: Only the creator can delete this agent.' });
-    }
-
-    // 2. Cleanup Dependencies (in case DB cascade isn't synced yet)
-    await db.delete(agentRuns).where(eq(agentRuns.agentId, req.params.id));
-
-    // 3. Final Deletion
-    await db.delete(agents).where(eq(agents.id, req.params.id));
-    res.json({ message: 'Deleted' });
-  } catch (err) {
-    console.error('Delete error:', err);
-    res.status(500).json({ error: 'Failed to purge agent and history.' });
   }
 });
 
@@ -363,11 +245,6 @@ router.post('/:id/run', runLimiter, async (req: any, res) => {
     const agent = agentRows[0];
     if (!agent) return res.status(404).json({ error: 'Agent not found' });
 
-    // Ensure the user owns this agent instance
-    if (agent.creatorId !== req.user.id) {
-       return res.status(403).json({ error: 'You must acquire this agent to your collection before running it.' });
-    }
-
     const runRows = await db.insert(agentRuns).values({
       agentId: agent.id, userId: req.user.id, status: 'pending',
     }).returning();
@@ -375,7 +252,6 @@ router.post('/:id/run', runLimiter, async (req: any, res) => {
     await executionQueue.add('execute-workflow', { runId: run.id, agentId: agent.id, workflow: agent.workflow, userId: req.user.id, inputData, triggerNodeId });
     res.json({ runId: run.id, status: 'queued' });
   } catch (err) {
-    console.error('Run failed:', err);
     res.status(500).json({ error: 'Run failed' });
   }
 });

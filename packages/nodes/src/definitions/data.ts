@@ -2,31 +2,6 @@ import type { NodeDefinition } from '../types';
 
 export const dataNodes: NodeDefinition[] = [
   {
-    id: 'data.edit',
-    label: 'Edit Data',
-    name: 'Edit Data',
-    description: 'Transform or create new JSON fields from inputs.',
-    category: 'Data',
-    icon: 'FileJson',
-    color: 'text-blue-500',
-    bg: 'bg-blue-500/10',
-    border: 'border-blue-500/20',
-    isTrigger: false,
-    executionKey: 'data_edit',
-    inputs: [{ name: 'input', type: 'data' }],
-    outputs: [{ name: 'output', type: 'data' }],
-    configFields: [
-      {
-        key: 'assignments',
-        label: 'Assignments',
-        type: 'filter',
-        default: {
-          conditions: [{ leftValue: 'new_field', operator: 'equal', rightValue: '{input.success}' }],
-        },
-      },
-    ],
-  },
-  {
     id: 'database.mongodb',
     label: 'MongoDB',
     name: 'MongoDB Atlas',

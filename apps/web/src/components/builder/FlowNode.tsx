@@ -50,8 +50,8 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
 
   // Status-based colors and animations
   const statusStyles = {
-    idle: 'border-border/40 grayscale opacity-40',
-    pending: 'border-blue-400/30 opacity-80 shadow-[0_0_10px_rgba(59,130,246,0.1)]', // Ready state
+    idle: 'border-border/40 opacity-80 shadow-sm', // Remove grayscale/opacity-40
+    pending: 'border-blue-400/30 opacity-90 shadow-[0_0_10px_rgba(59,130,246,0.1)]',
     running: 'border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.3)] animate-pulse-glow opacity-100',
     completed: 'border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.15)] opacity-100',
     failed: 'border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.1)] opacity-100',
@@ -180,12 +180,13 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
             <img 
               src={tool.icon} 
               alt={tool.label} 
-              className={`${isToolMode ? 'w-8 h-8' : 'w-12 h-12'} object-contain ${status === 'idle' ? 'opacity-40 grayscale' : 'opacity-100'}`} 
+              className={`${isToolMode ? 'w-8 h-8' : 'w-12 h-12'} object-contain transition-all duration-300`} 
             />
           ) : (
             <Icon 
               size={isToolMode ? 28 : 40} 
-              className={`${status === 'idle' ? 'text-muted opacity-40' : tool.color} transition-colors duration-500`} 
+              style={tool.color.startsWith('#') || tool.color.startsWith('rgb') ? { color: tool.color } : {}}
+              className={`${!(tool.color.startsWith('#') || tool.color.startsWith('rgb')) ? tool.color : ''} transition-colors duration-500`} 
             />
           )}
           
@@ -201,7 +202,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
 
         {/* Persistent Bottom Label */}
         <div className={`absolute ${isToolMode ? 'top-[100%]' : 'top-[105%]'} left-1/2 -translate-x-1/2 pt-2 text-center whitespace-nowrap pointer-events-none`}>
-           <p className={`text-[11px] font-black tracking-tight transition-opacity duration-300 ${status === 'idle' ? 'text-muted-foreground/60' : 'text-foreground'}`}>{data.label}</p>
+           <p className="text-[11px] font-black tracking-tight text-foreground">{data.label}</p>
         </div>
       </div>
     );
@@ -211,9 +212,9 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   return (
     <div
       className={`
-        group relative ${isAgent ? 'min-w-[280px] max-w-[340px]' : 'min-w-[160px] max-w-[220px]'} rounded-2xl
+        group relative ${isAgent ? 'min-w-[320px] max-w-[450px]' : 'min-w-[170px] max-w-[240px]'} rounded-[2rem]
         border transition-all duration-300
-        ${isAgent ? 'bg-[#1a1a1a] text-white shadow-2xl' : 'bg-[#1e1e1e] border-border/10'}
+        ${isAgent ? 'bg-[#1a1a1a] text-white shadow-2xl p-2' : 'bg-[#1e1e1e] border-border/10'}
         ${status !== 'idle' ? statusStyles[status] : (selected
           ? 'border-blue-500 shadow-xl ring-4 ring-blue-500/10 scale-[1.02] z-50'
           : 'hover:border-border/40 hover:scale-[1.01] shadow-lg')}
@@ -368,9 +369,14 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
         <div className="flex items-center gap-4 w-full">
           <div className={`p-2 rounded-lg ${status === 'idle' ? 'bg-zinc-900/50' : tool.bg} border border-white/5 shrink-0 transition-colors`}>
             {typeof tool.icon === 'string' ? (
-              <img src={tool.icon} alt={tool.label} className={`w-6 h-6 object-contain ${status === 'idle' ? 'opacity-40 grayscale' : ''}`} />
+              <img src={tool.icon} alt={tool.label} className={`w-6 h-6 object-contain ${status === 'idle' && false ? 'opacity-40 grayscale' : ''}`} />
             ) : (
-              <Icon size={isAgent ? 30 : 22} className={`${status === 'idle' ? 'text-muted-foreground/40' : (isAgent ? 'text-white' : tool.color)} transition-colors duration-500`} strokeWidth={isAgent ? 1.5 : 2} />
+              <Icon 
+                size={isAgent ? 36 : 24} 
+                style={tool.color.startsWith('#') || tool.color.startsWith('rgb') ? { color: tool.color } : {}}
+                className={`${!(tool.color.startsWith('#') || tool.color.startsWith('rgb')) ? tool.color : ''} transition-colors duration-500`} 
+                strokeWidth={isAgent ? 1 : 2} 
+              />
             )}
           </div>
           <div className="flex-1 min-w-0">

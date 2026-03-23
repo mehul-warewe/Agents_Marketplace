@@ -29,7 +29,8 @@ export type ConfigFieldType =
   | 'password'
   | 'notice'
   | 'filter'
-  | 'chat_test';
+  | 'chat_test'
+  | 'hidden';
 
 export interface ConfigField {
   key: string;

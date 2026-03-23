@@ -31,28 +31,4 @@ export const logicNodes: NodeDefinition[] = [
       },
     ],
   },
-  {
-    id: 'logic.code',
-    label: 'Code',
-    name: 'Code',
-    category: 'Logic',
-    variant: 'connector',
-    description: 'Execute custom JavaScript (Node.js vm) to transform data.',
-    icon: 'Code',
-    color: '#8b5cf6',
-    bg: 'bg-[#8b5cf6]/10',
-    border: 'border-[#8b5cf6]/30',
-    isTrigger: false,
-    executionKey: 'logic_code',
-    inputs: [{ name: 'input', type: 'data', position: 'left' }],
-    outputs: [{ name: 'output', type: 'data', position: 'right' }],
-    configFields: [
-      {
-        key: 'jsCode',
-        label: 'JavaScript Code',
-        type: 'textarea',
-        default: 'return {\n  ...$input,\n  customField: "Hello World"\n};',
-      },
-    ],
-  },
 ];

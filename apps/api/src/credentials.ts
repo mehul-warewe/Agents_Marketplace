@@ -185,6 +185,35 @@ export const CREDENTIAL_SCHEMAS: Record<string, {
       { key: 'url', label: 'Redis URL', type: 'password', placeholder: 'redis://default:password@host:port' },
     ],
   },
+  github_pat: {
+    label: 'GitHub (Personal Access Token)',
+    icon: 'github',
+    fields: [
+      { key: 'accessToken', label: 'Personal Access Token', type: 'password', placeholder: 'ghp_...' },
+    ],
+  },
+  linear_api_key: {
+    label: 'Linear (API Key)',
+    icon: 'linear',
+    fields: [
+      { key: 'apiKey', label: 'Personal API Key', type: 'password', placeholder: 'lin_api_...' },
+    ],
+  },
+  notion_integration_token: {
+    label: 'Notion (Integration Token)',
+    icon: 'notion',
+    fields: [
+      { key: 'accessToken', label: 'Integration Token', type: 'password', placeholder: 'secret_...' },
+    ],
+  },
+  supabase_service_role: {
+    label: 'Supabase (Service Role Key)',
+    icon: 'database',
+    fields: [
+      { key: 'accessToken', label: 'Service Role Key', type: 'password', placeholder: 'eyJh...' },
+      { key: 'projectRef', label: 'Project Ref', type: 'text', placeholder: 'abcdefgh...' },
+    ],
+  },
 };
 
 // ─── GET /credentials/schemas — return available types & their field schemas ──

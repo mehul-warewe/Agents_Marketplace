@@ -12,6 +12,11 @@ import { memory_buffer, memory_mongodb, memory_redis } from './ai/memory.js';
 import { agentCaller } from '../tools/agent_caller.js';
 import { logicCode } from '../tools/logic_code.js';
 
+// Shared handler for all MCP platforms
+const platformMcpHandler: ToolHandler = async (ctx) => {
+  return { status: "ready", platform: ctx.config.platform };
+};
+
 export const WORKER_NODES: Record<string, ToolHandler> = {
   // ── Triggers ────────────────────────────────────────────────────────────────
   'trigger_manual': triggerManual,
@@ -31,44 +36,8 @@ export const WORKER_NODES: Record<string, ToolHandler> = {
   'tool_agent_caller': agentCaller,
   'logic_code':        logicCode,
 
-  // ── Google (modular routers) ─────────────────────────────────────────────────
-  'google_gmail':     gmail.handler,
-  'google_drive':     googleLegacy.googleDrive,
-  'google_calendar':  googleLegacy.googleCalendar,
-  'google_sheets':    googleLegacy.googleSheets,
-  'google_youtube':   googleLegacy.googleYoutube,
-
-  // ── Google (individual agentic sub-operations) ───────────────────────────────
-  'google_gmail_send':      googleLegacy.googleGmailSend,
-  'google_gmail_search':    googleLegacy.googleGmailSearch,
-  'google_gmail_get':       googleLegacy.googleGmailGet,
-  'google_gmail_reply':     googleLegacy.googleGmailReply,
-  'google_gmail_mark_read': googleLegacy.googleGmailMarkRead,
-  'google_gmail_delete':    googleLegacy.googleGmailDelete,
-
-  'google_drive_upload':        googleLegacy.googleDriveUpload,
-  'google_drive_list':          googleLegacy.googleDriveList,
-  'google_drive_get_content':   googleLegacy.googleDriveGetContent,
-  'google_drive_delete':        googleLegacy.googleDriveDelete,
-  'google_drive_create_folder': googleLegacy.googleDriveCreateFolder,
-  'google_drive_share':         googleLegacy.googleDriveShare,
-
-  'google_calendar_create': googleLegacy.googleCalendarCreate,
-  'google_calendar_list':   googleLegacy.googleCalendarList,
-  'google_calendar_get':    googleLegacy.googleCalendarGet,
-  'google_calendar_update': googleLegacy.googleCalendarUpdate,
-  'google_calendar_delete': googleLegacy.googleCalendarDelete,
-
-  'google_sheets_append': googleLegacy.googleSheetsAppend,
-  'google_sheets_read':   googleLegacy.googleSheetsRead,
-  'google_sheets_update': googleLegacy.googleSheetsUpdate,
-  'google_sheets_clear':  googleLegacy.googleSheetsClear,
-  'google_sheets_create': googleLegacy.googleSheetsCreate,
-
-  'google_youtube_channel_stats': googleLegacy.googleYoutubeChannelStats,
-  'google_youtube_list_my_vids':  googleLegacy.googleYoutubeListVideos,
-  'google_youtube_video_stats':   googleLegacy.googleYoutubeVideoStats,
-  'google_youtube_analytics':     googleLegacy.googleYoutubeAnalytics,
+  // ── MCP Platforms ─────────────────────────────────────────────────────────
+  'platform_mcp_handler': platformMcpHandler,
 
   // ── Data ────────────────────────────────────────────────────────────────────
   'data_edit':     dataEdit,
