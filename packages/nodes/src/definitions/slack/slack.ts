@@ -9,7 +9,7 @@ export const slackNode: NodeDefinition = {
   description: 'Send messages and manage channels via your Slack Bot Token.',
   icon: '/iconSvg/slack.svg',
   color: '#4A154B',
-  executionKey: 'platform_mcp_handler',
+  executionKey: 'slack_mcp',
   inputs: [{ name: 'input', type: 'data', position: 'left' }],
   outputs: [{ name: 'output', type: 'tool', position: 'bottom' }],
   isTrigger: false,

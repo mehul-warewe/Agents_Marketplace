@@ -9,7 +9,7 @@ export const githubNode: NodeDefinition = {
   description: 'Manage issues, pull requests, and repos via your GitHub Personal Access Token.',
   icon: '/iconSvg/github.svg',
   color: '#24292e',
-  executionKey: 'platform_mcp_handler',
+  executionKey: 'github_mcp',
   inputs: [{ name: 'input', type: 'data', position: 'left' }],
   outputs: [{ name: 'output', type: 'tool', position: 'bottom' }],
   isTrigger: false,

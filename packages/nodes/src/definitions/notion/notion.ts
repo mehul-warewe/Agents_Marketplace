@@ -9,7 +9,7 @@ export const notionNode: NodeDefinition = {
   description: 'Search and update Notion pages via your Notion Integration Token.',
   icon: '/iconSvg/notion.svg',
   color: '#000000',
-  executionKey: 'platform_mcp_handler',
+  executionKey: 'notion_mcp',
   inputs: [{ name: 'input', type: 'data', position: 'left' }],
   outputs: [{ name: 'output', type: 'tool', position: 'bottom' }],
   isTrigger: false,

@@ -31,12 +31,12 @@ export * from './definitions/calendar/calendar.handler.js';
 export * from './definitions/sheets/sheets.handler.js';
 export * from './definitions/youtube/youtube.handler.js';
 
-// MCP Platforms
+// MCP Platforms (Specialized)
 export * from './definitions/github/github.handler.js';
 export * from './definitions/slack/slack.handler.js';
 export * from './definitions/linear/linear.handler.js';
 export * from './definitions/notion/notion.handler.js';
 export * from './definitions/supabase/supabase.handler.js';
 
-// Shared MCP logic
-export * from './definitions/mcp.handler.js';
+// Shared MCP logic (Utility)
+export * from './utils/mcp.js';

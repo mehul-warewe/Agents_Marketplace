@@ -9,7 +9,7 @@ export const supabaseNode: NodeDefinition = {
   description: 'Query and manage Supabase databases via your Service Role Key.',
   icon: '/iconSvg/supabase.svg',
   color: '#3ecf8e',
-  executionKey: 'platform_mcp_handler',
+  executionKey: 'supabase_mcp',
   inputs: [{ name: 'input', type: 'data', position: 'left' }],
   outputs: [{ name: 'output', type: 'tool', position: 'bottom' }],
   isTrigger: false,

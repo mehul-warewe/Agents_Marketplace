@@ -10,8 +10,8 @@ import {
   mongodbAtlasHandler, redisHandler,
   // Google
   gmailHandler, driveHandler, calendarHandler, sheetsHandler, youtubeHandler,
-  // MCP
-  mcpHandler
+  // MCP Platforms (Specialized)
+  githubHandler, slackHandler, linearHandler, notionHandler, supabaseHandler
 } from '@repo/nodes/handlers';
 
 export const WORKER_NODES: Record<string, ToolHandler> = {
@@ -41,8 +41,12 @@ export const WORKER_NODES: Record<string, ToolHandler> = {
   'google_sheets':   sheetsHandler,
   'google_youtube':  youtubeHandler,
 
-  // MCP Generic Platform Handler
-  'platform_mcp_handler': mcpHandler,
+  // MCP Platforms
+  'github_mcp':      githubHandler,
+  'slack_mcp':       slackHandler,
+  'linear_mcp':      linearHandler,
+  'notion_mcp':      notionHandler,
+  'supabase_mcp':    supabaseHandler,
 };
 
 // Log warning if any registry keys are missing handlers

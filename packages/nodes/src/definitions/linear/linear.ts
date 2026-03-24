@@ -9,7 +9,7 @@ export const linearNode: NodeDefinition = {
   description: 'Manage Linear issues and projects via your Linear API Key.',
   icon: '/iconSvg/linear.svg',
   color: '#5E6AD2',
-  executionKey: 'platform_mcp_handler',
+  executionKey: 'linear_mcp',
   inputs: [{ name: 'input', type: 'data', position: 'left' }],
   outputs: [{ name: 'output', type: 'tool', position: 'bottom' }],
   isTrigger: false,

@@ -189,8 +189,8 @@ function AgentBuilderInner() {
   const [pickerSearch, setPickerSearch] = useState('');
 
   const { user, isLoading: authLoading } = useAuthStore();
-  const { mutate: createAgent, isPending: isCreating } = useCreateAgent();
-  const { mutate: updateAgent, isPending: isUpdating } = useUpdateAgent();
+  const { mutateAsync: createAgent, isPending: isCreating } = useCreateAgent();
+  const { mutateAsync: updateAgent, isPending: isUpdating } = useUpdateAgent();
   const { mutate: architect,   isPending: isArchitecting } = useArchitect();
   const { mutate: runAgent,    isPending: isStartingRun }  = useRunAgent();
 
@@ -218,13 +218,13 @@ function AgentBuilderInner() {
 
     try {
       if (agentId) {
-        const result = await (updateAgent as any).mutateAsync({ id: agentId, agentData: payload });
+        const result = await (updateAgent as any)({ id: agentId, agentData: payload });
         if (!options.silent) {
           router.push('/agents');
         }
         return result;
       } else {
-        const result = await (createAgent as any).mutateAsync(payload);
+        const result = await (createAgent as any)(payload);
         if (!options.silent) {
           router.push('/agents');
         }
