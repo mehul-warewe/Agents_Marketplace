@@ -139,28 +139,14 @@ function normaliseArchitectNodes(rawNodes: any[], rawEdges: any[]) {
       }
     }
 
-    // Fallback 2: fuzzy label match
+    // Fallback 2: fuzzy label/description match against ALL nodes in registry
     if (!resolvedTool) {
-      const label = (n.data?.label || '').toLowerCase();
-      const toolId =
-        label.includes('chat') && label.includes('input') ? 'trigger.chat'
-        : label.includes('trigger') || label.includes('manual') || label.includes('start') ? 'trigger.manual'
-        : label.includes('gmail') || label.includes('email') ? 'google.gmail'
-        : label.includes('drive') ? 'google.drive'
-        : label.includes('calendar') ? 'google.calendar'
-        : label.includes('sheet') ? 'google.sheets'
-        : label.includes('github') ? 'github.mcp'
-        : label.includes('slack') ? 'slack.mcp'
-        : label.includes('linear') ? 'linear.mcp'
-        : label.includes('notion') ? 'notion.mcp'
-        : label.includes('supabase') ? 'supabase.mcp'
-        : label.includes('openai') || label.includes('gpt') ? 'model.openai'
-        : label.includes('gemini') ? 'model.gemini'
-        : label.includes('claude') ? 'model.claude'
-        : label.includes('openrouter') ? 'model.openrouter'
-        : label.includes('agent') || label.includes('llm') || label.includes('synthesis') ? 'ai.llm'
-        : i === 0 ? 'trigger.manual' : 'ai.llm';
-      resolvedTool = getToolById(toolId);
+      const query = (n.data?.label || n.label || n.name || '').toLowerCase();
+      resolvedTool = TOOL_REGISTRY.find(t => 
+        query.includes(t.label.toLowerCase()) || 
+        query.includes(t.name.toLowerCase()) ||
+        t.label.toLowerCase().includes(query)
+      ) || TOOL_REGISTRY[0]!; // Default to first node if all else fails
     }
 
     return {

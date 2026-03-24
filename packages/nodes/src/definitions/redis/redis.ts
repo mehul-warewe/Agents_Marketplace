@@ -1,0 +1,52 @@
+import type { NodeDefinition } from '../../types.js';
+
+export const redisNode: NodeDefinition = {
+  id: 'database.redis',
+  label: 'Redis',
+  name: 'Redis Database',
+  description: 'Interact with Redis key-value store.',
+  category: 'Databases',
+  variant: 'connector',
+  icon: '/iconSvg/redis.svg',
+  color: 'text-red-500',
+  bg: 'bg-red-500/10',
+  border: 'border-red-500/20',
+  isTrigger: false,
+  executionKey: 'redis',
+  credentialTypes: ['redis'],
+  inputs: [{ name: 'input', type: 'data' }],
+  outputs: [{ name: 'output', type: 'memory', color: '#a855f7' }],
+  configFields: [
+    {
+      key: 'operation',
+      label: 'Operation',
+      type: 'select',
+      options: [
+        { label: 'Get', value: 'get' },
+        { label: 'Set', value: 'set' },
+        { label: 'Delete', value: 'del' },
+        { label: 'Increment', value: 'incr' },
+        { label: 'Hash Set (Object)', value: 'hset' },
+        { label: 'Hash Get (Object)', value: 'hget' },
+        { label: 'List Push (Append)', value: 'lpush' },
+        { label: 'List Range (Get All)', value: 'lrange' },
+      ],
+      default: 'get',
+    },
+    { key: 'key', label: 'Key', type: 'text', placeholder: 'user:{input.id}' },
+    {
+      key: 'value',
+      label: 'Value',
+      type: 'textarea',
+      placeholder: '{"field": "value"} or just "string"',
+      displayOptions: { showFor: { operation: ['set', 'hset', 'lpush'] } },
+    },
+    {
+      key: 'ttl',
+      label: 'TTL (Seconds)',
+      type: 'text',
+      placeholder: '3600',
+      displayOptions: { showFor: { operation: ['set'] } },
+    },
+  ],
+};

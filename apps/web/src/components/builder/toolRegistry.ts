@@ -55,23 +55,32 @@ export const TOOL_REGISTRY: ToolDefinition[] = NODE_REGISTRY.map((node) => ({
   icon: (ICON_MAP[node.icon] ?? node.icon) as IconType,
 }));
 
+/**
+ * List of unique categories derived from the registry, in a preferred order.
+ */
 export const TOOL_CATEGORIES = [
-  'Triggers',
-  'Models',
-  'AI',
-  'Tools',
-  'Logic',
-  'Data',
-  'Databases',
-  'Core',
-  'Output',
-] as const;
+  ...new Set(NODE_REGISTRY.map(n => n.category))
+].sort((a, b) => {
+  const order = ['Triggers', 'AI', 'Models', 'Tools', 'Logic', 'Data', 'Databases', 'Core', 'Output'];
+  return order.indexOf(a) - order.indexOf(b);
+});
 
-export const MODEL_TYPES = [
-  { id: 'google/gemini-2.0-flash-001', label: 'Gemini 2.0 Flash (Fastest)', provider: 'Google' },
-  { id: 'openai/gpt-4o', label: 'GPT-4o (Smartest)', provider: 'OpenAI' },
-  { id: 'anthropic/claude-3-5-sonnet', label: 'Claude 3.5 Sonnet', provider: 'Anthropic' },
-];
+/**
+ * Dynamically extract model options from the Model nodes.
+ */
+export const MODEL_TYPES = NODE_REGISTRY
+  .filter(n => n.category === 'Models')
+  .flatMap(n => {
+    const modelField = n.configFields.find(f => f.key === 'model');
+    if (modelField && Array.isArray(modelField.options)) {
+      return (modelField.options as string[]).map(m => ({
+        id: m,
+        label: m,
+        provider: n.label,
+      }));
+    }
+    return [];
+  });
 
 export const INITIAL_NODES = [
   {
