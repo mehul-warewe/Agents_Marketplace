@@ -30,6 +30,7 @@ export type ConfigFieldType =
   | 'notice'
   | 'filter'
   | 'chat_test'
+  | 'color'
   | 'hidden';
 
 export interface ConfigField {

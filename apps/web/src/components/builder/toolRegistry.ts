@@ -10,6 +10,7 @@ import {
   Github,
   ListTodo,
   BookOpen,
+  StickyNote,
 } from 'lucide-react';
 
 import { NODE_REGISTRY } from '@repo/nodes';
@@ -42,6 +43,7 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Github,
   ListTodo,
   BookOpen,
+  StickyNote,
 };
 
 /**
@@ -143,6 +145,7 @@ export const makeNode = (toolId: string, position: { x: number; y: number }) => 
       status: 'idle',
       config: {},
     },
+    zIndex: tool.executionKey === 'sticky_note' ? -50 : 0,
   };
 };
 

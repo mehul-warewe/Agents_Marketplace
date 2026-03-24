@@ -28,6 +28,7 @@ import { slackNode } from './definitions/slack/slack.js';
 import { linearNode } from './definitions/linear/linear.js';
 import { notionNode } from './definitions/notion/notion.js';
 import { supabaseNode } from './definitions/supabase/supabase.js';
+import { stickyNoteNode } from './definitions/sticky-note/sticky-note.js';
 
 import { structuredOutputParserNode } from './definitions/structured-output-parser/structured-output-parser.js';
 
@@ -73,6 +74,7 @@ export const NODE_REGISTRY: NodeDefinition[] = [
   linearNode,
   notionNode,
   supabaseNode,
+  stickyNoteNode,
 
   // Output
   structuredOutputParserNode,

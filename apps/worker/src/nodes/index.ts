@@ -11,7 +11,8 @@ import {
   // Google
   gmailHandler, driveHandler, calendarHandler, sheetsHandler, youtubeHandler,
   // MCP Platforms (Specialized)
-  githubHandler, slackHandler, linearHandler, notionHandler, supabaseHandler
+  githubHandler, slackHandler, linearHandler, notionHandler, supabaseHandler,
+  stickyNoteHandler, mcpHandler
 } from '@repo/nodes/handlers';
 
 export const WORKER_NODES: Record<string, ToolHandler> = {
@@ -41,12 +42,16 @@ export const WORKER_NODES: Record<string, ToolHandler> = {
   'google_sheets':   sheetsHandler,
   'google_youtube':  youtubeHandler,
 
-  // MCP Platforms
+  // MCP Platforms (Specialized)
   'github_mcp':      githubHandler,
   'slack_mcp':       slackHandler,
   'linear_mcp':      linearHandler,
   'notion_mcp':      notionHandler,
   'supabase_mcp':    supabaseHandler,
+  'sticky_note':     stickyNoteHandler,
+
+  // Legacy / Generic MCP support - Backwards Compatibility
+  'platform_mcp_handler': mcpHandler,
 };
 
 // Log warning if any registry keys are missing handlers

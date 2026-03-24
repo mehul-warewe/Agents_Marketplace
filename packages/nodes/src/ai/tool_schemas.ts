@@ -547,4 +547,91 @@ export const TOOL_SCHEMAS: Record<string, { name: string; description: string; p
       required: ['operation', 'key'],
     },
   },
+
+  // ── MCP Platform Routers ──────────────────────────────────────────────────
+  github_mcp: {
+    name: 'github',
+    description: 'Manage GitHub. Operations: list (list issues), get (read issue), create (create issue), update (update issue).',
+    parameters: {
+      type: 'object',
+      properties: {
+        resource:  { type: 'string', enum: ['issue', 'repository', 'pullRequest'], default: 'issue' },
+        operation: { type: 'string', enum: ['list', 'get', 'create', 'update'], default: 'list' },
+        owner:     { type: 'string', description: 'GitHub username or organization' },
+        repo:      { type: 'string', description: 'Repository name' },
+        issueNumber: { type: 'number', description: 'The issue/PR number' },
+        title:     { type: 'string', description: 'Title (for create/update)' },
+        body:      { type: 'string', description: 'Body (for create/update)' },
+        state:     { type: 'string', enum: ['open', 'closed'], description: 'State (for update)' },
+      },
+      required: ['operation', 'owner', 'repo'],
+    },
+  },
+
+  slack_mcp: {
+    name: 'slack',
+    description: 'Manage Slack. Operations: post (send message), list (list channels), info (get channel info).',
+    parameters: {
+      type: 'object',
+      properties: {
+        resource:  { type: 'string', enum: ['message', 'channel'], default: 'message' },
+        operation: { type: 'string', enum: ['post', 'list', 'info'], default: 'post' },
+        channelId: { type: 'string', description: 'Channel ID (e.g. C12345678)' },
+        text:      { type: 'string', description: 'Message content' },
+        types:     { type: 'string', description: 'Channel types (e.g. public_channel,private_channel)' },
+      },
+      required: ['operation'],
+    },
+  },
+
+  linear_mcp: {
+    name: 'linear',
+    description: 'Manage Linear. Operations: create (create issue), list (list issues), get (read issue), update (update issue).',
+    parameters: {
+      type: 'object',
+      properties: {
+        resource:  { type: 'string', enum: ['issue', 'project', 'cycle'], default: 'issue' },
+        operation: { type: 'string', enum: ['create', 'list', 'get', 'update'], default: 'list' },
+        teamId:    { type: 'string', description: 'Linear Team ID (required for create)' },
+        title:     { type: 'string', description: 'Issue title' },
+        description: { type: 'string', description: 'Issue description' },
+        issueId:   { type: 'string', description: 'ID of existing issue (for get/update)' },
+      },
+      required: ['operation'],
+    },
+  },
+
+  notion_mcp: {
+    name: 'notion',
+    description: 'Manage Notion. Operations: search (search pages), create (create page), get (read page), update (update page).',
+    parameters: {
+      type: 'object',
+      properties: {
+        resource:  { type: 'string', enum: ['page', 'database', 'block'], default: 'page' },
+        operation: { type: 'string', enum: ['search', 'create', 'get', 'update'], default: 'search' },
+        query:     { type: 'string', description: 'Search term' },
+        parentId:  { type: 'string', description: 'Parent page/database ID' },
+        title:     { type: 'string', description: 'Page title' },
+        pageId:    { type: 'string', description: 'Page ID' },
+      },
+      required: ['operation'],
+    },
+  },
+
+  supabase_mcp: {
+    name: 'supabase',
+    description: 'Manage Supabase. Operations: select (query rows), insert (add rows), update (edit rows), delete (remove rows), rpc (call function).',
+    parameters: {
+      type: 'object',
+      properties: {
+        resource:  { type: 'string', enum: ['database', 'auth', 'storage'], default: 'database' },
+        operation: { type: 'string', enum: ['select', 'insert', 'update', 'delete', 'rpc'], default: 'select' },
+        table:     { type: 'string', description: 'Table name' },
+        select:    { type: 'string', description: 'Columns to return (default: *)' },
+        filter:    { type: 'string', description: 'JSON filter (e.g. {"id": 123})' },
+        values:    { type: 'string', description: 'JSON data to insert/update' },
+      },
+      required: ['operation', 'table'],
+    },
+  },
 };

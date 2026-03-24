@@ -5,8 +5,17 @@ export const githubHandler: ToolHandler = async (ctx: ToolContext) => {
   const { config, render } = ctx;
   const operation = config.operation;
 
+  // Map internal operation keys to standard MCP tool names
+  const toolMapping: Record<string, string> = {
+    'list':   'list_repo_issues',
+    'get':    'get_issue',
+    'create': 'create_issue',
+    'update': 'update_issue',
+  };
+
+  const toolName = toolMapping[operation] || operation;
+
   // We can add GitHub-specific pre-processing here if needed
-  // For now, it delegates to the generic MCP caller but with a specific entry point
   const args = { ...config };
   delete args.operation;
 
@@ -17,5 +26,5 @@ export const githubHandler: ToolHandler = async (ctx: ToolContext) => {
     }
   });
 
-  return await callMcpTool(ctx, operation, args);
+  return await callMcpTool(ctx, toolName, args);
 };

@@ -37,6 +37,8 @@ export * from './definitions/slack/slack.handler.js';
 export * from './definitions/linear/linear.handler.js';
 export * from './definitions/notion/notion.handler.js';
 export * from './definitions/supabase/supabase.handler.js';
+export * from './definitions/sticky-note/sticky-note.handler.js';
 
 // Shared MCP logic (Utility)
+export * from './definitions/mcp.handler.js';
 export * from './utils/mcp.js';

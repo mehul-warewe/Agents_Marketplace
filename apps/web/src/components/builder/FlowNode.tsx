@@ -1,8 +1,11 @@
 'use client';
 import React, { useCallback } from 'react';
-import { Handle, Position, useEdges } from 'reactflow';
-import { CheckCircle, AlertCircle, Play, Loader2, MoreHorizontal, Zap, Plus, Power, Trash2, Settings } from 'lucide-react';
+import { Handle, Position, useEdges, NodeResizer } from 'reactflow';
+import { CheckCircle, AlertCircle, Play, Loader2, MoreHorizontal, Zap, Plus, Power, Trash2, Settings, StickyNote } from 'lucide-react';
 import { getToolByExecutionKey, getToolById } from './toolRegistry';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 
 interface FlowNodeProps {
   id: string;
@@ -19,6 +22,48 @@ interface FlowNodeProps {
   selected?: boolean;
 }
 
+// ─── Memoized Markdown Content ──────────────────────────────────────────────
+// This prevents YouTube embeds and complex markdown from flickering/reloading
+// when the parent node re-renders (e.g. during selection or unrelated canvas state changes).
+const MemoizedMarkdown = React.memo(({ content }: { content: string }) => {
+  return (
+    <ReactMarkdown 
+      remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypeRaw]}
+      components={{
+        h1: ({node, ...props}: any) => <h1 className="text-[17px] font-black tracking-tight mb-4 border-b border-black/10 pb-2 flex items-center gap-2" {...props} />,
+        h2: ({node, ...props}: any) => <h2 className="text-[15px] font-black tracking-tight mb-3 mt-6 border-b border-black/5 pb-1" {...props} />,
+        h3: ({node, ...props}: any) => <h3 className="text-[13px] font-black uppercase tracking-widest opacity-40 mb-2 mt-4" {...props} />,
+        h4: ({node, ...props}: any) => <h4 className="text-[13px] font-bold text-red-500/80 mb-2" {...props} />,
+        a: ({node, ...props}: any) => <a className="text-red-500 font-bold underline decoration-red-500/20 hover:text-red-600 transition-colors" target="_blank" {...props} />,
+        img: ({node, ...props}: any) => <img className="rounded-2xl shadow-2xl my-6 max-w-full border border-black/5" {...props} />,
+        code: ({node, ...props}: any) => <code className="bg-black/5 px-1.5 py-0.5 rounded font-mono text-[11px]" {...props} />,
+        ul: ({node, ...props}: any) => <ul className="list-disc ml-5 mb-4 space-y-1.5" {...props} />,
+        ol: ({node, ...props}: any) => <ol className="list-decimal ml-5 mb-4 space-y-1.5 font-bold" {...props} />,
+        li: ({node, ...props}: any) => <li className="font-medium" {...props} />,
+        p: ({node, ...props}: any) => <p className="mb-4 last:mb-0" {...props} />,
+        hr: () => <hr className="my-8 border-black/10" />,
+        blockquote: ({node, ...props}: any) => <blockquote className="border-l-4 border-red-500/30 pl-4 italic my-6 text-zinc-600" {...props} />,
+        div: ({node, className, ...props}: any) => {
+          const youtubeMatch = className?.match(/youtube-embed-(.+)/);
+          if (youtubeMatch) {
+            return (
+              <iframe 
+                src={`https://www.youtube.com/embed/${youtubeMatch[1]}`}
+                className="w-full aspect-video rounded-2xl shadow-2xl my-8 border border-black/5 bg-black/5 animate-in fade-in duration-700"
+                allowFullScreen
+              />
+            );
+          }
+          return <div className={className} {...props} />;
+        }
+      }}
+    >
+      {content.replace(/@\[youtube\]\((.+?)\)/g, '<div class="youtube-embed-$1"></div>')}
+    </ReactMarkdown>
+  );
+});
+
 export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   const tool = data.toolId 
     ? getToolById(data.toolId) 
@@ -26,10 +71,63 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   
   if (!tool) return null; // Safety check
 
-  // Cast to ComponentType for JSX usage; string icons are handled by typeof checks below
+  const isStickyNote = data.executionKey === 'sticky_note';
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const Icon = tool.icon as React.ComponentType<any>;
   const status = data.status ?? 'idle';
+
+  if (isStickyNote) {
+     const content = data.config?.content || "Click to edit note...";
+     const noteColor = data.config?.noteColor || '#635e4fff';
+     
+     const isHex = noteColor.startsWith('#');
+     const colorStyle = isHex ? { backgroundColor: noteColor } : {};
+     const colorClass = isHex ? 'text-zinc-900 border-black/10' : (
+       noteColor === 'Yellow' ? 'bg-[#FFD233] text-zinc-900 border-[#EBC22D]' :
+       noteColor === 'Blue'   ? 'bg-blue-100 text-blue-900 border-blue-200' :
+       'bg-[#FFD233] text-zinc-900 border-[#EBC22D]'
+     );
+
+     return (
+       <>
+         <NodeResizer 
+           minWidth={150} 
+           minHeight={100} 
+           isVisible={selected}
+           lineClassName="!border-none"
+           handleClassName="!w-6 !h-6 !bg-blue-500/5 !border-0 !rounded-lg opacity-0 group-hover:opacity-100" 
+         />
+         <div 
+           style={colorStyle}
+           className={`
+             w-full h-full p-8 rounded-[2rem] shadow-xl border-l-[6px] 
+             transition-all duration-300 font-sans cursor-pointer
+             ${colorClass} ${selected ? 'shadow-2xl opacity-100' : 'opacity-90 hover:opacity-100'}
+           `}
+         >
+           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-40 transition-opacity">
+              <StickyNote size={12} />
+           </div>
+
+           <div className="text-[13.5px] font-medium leading-[1.8] opacity-95 select-none overflow-y-auto no-scrollbar h-full prose-zinc max-w-none">
+             <MemoizedMarkdown content={content} />
+           </div>
+
+            <button 
+               onClick={(e) => { e.stopPropagation(); (data as any).onDelete?.(id); }}
+               className="absolute -bottom-2 -right-2 w-5 h-5 bg-card border border-border/10 rounded-full flex items-center justify-center text-[8px] opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition-all shadow-md z-[100]"
+            >
+              ✕
+            </button>
+         </div>
+       </>
+     );
+  }
+
+  // Hook for standard nodes
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  // Hook for standard nodes - Move below StickyNote return to prevent note flickers
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const edges = useEdges();
 
   const onPlayClick = useCallback(
@@ -50,7 +148,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
 
   // Status-based colors and animations
   const statusStyles = {
-    idle: 'border-border/40 opacity-80 shadow-sm', // Remove grayscale/opacity-40
+    idle: 'border-transparent opacity-100 shadow-sm', // Remove grayscale/opacity-40
     pending: 'border-blue-400/30 opacity-90 shadow-[0_0_10px_rgba(59,130,246,0.1)]',
     running: 'border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.3)] animate-pulse-glow opacity-100',
     completed: 'border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.15)] opacity-100',
@@ -166,8 +264,8 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
         {/* Status indicator on body */}
         <div
           className={`
-            ${bodyClass} flex items-center justify-center border-2 transition-all shadow-xl relative
-            ${status !== 'idle' ? statusStyles[status] : (selected ? 'border-foreground shadow-2xl z-40' : statusStyles.idle)}
+            ${bodyClass} flex items-center justify-center border-0 transition-all relative
+            ${status !== 'idle' ? statusStyles[status] : statusStyles.idle}
             ${tool.bg}
           `}
         >

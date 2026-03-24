@@ -162,6 +162,8 @@ function normaliseArchitectNodes(rawNodes: any[], rawEdges: any[]) {
         status: 'idle',
         config: n.data?.config || {}, // Preserve AI generated config!
       },
+      // If it's a sticky note, put it underneath everything else
+      zIndex: resolvedTool.executionKey === 'sticky_note' ? -50 : 0,
     };
   });
 
@@ -411,6 +413,8 @@ function AgentBuilderInner() {
   const nodesWithHandlers = useMemo(
     () => nodes.map(n => ({ 
       ...n, 
+      zIndex: n.data?.executionKey === 'sticky_note' ? -50 : (n.zIndex ?? 0),
+      className: n.data?.executionKey === 'sticky_note' ? 'sticky-note-wrapper' : '',
       data: { 
         ...n.data, 
         onTrigger: handleTrigger,
@@ -596,6 +600,7 @@ function AgentBuilderInner() {
             onConnect={onConnect}
             isValidConnection={isValidConnection}
             onNodeClick={onNodeClick}
+            elevateNodesOnSelect={false}
             onPaneClick={onPaneClick}
             onEdgeContextMenu={onEdgeContextMenu}
             nodeTypes={nodeTypes}
@@ -634,7 +639,12 @@ function AgentBuilderInner() {
                 opacity: 0.8
               }}
               position="bottom-left"
-              nodeColor={() => 'var(--foreground)'}
+              nodeColor={(n: any) => {
+                if (n.data?.executionKey === 'sticky_note') return 'rgba(120, 120, 120, 0.08)';
+                return 'var(--foreground)';
+              }}
+              nodeStrokeColor={(n: any) => (n.data?.executionKey === 'sticky_note' ? 'transparent' : 'rgba(0,0,0,0.1)')}
+              nodeBorderRadius={8}
               maskColor="rgba(var(--background-rgb, 0,0,0), 0.1)"
               zoomable
               pannable

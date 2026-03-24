@@ -448,7 +448,7 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
                   <SlidersHorizontal size={12} />
                   Parameters
                 </div>
-                {onTrigger && (
+                {onTrigger && tool.executionKey !== 'sticky_note' && (
                   <button
                     onClick={() => onTrigger(node.id)}
                     className="flex items-center gap-1.5 px-4 py-1.5 bg-[#f04e3a] text-white rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-[#ff5d4a] hover:-translate-y-0.5 active:translate-y-0 transition-all shadow-lg shadow-[#f04e3a]/20"
@@ -744,11 +744,16 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
                 })() : (
                   /* ── Regular configFields (Agent, Models, Triggers) ── */
                   (tool.configFields as any)
-                   .filter((f: any) => f.type !== 'notice' && f.type !== 'hidden')
+                   .filter((f: any) => 
+                      f.type !== 'notice' && 
+                      f.type !== 'hidden' && 
+                      f.key !== 'width' && 
+                      f.key !== 'height'
+                   )
                    .map((field: any) => (
                     <div key={field.key} className="space-y-2">
                        <label className="text-[10px] font-bold text-muted/60 uppercase ml-1 font-inter tracking-tight">{field.label}</label>
-                      {field.type === 'select' ? (
+                      {(field.type === 'select' || field.key === 'model') ? (
                         <CustomSelect
                           value={values[field.key] ?? ''}
                           onChange={val => set(field.key, val)}
@@ -768,6 +773,28 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
                                 )
                           }
                         />
+                      ) : (field.type === 'color' || field.label.toLowerCase().includes('color')) ? (
+                        <div className="flex items-center gap-4 animate-in fade-in duration-300">
+                          <div className="relative group shrink-0">
+                            <input
+                              type="color"
+                              value={values[field.key] ?? '#FFD233'}
+                              onChange={e => set(field.key, e.target.value)}
+                              className="w-12 h-12 rounded-2xl border border-border/20 bg-foreground/[0.03] cursor-pointer overflow-hidden p-0 opacity-100"
+                              style={{ appearance: 'none', border: 'none' }}
+                            />
+                            <div 
+                              className="absolute inset-0 rounded-2xl border border-white/10 pointer-events-none transition-all group-hover:scale-105" 
+                              style={{ backgroundColor: values[field.key] ?? '#FFD233' }} 
+                            />
+                          </div>
+                          <input
+                            value={values[field.key] ?? '#FFD233'}
+                            onChange={e => set(field.key, e.target.value)}
+                            className="flex-1 px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-xl text-[12px] font-mono outline-none focus:border-foreground/40 transition-all uppercase tracking-widest text-foreground/80"
+                            placeholder="#000000"
+                          />
+                        </div>
                       ) : field.type === 'textarea' ? (
                         <textarea
                           value={values[field.key] ?? ''}
