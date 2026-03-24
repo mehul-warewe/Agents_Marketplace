@@ -4,8 +4,8 @@ import { getRedisConnection, AGENT_EXECUTION_QUEUE } from '@repo/queue';
 import { createClient, agentRuns, eq } from '@repo/database';
 import { resolveCredential, resolveGoogleToken } from './credentialResolver.js';
 import { deductCredits } from './credit-manager.js';
-import { ToolContext } from './tools/index.js';
 import { WORKER_NODES } from './nodes/index.js';
+import type { ToolContext } from '@repo/nodes';
 
 dotenv.config({ path: '../../.env' });
 

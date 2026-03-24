@@ -1,5 +1,4 @@
-import { NODE_REGISTRY } from '@repo/nodes';
-import type { ToolHandler } from '../tools/types.js';
+import { NODE_REGISTRY, type ToolHandler, type ToolContext } from '@repo/nodes';
 import { 
   // Triggers
   manualTriggerHandler, chatTriggerHandler, webhookTriggerHandler,

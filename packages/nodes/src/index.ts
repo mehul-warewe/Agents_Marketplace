@@ -1,4 +1,4 @@
-export type { NodeDefinition, NodeSocket, ConfigField, ConfigFieldType, NodeCategory, SocketType, SocketPosition } from './types.js';
+export type { NodeDefinition, NodeSocket, ConfigField, ConfigFieldType, NodeCategory, SocketType, SocketPosition, ToolContext, ToolHandler } from './types.js';
 
 import { manualTrigger } from './definitions/manual-trigger/manual-trigger.js';
 import { chatTrigger } from './definitions/chat-trigger/chat-trigger.js';
