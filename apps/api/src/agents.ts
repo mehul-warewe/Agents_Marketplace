@@ -174,29 +174,116 @@ CRITICAL RULES:
 
 Agent Config Examples - ALWAYS DO THIS:
 
+DYNAMIC DATA EXTRACTION PATTERNS:
+When prompt mentions data coming "from the chat", "from the user", "from the message",
+"from input", "from webhook", "provided by", "in the message", etc.:
+1. Identify what field is dynamic (username, email, topic, etc.)
+2. Identify the source (chat message, input data, webhook, etc.)
+3. Include extraction instructions in userMessage
+
+Pattern examples:
+- "from the chat" → "Extract X from the chat message"
+- "from the user input" → "Extract X from the user's input"
+- "provided in the message" → "Extract X from the message"
+- "given by the user" → "The user will provide X"
+- "mentioned in" → "Look for X in the text"
+
 User says: "I want an agent that creates GitHub issues"
 Your response: {
   userMessage: "Create a GitHub issue based on the input provided",
   systemPrompt: "You are a helpful developer assistant..."
 }
 
-User says: "Build a workflow that analyzes emails and responds"
+User says: "github repository checker find repositories for the user from the chat"
 Your response: {
-  userMessage: "Analyze the email message and provide a helpful response",
-  systemPrompt: "..."
+  userMessage: "Find GitHub repositories for the user mentioned in the chat message. Extract the GitHub username from the message and search for their repositories. Return the count and list of repository names.",
+  systemPrompt: "You are a GitHub expert assistant. Extract user information from the chat message intelligently."
 }
 
-User says: "Chat trigger with an agent"
+User says: "Build a workflow that analyzes emails and responds to them from the chat"
 Your response: {
-  userMessage: "Respond helpfully to the user's chat message",
-  systemPrompt: "..."
+  userMessage: "Read the email content from the chat message. Analyze it and generate a helpful response. The email text will be provided in the user's message.",
+  systemPrompt: "You are a professional email analyst. Extract email content from messages and provide thoughtful responses."
 }
 
-User says: "Process incoming data with an AI agent"
+User says: "Chat trigger with an agent that processes tasks"
 Your response: {
-  userMessage: "Process the incoming data and extract meaningful information",
-  systemPrompt: "..."
+  userMessage: "Process the task described in the chat message. Extract the task details and execute them using available tools.",
+  systemPrompt: "You are a helpful task processor. Extract task requirements from chat messages and complete them."
 }
+
+User says: "Process incoming webhook data and save to database"
+Your response: {
+  userMessage: "Process the incoming webhook payload. Extract relevant data from the payload and save it to the database using available tools.",
+  systemPrompt: "You are a data processor. Extract data from webhook payloads and store it appropriately."
+}
+
+RULE: When data is "from the chat/input/message/webhook":
+- Explicitly tell Agent to EXTRACT it
+- Describe HOW to identify it in the source
+- Include the extraction logic in userMessage
+- Don't leave it vague - be specific about what to extract
+
+═══ 📝 DYNAMIC DATA RECOGNITION (CRITICAL!) ═══
+Learn to identify when prompts describe DYNAMIC data that comes from user input.
+
+KEYWORDS THAT INDICATE DYNAMIC DATA:
+- "from the chat"
+- "from the user input"
+- "from the message"
+- "provided by the user"
+- "given in the chat"
+- "mentioned in"
+- "from the webhook"
+- "in the incoming request"
+- "from the trigger"
+- "provided in"
+- "the user will provide"
+- "based on the input"
+- "from the email"
+- "extracted from"
+
+EXTRACTION INSTRUCTION TEMPLATES:
+
+If prompt says "username from the chat":
+→ userMessage: "Extract the GitHub username from the chat message and find repositories for that user."
+
+If prompt says "email address provided by user":
+→ userMessage: "Extract the email address from the user's message and send an email to that address."
+
+If prompt says "webhook data":
+→ userMessage: "Process the incoming webhook payload. Extract and validate the data, then take appropriate action."
+
+If prompt says "task mentioned in the message":
+→ userMessage: "Read the task description from the user's message. Identify what needs to be done and execute it."
+
+ALGORITHM FOR EXTRACTING DYNAMIC DATA:
+
+1. Scan prompt for KEYWORDS (from, provided, given, mentioned, in the)
+2. Identify what FIELD is dynamic (username, email, task, data, etc.)
+3. Identify the DATA SOURCE (chat, message, input, webhook, trigger)
+4. Generate extraction instruction:
+   "Extract [FIELD] from [SOURCE] and [ACTION]"
+
+EXAMPLES:
+
+Prompt: "github repository checker find repositories for the user from the chat"
+→ FIELD: "GitHub username"
+→ SOURCE: "chat message"
+→ ACTION: "find repositories"
+→ Generated userMessage: "Extract the GitHub username from the chat message and search for their repositories. Return count and names."
+
+Prompt: "send reminder emails to all addresses from the webhook data"
+→ FIELD: "email addresses"
+→ SOURCE: "webhook payload"
+→ ACTION: "send reminders"
+→ Generated userMessage: "Extract all email addresses from the incoming webhook data. Send a reminder email to each address."
+
+Prompt: "analyze the document and summarize the key points from user input"
+→ FIELD: "document content"
+→ SOURCE: "user input"
+→ ACTION: "analyze and summarize"
+→ Generated userMessage: "Read the document provided by the user. Analyze it thoroughly and provide a clear summary of the key points."
 
 ═══ 🔗 INTELLIGENT FIELD MAPPING (SEMANTIC MATCHING) ═══
 When nodes are connected, field names may NOT match exactly. DO NOT FAIL.
@@ -265,6 +352,64 @@ VALIDATION RULES:
 4. MUST MATCH TYPES: Data flowing between nodes must match in type
 5. NO MISSING INPUTS: If a node requires 'channelId' and upstream doesn't provide it, set it in config or add Code node
 6. ENRICHMENT: Use Code nodes to transform/enrich data if needed
+
+═══ AGENTIC TOOL CONNECTIONS (CRITICAL!) ═══
+When the prompt mentions ANY platform tool (GitHub, Gmail, Slack, Drive, etc.):
+1. DO NOT create as sequential node after Agent
+2. DO connect to Agent's "Tools" port
+3. This makes the tool available for Agent to CALL autonomously
+
+WRONG ❌:
+Chat → Agent → GitHub
+(GitHub is sequential - Agent can't call it, data just flows through)
+
+RIGHT ✅:
+Chat → Agent ← GitHub (connected to Tools port)
+(GitHub is a tool Agent can call when needed)
+
+EXAMPLES:
+
+User says: "github repository checker find repositories for a given user"
+Structure:
+  - Trigger: Chat
+  - Agent: userMessage = "Find GitHub repositories for the provided user"
+  - Model: OpenRouter (connected to Agent.Model)
+  - Tool: GitHub (connected to Agent.Tools port, NOT as sequential)
+  - GitHub config: { operation: "list" } ← Only set static config
+    (Agent will fill owner from chat message dynamically)
+
+User says: "Send emails and post to slack using an agent"
+Structure:
+  - Trigger: Chat
+  - Agent: userMessage = "Send emails and post to Slack based on the request"
+  - Model: OpenRouter
+  - Tools connected to Agent.Tools port:
+    - Gmail (config: { operation: "send" })
+    - Slack (config: { operation: "send" })
+  (Agent calls both tools as needed)
+
+KEY DIFFERENCES:
+
+Sequential Node (❌ for tools):
+  Tool → receives data → processes → passes result downstream
+  Agent cannot call it - just a data processor
+
+Tool Connection (✅ for tools):
+  Agent.Tools ← Tool Definition
+  Agent can call the tool when it decides to
+  Tool executes on Agent's request
+  Result comes back to Agent for next decision
+
+RECOGNITION RULES:
+If prompt mentions:
+- "GitHub" → Add GitHub node connected to Tools port
+- "Gmail" / "email" → Add Gmail node connected to Tools port
+- "Slack" → Add Slack node connected to Tools port
+- "Google Drive" → Add Drive node connected to Tools port
+- "Sheets" → Add Sheets node connected to Tools port
+- etc.
+
+ALWAYS connect these to Agent as TOOLS, not sequential nodes!
 
 ═══ SPECIAL RULES ═══
 - ALL platform tools (GitHub, Slack, etc.) use the ".mcp" suffix (e.g., github.mcp).
