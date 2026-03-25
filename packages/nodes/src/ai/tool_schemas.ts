@@ -548,23 +548,21 @@ export const TOOL_SCHEMAS: Record<string, { name: string; description: string; p
     },
   },
 
-  // ── MCP Platform Routers ──────────────────────────────────────────────────
   github_mcp: {
     name: 'github',
     description: 'Manage GitHub. Operations: list (list issues), get (read issue), create (create issue), update (update issue).',
     parameters: {
       type: 'object',
       properties: {
-        resource:  { type: 'string', enum: ['issue', 'repository', 'pullRequest'], default: 'issue' },
-        operation: { type: 'string', enum: ['list', 'get', 'create', 'update'], default: 'list' },
+        resource:  { type: 'string', enum: ['issue', 'repository', 'pullRequest'], description: 'Resource to interact with' },
+        operation: { type: 'string', enum: ['list', 'get', 'create', 'update'], description: 'Action to perform' },
         owner:     { type: 'string', description: 'GitHub username or organization' },
         repo:      { type: 'string', description: 'Repository name' },
-        issueNumber: { type: 'number', description: 'The issue/PR number' },
+        issueNumber: { type: 'string', description: 'The issue/PR number' },
         title:     { type: 'string', description: 'Title (for create/update)' },
         body:      { type: 'string', description: 'Body (for create/update)' },
-        state:     { type: 'string', enum: ['open', 'closed'], description: 'State (for update)' },
       },
-      required: ['operation', 'owner', 'repo'],
+      required: ['operation', 'resource', 'owner', 'repo'],
     },
   },
 

@@ -13,8 +13,9 @@ export const driveNode: NodeDefinition = {
   border: 'border-[#fbbc04]/20',
   isTrigger: false,
   executionKey: 'google_drive',
+  usableAsTool: true,
   inputs: [{ name: 'input', type: 'data', position: 'left' }],
-  outputs: [{ name: 'output', type: 'data', position: 'right' }],
+  outputs: [{ name: 'output', type: 'any', position: 'right' }],
   credentialTypes: ['google_drive_oauth'],
   configFields: [
     {

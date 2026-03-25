@@ -2,10 +2,10 @@ import * as dotenv from 'dotenv';
 import { Worker } from 'bullmq';
 import { getRedisConnection, AGENT_EXECUTION_QUEUE } from '@repo/queue';
 import { createClient, agentRuns, eq } from '@repo/database';
-import { resolveCredential, resolveGoogleToken } from './credentialResolver.js';
+import { resolveCredential, resolveGoogleToken, resolveDefaultCredential } from './credentialResolver.js';
 import { deductCredits } from './credit-manager.js';
 import { WORKER_NODES } from './nodes/index.js';
-import type { ToolContext } from '@repo/nodes';
+import { ToolContext, NODE_REGISTRY } from '@repo/nodes';
 
 dotenv.config({ path: '../../.env' });
 
@@ -264,22 +264,34 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
 
         if (isAgenticToolNode) {
           console.log(`[Flow] "${nodeLabel}" is an agentic tool — forwarding definition (not executing).`);
+          const nodeDef = NODE_REGISTRY.find(n => n.executionKey === execKey);
           nodeResult = {
             __toolDefinition: true,
             nodeId: nodeId, // Pass node ID so synthesis can log its usage
             executionKey: execKey,
             label: nodeLabel,
+            credentialTypes: nodeDef?.credentialTypes || [],
             config,           // includes credentialId + any fallback static values
           };
         } else {
           // ── EXECUTE NODE LOGIC ─────────────────────────────────────────────
           const handler = WORKER_NODES[execKey];
           if (handler) {
-            // Resolve node-specific credentials if available
+            // Resolve node-specific credentials: Use selected or find default for user
             let nodeCredentials = null;
             if (config.credentialId) {
               const res = await resolveCredential(config.credentialId, job.data.userId);
               nodeCredentials = res.data;
+            } else {
+              // Automatic lookup: if user has a credential for this node type, use the newest valid one
+              const nodeDef = NODE_REGISTRY.find(n => n.executionKey === execKey);
+              if (nodeDef?.credentialTypes && nodeDef.credentialTypes.length > 0) {
+                const res = await resolveDefaultCredential(nodeDef.credentialTypes, job.data.userId);
+                if (res) {
+                  console.log(`[Flow] Using default saved credential for "${nodeLabel}" (${res.type})`);
+                  nodeCredentials = res.data;
+                }
+              }
             }
 
             const toolContext: ToolContext = {
@@ -294,6 +306,9 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
               nodeId,
               execKey,
               label: nodeLabel,
+              handlers: WORKER_NODES,
+              resolveCredential,
+              resolveDefaultCredential,
             };
             nodeResult = await handler(toolContext);
             if (nodeResult && nodeResult._activeHandle) {

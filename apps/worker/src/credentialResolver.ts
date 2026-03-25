@@ -1,5 +1,5 @@
 import * as dotenv from 'dotenv';
-import { createClient, credentials, eq, and } from '@repo/database';
+import { createClient, credentials, eq, and, inArray, desc } from '@repo/database';
 import { decryptCredential } from './credentialEncryption.js';
 import axios from 'axios';
 
@@ -29,6 +29,29 @@ export async function resolveCredential(
   const cred = rows[0];
   if (!cred) throw new Error(`Credential ${credentialId} not found or access denied`);
   if (!cred.isValid) throw new Error(`Credential "${cred.name}" is marked invalid. Please re-connect it in Settings → Integrations.`);
+
+  const data = decryptCredential(cred.data);
+  return { type: cred.type, data };
+}
+
+/**
+ * Automatically finds the newest valid credential for a given set of types.
+ */
+export async function resolveDefaultCredential(
+  types: string[],
+  userId: string,
+): Promise<ResolvedCredential | null> {
+  const rows = await db.select()
+    .from(credentials)
+    .where(and(
+      inArray(credentials.type, types),
+      eq(credentials.userId, userId),
+      eq(credentials.isValid, true),
+    ))
+    .orderBy(desc(credentials.createdAt));
+
+  const cred = rows[0];
+  if (!cred) return null;
 
   const data = decryptCredential(cred.data);
   return { type: cred.type, data };

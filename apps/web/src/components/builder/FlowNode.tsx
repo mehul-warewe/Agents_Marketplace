@@ -200,13 +200,16 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
           <div className={`absolute inset-0 -m-1 ${isToolMode ? 'rounded-full' : 'rounded-2xl'} border-2 border-blue-500 animate-ping opacity-20 pointer-events-none`} />
         )}
 
-        {/* Target Handle (Left) — Only if NOT connected as a tool */}
-        {!isConnectedToAgent && tool.inputs.map(socket => {
+        {/* Target Handle (Contextual: Bottom if tool, Left if linear) */}
+        {tool.inputs.map(socket => {
+          const isActuallyTool = isConnectedToAgent && isToolMode;
+          if (isActuallyTool) return null; // Only show output port for full-duplex agentic tools
+
           return (
             <React.Fragment key={socket.name}>
               <Handle
                 type="target"
-                position={Position.Left}
+                position={socket.position as any || Position.Left}
                 id={socket.name}
                 className="!bg-[#252525] !border !border-gray-500 hover:!bg-white !w-2 !h-2 !rounded-full !shadow-none z-30"
                 style={{ left: -4, top: '50%', transform: 'translateY(-50%)' }}

@@ -13,8 +13,9 @@ export const youtubeNode: NodeDefinition = {
   border: 'border-[#ff0000]/20',
   isTrigger: false,
   executionKey: 'google_youtube',
+  usableAsTool: true,
   inputs: [{ name: 'input', type: 'data', position: 'left' }],
-  outputs: [{ name: 'output', type: 'data', position: 'right' }],
+  outputs: [{ name: 'output', type: 'any', position: 'right' }],
   credentialTypes: ['google_youtube_oauth'],
   configFields: [
     {

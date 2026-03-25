@@ -14,6 +14,7 @@ export const codeHandler: ToolHandler = async (ctx: ToolContext) => {
   try {
     const sandbox = {
       $input: incomingData || {},
+      input: incomingData || {}, // Alias for resilience
       console: {
         log: (...args: any[]) => console.log(`[Code Node]:`, ...args),
         error: (...args: any[]) => console.error(`[Code Node]:`, ...args),

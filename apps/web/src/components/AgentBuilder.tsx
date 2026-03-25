@@ -447,9 +447,20 @@ function AgentBuilderInner() {
     // 1. Get Source & Target Nodes
     const sourceNode = nodes.find(n => n.id === connection.source);
     const targetNode = nodes.find(n => n.id === connection.target);
-    if (!sourceNode || !targetNode) return false;
+    if (!sourceNode || !targetNode || sourceNode.id === targetNode.id) return false;
 
-    // 2. Resolve Tool Definitions
+    // 2. Check for existing connections to the target handle (Restrict to ONE)
+    // EXCEPTION: The 'Tools' port on the Agent, which accepts multiple tool connections.
+    const isMultiInputHandle = connection.targetHandle?.toLowerCase() === 'tools';
+    const existingEdges = edges.filter(e => e.target === connection.target && e.targetHandle === connection.targetHandle);
+    
+    if (!isMultiInputHandle && existingEdges.length > 0) {
+      // Allow if we're technically just "re-connecting" the same edge (though ReactFlow handles this, we be explicit)
+      const sameEdgeExists = existingEdges.some(e => e.source === connection.source && e.sourceHandle === connection.sourceHandle);
+      if (!sameEdgeExists) return false;
+    }
+
+    // 3. Resolve Tool Definitions
     const sourceTool = getToolById(sourceNode.data.toolId);
     const targetTool = getToolById(targetNode.data.toolId);
     if (!sourceTool || !targetTool) return false;
@@ -489,7 +500,7 @@ function AgentBuilderInner() {
     }
 
     return sourceType === targetType;
-  }, [nodes]);
+  }, [nodes, edges]);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges(eds => addEdge({ ...params, ...EDGE_DEFAULTS }, eds)),

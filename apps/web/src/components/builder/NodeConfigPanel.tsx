@@ -211,6 +211,20 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
     }
   }, [values.credentialId, tool.category]);
 
+  // Auto-select credential if none selected and available
+  useEffect(() => {
+    if (!values.credentialId && allCredentials && tool.credentialTypes && tool.credentialTypes.length > 0) {
+      const matching = allCredentials.filter((c: any) => 
+        tool.credentialTypes?.includes(c.type)
+      );
+      if (matching.length > 0) {
+        // Find the best match (e.g. valid and newest)
+        const validMatch = matching.find((c: any) => c.isValid) || matching[0];
+        set('credentialId', validMatch.id);
+      }
+    }
+  }, [allCredentials, tool.credentialTypes, values.credentialId]);
+
   const set = (key: string, val: any) =>
     setValues(prev => ({ ...prev, [key]: val }));
 
@@ -226,12 +240,13 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
   }, [values, operations, tool, node.data, onUpdate, onClose]);
 
   const handleAddCred = async () => {
-    if (!newCredName || !tool.credentialTypes?.[0]) return;
+    const type = tool.credentialTypes?.[0];
+    if (!newCredName || !type) return;
     
     try {
       const res = await createCredential.mutateAsync({
         name: newCredName,
-        type: tool.credentialTypes[0],
+        type: type,
         data: newCredData
       });
       
@@ -410,7 +425,7 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
                            </div>
                          ) : (
                            <div className="p-3 bg-foreground/[0.02] rounded-lg border border-border/20 text-center">
-                              <span className="text-[9px] font-bold text-muted/40 uppercase tracking-widest italic">Waiting for execution...</span>
+                              <span className="text-[9px] font-black text-muted/40 uppercase tracking-widest italic animate-pulse">Waiting for pulse...</span>
                            </div>
                          )}
                       </div>
@@ -467,164 +482,6 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
                     <p className="text-[11px] font-bold text-blue-500/80 leading-relaxed tracking-tight">{field.label}</p>
                   </div>
                 ))}
-
-                {allowedTypes && allowedTypes.length > 0 && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between px-1">
-                      <label className="text-[10px] font-bold text-muted/60 uppercase">Authentication</label>
-                      {!isAddingCred && (
-                        <button 
-                          onClick={() => setIsAddingCred(true)}
-                          className="text-[9px] font-black text-foreground hover:underline uppercase tracking-widest"
-                        >
-                          + Connect New
-                        </button>
-                      )}
-                    </div>
-
-                    {isAddingCred ? (
-                      <div className="p-4 bg-foreground/[0.03] border border-dashed border-border/60 rounded-xl space-y-4 animate-in slide-in-from-top-2 duration-300">
-                        {tool.credentialTypes?.[0]?.startsWith('google_') || tool.credentialTypes?.[0]?.startsWith('slack_') ? (
-                          <div className="space-y-4 py-2">
-                            <p className="text-[10px] text-muted font-medium text-center px-4">
-                              You'll be redirected to {tool.credentialTypes[0].includes('google') ? 'Google' : 'Slack'} to securely authorize Aether.
-                            </p>
-                            <button
-                              onClick={() => {
-                                if (tool.credentialTypes && tool.credentialTypes[0]) {
-                                  handleConnectOAuth(tool.credentialTypes[0]);
-                                }
-                              }}
-                              className="w-full flex items-center justify-center gap-2 py-3 bg-foreground text-background rounded-xl text-[11px] font-black uppercase tracking-wider hover:opacity-90 transition-all"
-                            >
-                              <Globe size={14} />
-                              Continue with {tool.credentialTypes[0].includes('google') ? 'Google' : 'Slack'}
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="space-y-4">
-                              <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Account Display Name</label>
-                                <input
-                                  type="text"
-                                  value={newCredName}
-                                  onChange={e => setNewCredName(e.target.value)}
-                                  placeholder="e.g. My Production DB"
-                                  className="w-full px-3 py-2 bg-background border border-border/40 rounded-xl text-[11px] outline-none focus:border-foreground/40 transition-all font-bold"
-                                />
-                              </div>
-
-                              {/* Schema-aware fields */}
-                              {(() => {
-                                const type = tool.credentialTypes?.[0];
-                                if (!type) return null;
-
-                                // OAuth Logic
-                                if (type.includes('oauth')) {
-                                  const provider = type.includes('google') ? 'google' : 'slack';
-                                  return (
-                                    <button 
-                                      onClick={() => {
-                                        const width = 600;
-                                        const height = 700;
-                                        const left = window.screenX + (window.outerWidth - width) / 2;
-                                        const top = window.screenY + (window.outerHeight - height) / 2;
-                                        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-                                        
-                                        window.open(
-                                          `${apiBase}/credentials/oauth/${provider}`,
-                                          `Connect ${provider}`,
-                                          `width=${width},height=${height},left=${left},top=${top}`
-                                        );
-                                        
-                                        // Auto close and refresh after a delay (simulating successful OAuth flow)
-                                        setTimeout(() => {
-                                          refetchCreds();
-                                          setIsAddingCred(false);
-                                        }, 4000);
-                                      }}
-                                      className="w-full flex items-center justify-center gap-3 py-3 bg-foreground text-background rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:opacity-90 transition-all"
-                                    >
-                                      <LogIn size={14} strokeWidth={3} />
-                                      Authorize with {provider === 'google' ? 'Google' : 'Slack'}
-                                    </button>
-                                  );
-                                }
-
-                                // Standard Fields
-                                const schema = credentialSchemas?.[type];
-                                if (!schema) {
-                                  // Fallback to single API Key if schema not loaded or defined
-                                  return (
-                                    <div className="space-y-1.5">
-                                      <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Secret Key</label>
-                                      <input
-                                        type="password"
-                                        value={newCredData.apiKey || ''}
-                                        onChange={e => setNewCredData({ ...newCredData, apiKey: e.target.value })}
-                                        placeholder="API Key (sk-...)"
-                                        className="w-full px-3 py-2 bg-background border border-border/40 rounded-xl text-[11px] outline-none focus:border-foreground/40 transition-all font-medium"
-                                      />
-                                    </div>
-                                  );
-                                }
-
-                                return schema.fields.map((f: any) => (
-                                  <div key={f.key} className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">{f.label}</label>
-                                    <input
-                                      type={f.type === 'password' || f.key.toLowerCase().includes('key') || f.key.toLowerCase().includes('secret') ? 'password' : 'text'}
-                                      value={newCredData[f.key] || ''}
-                                      onChange={e => setNewCredData({ ...newCredData, [f.key]: e.target.value })}
-                                      placeholder={f.placeholder || `Enter ${f.label.toLowerCase()}...`}
-                                      className="w-full px-3 py-2 bg-background border border-border/40 rounded-xl text-[11px] outline-none focus:border-foreground/40 transition-all font-medium"
-                                    />
-                                  </div>
-                                ));
-                              })()}
-                            </div>
-                            
-                            {tool.credentialTypes?.[0] && !tool.credentialTypes[0]?.includes('oauth') && (
-                              <div className="flex items-center gap-2 pt-2">
-                                <button
-                                  onClick={handleAddCred}
-                                  disabled={createCredential.isPending}
-                                  className="flex-1 py-3 bg-foreground text-background rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:opacity-90 disabled:opacity-40 transition-all shadow-xl shadow-foreground/5"
-                                >
-                                  {createCredential.isPending ? 'Validating...' : 'Verify & Establish_Link'}
-                                </button>
-                              </div>
-                            )}
-                          </>
-                        )}
-                        <div className="pt-1 border-t border-border/20">
-                          <button
-                            onClick={() => setIsAddingCred(false)}
-                            className="w-full py-2 text-[10px] font-black uppercase text-muted hover:text-foreground transition-all"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <CustomSelect
-                        value={values.credentialId ?? ''}
-                        onChange={val => set('credentialId', val)}
-                        options={(filteredCreds || []).map((c: any) => ({ id: c.id, label: c.name }))}
-                        placeholder="Select a credential..."
-                      />
-                    )}
-                    
-                    {!isAddingCred && (!filteredCreds || filteredCreds.length === 0) && (
-                      <div className="px-4 py-3 bg-red-500/5 border border-red-500/10 rounded-xl">
-                        <p className="text-[10px] font-bold text-red-500 uppercase tracking-tight">
-                          No {tool.label} accounts linked. Please connect one to proceed.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {/* ── Multi-step operations (Google tools) ── */}
                 {(tool as any).operationFields ? (() => {
@@ -1023,13 +880,120 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
           {activeTab === 'settings' && (
             <div className="space-y-6 animate-in fade-in duration-300">
               <div className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest opacity-40">
-                  <ShieldCheck size={12} />
-                  Reliability Protocols
-                </div>
-              <div className="p-6 rounded-xl border border-dashed border-border/60 text-center">
-                 <p className="text-[10px] font-black uppercase tracking-widest text-muted opacity-40">Advanced_Settings</p>
-                 <p className="text-[9px] font-medium mt-1 text-muted opacity-20 uppercase italic">Error handling & retry logic coming soon</p>
+                <ShieldCheck size={12} />
+                Authentication & Security
               </div>
+
+              {tool.credentialTypes && tool.credentialTypes.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-foreground/[0.015] border border-border/40 rounded-xl space-y-4 font-inter">
+                    <div className="flex items-center justify-between px-1">
+                      <label className="text-[10px] font-black text-muted uppercase tracking-widest">Connect Account</label>
+                      {!isAddingCred && (
+                        <button 
+                          onClick={() => setIsAddingCred(true)}
+                          className="text-[9px] font-black text-foreground hover:underline uppercase tracking-widest"
+                        >
+                          + Add New
+                        </button>
+                      )}
+                    </div>
+
+                    {isAddingCred ? (
+                      <div className="p-4 bg-foreground/[0.02] border border-dashed border-border/60 rounded-xl space-y-4 animate-in slide-in-from-top-2 duration-300 font-inter">
+                        {(tool.credentialTypes?.[0]?.startsWith('google_') || tool.credentialTypes?.[0]?.startsWith('slack_')) ? (
+                          <div className="space-y-4 py-2 text-center">
+                            <Globe size={20} className="mx-auto text-muted/40" />
+                            <p className="text-[10px] text-muted font-medium px-4">
+                              Connecting to {tool.label} via OAuth.
+                            </p>
+                            <button
+                              onClick={() => {
+                                const type = tool.credentialTypes?.[0];
+                                if (type) handleConnectOAuth(type);
+                              }}
+                              className="w-full py-3 bg-foreground text-background rounded-xl text-[11px] font-black uppercase tracking-wider hover:opacity-90 transition-all font-inter"
+                            >
+                              Authorize {tool.label}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Account Label</label>
+                              <input
+                                type="text"
+                                value={newCredName}
+                                onChange={e => setNewCredName(e.target.value)}
+                                placeholder="My Account"
+                                className="w-full px-3 py-2 bg-background border border-border/40 rounded-xl text-[11px] outline-none focus:border-foreground/40 transition-all font-bold"
+                              />
+                            </div>
+
+                            {(() => {
+                              const type = tool.credentialTypes?.[0];
+                              if (!type) return null;
+                              const schema = credentialSchemas?.[type];
+                              if (!schema) return (
+                                <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Secret Key</label>
+                                  <input
+                                    type="password"
+                                    value={newCredData.apiKey || ''}
+                                    onChange={e => setNewCredData({ ...newCredData, apiKey: e.target.value })}
+                                    className="w-full px-3 py-2 bg-background border border-border/40 rounded-xl text-[11px] outline-none focus:border-foreground/40 transition-all font-medium"
+                                  />
+                                </div>
+                              );
+                              return schema.fields.map((f: any) => (
+                                <div key={f.key} className="space-y-1.5">
+                                  <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">{f.label}</label>
+                                  <input
+                                    type={f.type === 'password' || f.key.toLowerCase().includes('key') || f.key.toLowerCase().includes('secret') ? 'password' : 'text'}
+                                    value={newCredData[f.key] || ''}
+                                    onChange={e => setNewCredData({ ...newCredData, [f.key]: e.target.value })}
+                                    placeholder={f.placeholder || `Enter ${f.label.toLowerCase()}...`}
+                                    className="w-full px-3 py-2 bg-background border border-border/40 rounded-xl text-[11px] outline-none focus:border-foreground/40 transition-all font-medium"
+                                  />
+                                </div>
+                              ));
+                            })()}
+
+                            <button
+                              onClick={handleAddCred}
+                              disabled={createCredential.isPending}
+                              className="w-full py-3 bg-foreground text-background rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:opacity-90 disabled:opacity-40 transition-all shadow-xl shadow-foreground/5"
+                            >
+                              {createCredential.isPending ? 'Saving...' : 'Confirm & Save'}
+                            </button>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => setIsAddingCred(false)}
+                          className="w-full py-2 text-[9px] font-black uppercase text-muted hover:text-foreground transition-all border-t border-border/10 mt-2 pt-2"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <CustomSelect
+                        value={values.credentialId ?? ''}
+                        onChange={val => set('credentialId', val)}
+                        options={(allCredentials || []).filter((c: any) => tool.credentialTypes?.includes(c.type)).map((c: any) => ({ id: c.id, label: c.name }))}
+                        placeholder="Choose active account..."
+                      />
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-10 rounded-2xl border-2 border-dashed border-border/20 text-center space-y-3 grayscale opacity-30 select-none">
+                  <ShieldCheck size={32} className="mx-auto text-muted" strokeWidth={1} />
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-foreground">No Auth Required</p>
+                    <p className="text-[10px] font-medium text-muted uppercase italic">Built-in operations only</p>
+                  </div>
+                </div>
+              )}
 
               <div className="pt-6 border-t border-border/40">
                 <button

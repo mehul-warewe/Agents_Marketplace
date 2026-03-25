@@ -12,8 +12,16 @@ export const synthesisHandler: ToolHandler = async (context: ToolContext) => {
     const agentInstructions = `\nYour goal is to fulfill the user's objective autonomously using the tools provided.\n- Proceed with tool calls immediately when relevant.\n- Summary results ONLY after tools executed.\n`;
     systemMessage = `${systemMessage}\n${agentInstructions}`;
 
-    // Model and Memory resolution logic...
-    const finalModelConfig = { ...config, apiKey: credentials?.apiKey || credentials?.key || '' };
+    // Find model configuration from upstream nodes (e.g. "OpenRouter" or "Google" model nodes)
+    const incomingModelConfig = Object.values(incomingData).find((v: any) => v && v._type === 'model_config') as any;
+    
+    // Merge incoming config (from nodes) with local node config
+    const finalModelConfig = { 
+      ...config, 
+      ...incomingModelConfig,
+      apiKey: credentials?.apiKey || credentials?.key || '' 
+    };
+    
     const model = await getLangChainModel(finalModelConfig, userId);
 
     // Tools discovery from context...
@@ -37,7 +45,7 @@ export const synthesisHandler: ToolHandler = async (context: ToolContext) => {
     ]);
 
     // Note: We'd need to pass the handlers for recursive agentic calling if desired
-    const tools = getLangChainTools(toolDefinitions, {}, context); 
+    const tools = getLangChainTools(toolDefinitions, context.handlers || {}, context); 
     const agent = await createToolCallingAgent({ llm: model, tools, prompt });
     const executor = new AgentExecutor({ agent, tools, maxIterations: 10 });
     const result = await executor.invoke({ input: render(config.userMessage || 'Fulfill objective.') });

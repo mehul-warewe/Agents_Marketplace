@@ -13,8 +13,9 @@ export const codeNode: NodeDefinition = {
   border: 'border-[#f59e0b]/20',
   isTrigger: false,
   executionKey: 'logic_code',
+  usableAsTool: true,
   inputs: [{ name: 'input', type: 'data', position: 'left' }],
-  outputs: [{ name: 'output', type: 'data', position: 'right' }],
+  outputs: [{ name: 'output', type: 'any', position: 'right' }],
   configFields: [
     {
       key: 'code',

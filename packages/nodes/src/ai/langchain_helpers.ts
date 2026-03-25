@@ -24,11 +24,31 @@ export async function getLangChainModel(config: any, userId: string) {
   // Extract from config if passed directly (e.g. from synthesis call)
   apiKey = config.apiKey || '';
 
-  if (modelName.includes('anthropic/')) provider = 'anthropic';
-  else if (modelName.includes('google/')) provider = 'google';
-  else if (modelName.includes('openai/')) {
-      provider = 'openai';
-      baseURL = 'https://api.openai.com/v1';
+  if (modelName.includes('anthropic/')) {
+    provider = 'anthropic';
+  } else if (modelName.includes('google/')) {
+    provider = 'google';
+  } else if (modelName.includes('openai/')) {
+    provider = 'openai';
+    baseURL = 'https://api.openai.com/v1';
+  }
+
+  // --- API Key & Provider Fallback Logic ---
+  // If we have no key yet, check env variables.
+  // CRITICAL: If native key is missing but OpenRouter key exists, use OpenRouter for ANY model.
+  if (!apiKey) {
+    if (provider === 'anthropic' && process.env.ANTHROPIC_API_KEY) {
+      apiKey = process.env.ANTHROPIC_API_KEY;
+    } else if (provider === 'google' && process.env.GOOGLE_API_KEY) {
+      apiKey = process.env.GOOGLE_API_KEY;
+    } else if (process.env.OPENROUTER_API_KEY) {
+      // Fallback to OpenRouter for all models if native key is unavailable
+      apiKey = process.env.OPENROUTER_API_KEY;
+      provider = 'openai'; // OpenRouter uses OpenAI SDK
+      baseURL = 'https://openrouter.ai/api/v1';
+    } else {
+      apiKey = process.env.OPENAI_API_KEY || '';
+    }
   }
 
   const commonParams = {
@@ -52,9 +72,14 @@ export async function getLangChainModel(config: any, userId: string) {
     });
   }
 
+  // OpenAI or OpenRouter routing
+  const resolvedModelName = (provider === 'openai' && baseURL.includes('openai.com'))
+    ? modelName.replace('openai/', '') 
+    : modelName;
+
   return new ChatOpenAI({
     ...commonParams,
-    modelName: modelName,
+    modelName: resolvedModelName,
     maxTokens: 4096,
     configuration: { baseURL },
   });
@@ -99,8 +124,25 @@ export function getLangChainTools(
         func: async (args) => {
           try {
             const mergedConfig = { ...def.config, ...args };
+            
+            // Resolve credentials for this specific tool if needed
+            let toolCredentials = null;
+            if (mergedConfig.credentialId && context.resolveCredential) {
+              const res = await context.resolveCredential(mergedConfig.credentialId, context.userId);
+              toolCredentials = res.data;
+            } else if (context.resolveDefaultCredential && def.credentialTypes?.length > 0) {
+               // Automatic fallback: find newest valid credential for the requested tool types
+               const res = await context.resolveDefaultCredential(def.credentialTypes, context.userId);
+               if (res) toolCredentials = res.data;
+            }
+            
             // Handlers are expected to be context-aware
-            const result = await handler({ ...context, config: mergedConfig, incomingData: {} });
+            const result = await handler({ 
+              ...context, 
+              config: mergedConfig, 
+              incomingData: {},
+              credentials: toolCredentials 
+            });
             return JSON.stringify(result);
           } catch (err: any) {
             return JSON.stringify({ error: err.message, status: 'failed' });

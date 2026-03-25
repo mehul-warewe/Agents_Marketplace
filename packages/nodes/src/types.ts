@@ -79,6 +79,7 @@ export interface NodeDefinition {
   operationFields?: Record<string, ConfigField[]>;
   credentialTypes?: string[];
   runtime?: { timeout: number; retry: number };
+  usableAsTool?: boolean;
 }
 
 export interface ToolContext {
@@ -95,6 +96,11 @@ export interface ToolContext {
   nodeId?: string;
   execKey?: string;
   label?: string;
+
+  // Registry access
+  handlers?: Record<string, ToolHandler>;
+  resolveCredential?: (id: string, userId: string) => Promise<any>;
+  resolveDefaultCredential?: (types: string[], userId: string) => Promise<any>;
 }
 
 export type ToolHandler = (context: ToolContext) => Promise<any>;

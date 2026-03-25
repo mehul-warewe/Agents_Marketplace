@@ -13,8 +13,9 @@ export const gmailNode: NodeDefinition = {
   border: 'border-[#ea4335]/20',
   isTrigger: false,
   executionKey: 'google_gmail',
+  usableAsTool: true,
   inputs: [{ name: 'input', type: 'data', position: 'left' }],
-  outputs: [{ name: 'output', type: 'data', position: 'right' }],
+  outputs: [{ name: 'output', type: 'any', position: 'right' }],
   credentialTypes: ['google_gmail_oauth'],
   configFields: [
     {

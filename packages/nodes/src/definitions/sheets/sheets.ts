@@ -13,8 +13,9 @@ export const sheetsNode: NodeDefinition = {
   border: 'border-[#34a853]/20',
   isTrigger: false,
   executionKey: 'google_sheets',
+  usableAsTool: true,
   inputs: [{ name: 'input', type: 'data', position: 'left' }],
-  outputs: [{ name: 'output', type: 'data', position: 'right' }],
+  outputs: [{ name: 'output', type: 'any', position: 'right' }],
   credentialTypes: ['google_sheets_oauth'],
   configFields: [
     {

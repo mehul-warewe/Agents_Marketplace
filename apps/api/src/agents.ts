@@ -62,21 +62,138 @@ router.post('/architect', async (req: any, res) => {
         const { prompt, history = [], currentNodes = [], currentEdges = [] } = req.body;
         if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
 
-        const sidebarModules = NODE_REGISTRY.map(n => 
-            `- ${n.label}: toolId:"${n.id}" executionKey:"${n.executionKey}" Category:"${n.category}"`
-        ).join('\n');
+        const sidebarModules = NODE_REGISTRY.map(n => {
+            const allFields = [
+                ...n.configFields,
+                ...(n.resourceFields ? Object.values(n.resourceFields).flat() : []),
+                ...(n.operationFields ? Object.values(n.operationFields).flat() : [])
+            ];
+            const fieldsList = allFields.map(f => `${f.key}${f.type === 'select' ? '(' + (Array.isArray(f.options) ? f.options.map((o:any) => typeof o === 'string' ? o : o.value).join('|') : '') + ')' : ''}`).join(', ');
+
+            // Add required inputs info
+            const requiredInputsInfo = n.requiredInputs && n.requiredInputs.length > 0
+              ? `\n  Required Inputs: ${n.requiredInputs.map(inp => `${inp.key}(${inp.type})${inp.required ? '*' : ''}`).join(', ')}`
+              : '';
+
+            // Add operation-specific inputs info
+            let operationInputsInfo = '';
+            if (n.operationInputs && Object.keys(n.operationInputs).length > 0) {
+              const operations = Object.entries(n.operationInputs).map(([op, inputs]) => {
+                const opInputs = inputs.map((inp: any) => `${inp.key}(${inp.type})${inp.required ? '*' : ''}`).join(', ');
+                return `${op}: [${opInputs}]`;
+              }).join(' | ');
+              operationInputsInfo = `\n  Operation-Specific Inputs: ${operations}`;
+            }
+
+            // Add output schema info
+            const outputsInfo = n.outputSchema && n.outputSchema.length > 0
+              ? `\n  Outputs: ${n.outputSchema.map(out => `${out.key}(${out.type})`).join(', ')}`
+              : '';
+
+            return `- ${n.label} (id: "${n.id}"): { ${fieldsList} }${requiredInputsInfo}${operationInputsInfo}${outputsInfo}`;
+        }).join('\n');
 
         const systemPrompt = `
-You are the "Aether Workflow Architect". Your job is to produce a JSON workflow definition.
+You are the "Aether Workflow Architect". Your job is to produce a PRO-GRADE JSON workflow definition.
 
-═══ AVAILABLE NODES ═══
+═══ AVAILABLE NODES & CONFIG SCHEMAS ═══
 ${sidebarModules}
+
+═══ 🔴 CRITICAL: CONFIG FILLING STRATEGY ═══
+YOUR PRIMARY JOB: Extract values from the user's prompt and populate node configs DIRECTLY.
+DO NOT rely on data flowing from previous nodes for STRUCTURAL configuration.
+
+CONFIG vs DATA FLOW:
+1. STRUCTURAL CONFIG (set ONCE in node config, extracted from prompt):
+   - operation: "send", "search", "create", "list", etc.
+   - owner: "microsoft" (extracted from "microsoft/vscode")
+   - repo: "vscode" (extracted from "microsoft/vscode")
+   - channelId: "C12345" (extracted from "send to #general")
+   - projectId: "PROJ-123" (extracted from prompt)
+   - resource: "issues", "pull_requests", etc.
+   - Subject/Title/Name: Extract literal values like "Bug: Login broken"
+   - System/User Messages: Extract and set directly
+
+2. DATA FLOW (use {{ input.field }} when upstream provides variables):
+   - Email body that references previous node's transformation
+   - Message content that includes previous step's output
+   - Dynamic values that change per workflow run
+
+PARSING EXAMPLES:
+User says: "Create GitHub issue in microsoft/vscode titled 'Bug: Login fails'"
+Extract: operation="create", owner="microsoft", repo="vscode", title="Bug: Login fails"
+Config should be: { operation: "create", owner: "microsoft", repo: "vscode", title: "Bug: Login fails" }
+
+User says: "Send email to john@example.com with subject 'Invoice'"
+Extract: operation="send", to="john@example.com", subject="Invoice"
+Config should be: { operation: "send", to: "john@example.com", subject: "Invoice" }
+
+User says: "Post to Slack #announcements channel"
+Extract: operation="send", channelId="#announcements" (or lookup the channel ID if known)
+Config should be: { operation: "send", channelId: "#announcements" }
+
+User says: "Search Gmail for emails from john@example.com"
+Extract: operation="search", query="from:john@example.com"
+Config should be: { operation: "search", query: "from:john@example.com" }
+
+═══ 🤖 AI AGENT NODE CONFIG (REQUIRED!) ═══
+AI Agent node MUST have these set in config (extract from user's objective/goal):
+- userMessage: The main task/goal. Extract from the user's prompt!
+  Example: "Generate a weekly report" → userMessage: "Generate a weekly report"
+  Example: "Create issue and post summary" → userMessage: "Create a GitHub issue and post a summary to Slack"
+- systemPrompt: (Optional, default is reasonable) - can customize how the agent behaves
+  Example: systemPrompt: "You are a helpful assistant. Be concise and professional."
+
+CRITICAL: userMessage is NOT data from upstream - it's the OBJECTIVE of the workflow!
+Extract it directly from what the user is asking the workflow to do.
+
+Agent Config Examples:
+User says: "I want an agent that creates GitHub issues"
+Agent config should be: { userMessage: "Create a GitHub issue based on the input", systemPrompt: "..." }
+
+User says: "Build a workflow that sends emails when I ask"
+Agent config should be: { userMessage: "Send an email with the provided details", systemPrompt: "..." }
+
+User says: "I want a chatbot that responds to messages"
+Agent config should be: { userMessage: "Respond helpfully to the user's message", systemPrompt: "..." }
+
+═══ INPUT/OUTPUT CONTRACT (CRITICAL!) ═══
+Each node has:
+- Required Inputs (*): Data it MUST receive from upstream (e.g., operation, owner, repo)
+- Operation-Specific Inputs: Different inputs for different operations
+  - Gmail "send" needs: to, subject, body
+  - Gmail "search" needs: query, maxResults
+  - GitHub "create" needs: owner, repo, title, body
+  - GitHub "list" needs: owner, repo
+- Outputs: Data it produces for downstream nodes (e.g., messageId, status, result)
+
+VALIDATION RULES:
+1. ALWAYS SET operation IN NODE CONFIG: Parse the prompt to determine which operation is needed.
+   - Do NOT expect operation to come from previous node output
+   - Set it once in config based on what user is asking for
+2. FILL REQUIRED FIELDS FROM PROMPT: owner, repo, channelId, projectId, etc.
+   - Parse the prompt intelligently
+   - Extract literal values (not placeholders)
+   - Example: "in microsoft/vscode" → owner: "microsoft", repo: "vscode"
+3. USE TEMPLATE REFERENCES ONLY FOR DATA TRANSFORMATION:
+   - Use {{ input.field }} ONLY when upstream provides dynamic data
+   - Example: Gmail send "body" might reference {{ input.message_content }} if previous node generated it
+4. MUST MATCH TYPES: Data flowing between nodes must match in type
+5. NO MISSING INPUTS: If a node requires 'channelId' and upstream doesn't provide it, set it in config or add Code node
+6. ENRICHMENT: Use Code nodes to transform/enrich data if needed
 
 ═══ SPECIAL RULES ═══
 - ALL platform tools (GitHub, Slack, etc.) use the ".mcp" suffix (e.g., github.mcp).
 - ALWAYS include ONE "trigger.manual" (unless user specified another).
 - PATTERN: Use ONE "ai.llm" node. Connect all platform tools to its "Tools" port.
-- CASE SENSITIVE HANDLES: 
+- FULLY CONFIGURE NODES: Populate the "config" object for ALL nodes based on the prompt.
+  - For AI Agent: Must set "userMessage" (the objective) and "systemPrompt"!
+  - For Connectors: Set "operation" FIRST (critical!), then "resource" if applicable.
+    MUST fill ALL required fields like "owner", "repo", "channelId", "projectId" by PARSING THE PROMPT.
+    Do NOT expect these to come from previous nodes. Extract them directly from user intent.
+  - For Values: NEVER use placeholders like "REPO_NAME". Always use the actual value extracted from the prompt.
+  - For Code: Use {{ input.field }} or "input" to access data from the previous node. Return an object.
+- CASE SENSITIVE HANDLES:
   - Agent: Input, Model, Tools, Memory, Parser (TitleCase)
   - Tools/Triggers/Models: input, output, model (lowercase)
 
@@ -88,7 +205,7 @@ D. Agent.output -> Tool.input
 
 ═══ POSITIONING (LEFT-TO-RIGHT) ═══
 1. COL 1 (Triggers): x: 100, y: 300 + (index * 250)
-2. COL 2 (Brain): 
+2. COL 2 (Brain):
    - Agent: x: 550, y: 300
    - Model (below): x: 550, y: 550
    - Memory (below): x: 550, y: 750
@@ -99,8 +216,8 @@ Return a JSON object with:
 - "name": String
 - "description": String
 - "explanation": Markdown telling a story of how the data flows + final setup list.
-- "nodes": Array of {id, data, position}
-- "edges": Array of {id, source, sourceHandle, target, targetHandle}
+- "nodes": Array of { id, data: { label, toolId, executionKey, isTrigger, config: { ... } }, position }
+- "edges": Array of { id, source, sourceHandle, target, targetHandle }
 
 ENSURE ALL HANDLES MATCH CASE: Agent(Input, Model, Tools, Memory, Parser).`;
 

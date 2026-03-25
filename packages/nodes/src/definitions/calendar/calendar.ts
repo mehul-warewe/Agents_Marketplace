@@ -13,8 +13,9 @@ export const calendarNode: NodeDefinition = {
   border: 'border-[#4285f4]/20',
   isTrigger: false,
   executionKey: 'google_calendar',
+  usableAsTool: true,
   inputs: [{ name: 'input', type: 'data', position: 'left' }],
-  outputs: [{ name: 'output', type: 'data', position: 'right' }],
+  outputs: [{ name: 'output', type: 'any', position: 'right' }],
   credentialTypes: ['google_calendar_oauth'],
   configFields: [
     {

@@ -12,7 +12,7 @@ export async function callMcpTool(ctx: ToolContext, toolName: string, arguments_
   const platform = ctx.label || 'Unknown';
 
   const token = credentials?.accessToken || credentials?.apiKey || credentials?.botToken;
-  if (!token) throw new Error(`Missing credentials for ${platform}.`);
+  if (!token) throw new Error(`[${platform}] Missing credentials. Please select your account in the node's "Settings" tab within the Builder.`);
 
   const transport = new SSEClientTransport(new URL(mcpUrl), {
     eventSourceInit: { headers: { 'Authorization': `Bearer ${token}` } } as any
