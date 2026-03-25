@@ -229,22 +229,33 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
         await db.update(agentRuns).set({ logs }).where(eq(agentRuns.id, runId));
       };
 
-      console.log(`[Flow] Pulse reached "${nodeLabel}" (${execKey})`);
-      
+      console.log(`[Flow] ▶▶▶ Pulse reached "${nodeLabel}" (${execKey}) at ${new Date().toISOString()}`);
+      console.log(`[Flow] Incoming data keys: ${Object.keys(incomingData).slice(0, 10).join(', ')}${Object.keys(incomingData).length > 10 ? '...' : ''}`);
+
       // Update UI Logs
       logs.push({ nodeId, label: nodeLabel, status: 'executing', time: new Date() });
       await db.update(agentRuns).set({ logs }).where(eq(agentRuns.id, runId));
 
       try {
-        // Prepare local context for templates: 
-        // Preference: 1. Merged incoming, 2. Global Results access (n8n style)
-        const localCtx = { 
-          ...ctx, 
+        // Prepare local context for templates:
+        // Preference: 1. incomingData (input from previous node) - PRIMARY
+        //            2. Global ctx access (n8n style) - SECONDARY
+        //            3. Spread incomingData fields - FALLBACK for legacy templates
+        const localCtx = {
+          // PRIMARY: Explicit access to incoming data
           incoming: incomingData,
           input: incomingData,
-          ...incomingData // Fallback for legacy simple templates
+
+          // FALLBACK: Spread incoming fields for {{ field }} style templates
+          ...incomingData,
+
+          // SECONDARY: Global context for workflow metadata only
+          workflow: ctx.workflow,
+          objective: ctx.objective,
+          nodes: ctx.nodes,      // n8n-style: {{ nodes.NodeName.field }}
+          ids: ctx.ids,          // Legacy: {{ ids.node_123.field }}
         };
-        
+
         // Define safer template renderer for this node
         const render = (str: string) => renderTemplate(str, localCtx);
 
@@ -274,49 +285,106 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
             config,           // includes credentialId + any fallback static values
           };
         } else {
-          // ── EXECUTE NODE LOGIC ─────────────────────────────────────────────
-          const handler = WORKER_NODES[execKey];
-          if (handler) {
-            // Resolve node-specific credentials: Use selected or find default for user
-            let nodeCredentials = null;
-            if (config.credentialId) {
-              const res = await resolveCredential(config.credentialId, job.data.userId);
-              nodeCredentials = res.data;
-            } else {
-              // Automatic lookup: if user has a credential for this node type, use the newest valid one
-              const nodeDef = NODE_REGISTRY.find(n => n.executionKey === execKey);
-              if (nodeDef?.credentialTypes && nodeDef.credentialTypes.length > 0) {
-                const res = await resolveDefaultCredential(nodeDef.credentialTypes, job.data.userId);
-                if (res) {
-                  console.log(`[Flow] Using default saved credential for "${nodeLabel}" (${res.type})`);
-                  nodeCredentials = res.data;
-                }
+          // ── VALIDATE REQUIRED INPUTS (WITH OPERATION-SPECIFIC SUPPORT) ────────
+          const nodeDef = NODE_REGISTRY.find(n => n.executionKey === execKey);
+          let requiredInputs = nodeDef?.requiredInputs || [];
+
+          // Check if this node has operation-specific inputs
+          const operation = config.operation || config.resource;
+          if (operation && nodeDef?.operationInputs && nodeDef.operationInputs[operation]) {
+            console.log(`[Flow] Using operation-specific inputs for "${operation}"`);
+            requiredInputs = [
+              // Always include generic operation input
+              ...(nodeDef.requiredInputs || []),
+              // Add operation-specific inputs
+              ...(nodeDef.operationInputs[operation] || [])
+            ];
+          }
+
+          // ── SEMANTIC VALIDATION: Check if required inputs can be satisfied ──────
+          // Don't require exact field name matches. Instead, check if:
+          // 1. Field exists in config (exact match) OR
+          // 2. Field exists in incomingData (exact match) OR
+          // 3. There's any data available from upstream that COULD be mapped via templates
+
+          const missingInputs: string[] = [];
+          const upstreamDataAvailable = Object.keys(incomingData).length > 0;
+          const configEmpty = Object.keys(config).length === 0;
+
+          for (const input of requiredInputs) {
+            if (input.required) {
+              // Check if input is exactly available in incomingData OR in node config
+              const hasExactMatchInUpstream = input.key in incomingData;
+              const hasExactMatchInConfig = input.key in config;
+
+              // If not exactly matched, check if we have ANY upstream data to potentially map
+              const canBeMappedFromUpstream = upstreamDataAvailable && !hasExactMatchInConfig;
+
+              // Input is satisfied if:
+              // - Exact match in config, OR
+              // - Exact match in upstream data, OR
+              // - Has upstream data available for semantic mapping (Architect job)
+              const isSatisfied = hasExactMatchInConfig || hasExactMatchInUpstream || canBeMappedFromUpstream;
+
+              if (!isSatisfied) {
+                missingInputs.push(`${input.key} (${input.label})`);
               }
             }
+          }
 
-            const toolContext: ToolContext = {
-              config,
-              incomingData,
-              ctx,
-              job,
-              userId: job.data.userId,
-              credentials: nodeCredentials,
-              render,
-              logNodeStatus,
-              nodeId,
-              execKey,
-              label: nodeLabel,
-              handlers: WORKER_NODES,
-              resolveCredential,
-              resolveDefaultCredential,
+          if (missingInputs.length > 0) {
+            console.error(`[Flow] Node "${nodeLabel}" cannot satisfy inputs: ${missingInputs.join(', ')}`);
+            console.error(`[Flow] Available upstream data keys: ${Object.keys(incomingData).join(', ') || '(none)'}`);
+            console.error(`[Flow] Node config keys: ${Object.keys(config).join(', ') || '(empty)'}`);
+            nodeResult = {
+              failed: true,
+              error: `Cannot satisfy required inputs: ${missingInputs.join(', ')}. No data available from upstream or config.`,
+              status: 'failed'
             };
-            nodeResult = await handler(toolContext);
-            if (nodeResult && nodeResult._activeHandle) {
-              activeHandle = nodeResult._activeHandle;
-            }
           } else {
-            console.warn(`[Worker] Unknown executionKey: ${execKey}`);
-            nodeResult = { error: `Unsupported executionKey: ${execKey}` };
+            // ── EXECUTE NODE LOGIC ─────────────────────────────────────────────
+            const handler = WORKER_NODES[execKey];
+            if (handler) {
+              // Resolve node-specific credentials: Use selected or find default for user
+              let nodeCredentials = null;
+              if (config.credentialId) {
+                const res = await resolveCredential(config.credentialId, job.data.userId);
+                nodeCredentials = res.data;
+              } else {
+                // Automatic lookup: if user has a credential for this node type, use the newest valid one
+                if (nodeDef?.credentialTypes && nodeDef.credentialTypes.length > 0) {
+                  const res = await resolveDefaultCredential(nodeDef.credentialTypes, job.data.userId);
+                  if (res) {
+                    console.log(`[Flow] Using default saved credential for "${nodeLabel}" (${res.type})`);
+                    nodeCredentials = res.data;
+                  }
+                }
+              }
+
+              const toolContext: ToolContext = {
+                config,
+                incomingData,
+                ctx,
+                job,
+                userId: job.data.userId,
+                credentials: nodeCredentials,
+                render,
+                logNodeStatus,
+                nodeId,
+                execKey,
+                label: nodeLabel,
+                handlers: WORKER_NODES,
+                resolveCredential,
+                resolveDefaultCredential,
+              };
+              nodeResult = await handler(toolContext);
+              if (nodeResult && nodeResult._activeHandle) {
+                activeHandle = nodeResult._activeHandle;
+              }
+            } else {
+              console.warn(`[Worker] Unknown executionKey: ${execKey}`);
+              nodeResult = { error: `Unsupported executionKey: ${execKey}` };
+            }
           }
         }
 
@@ -324,9 +392,10 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
         // ── POST-EXECUTION: PROPAGATE SIGNAL ─────────────────────────────────
         // Enrich result: if text/content is JSON, spread parsed fields for template access.
         // This lets downstream nodes use {{ nodes.Agent.email_to }} when LLM outputs JSON.
+        // CRITICAL: Preserve __toolDefinition flag for agentic tools
         let enrichedResult = nodeResult;
         const rawText = nodeResult?.text ?? nodeResult?.content ?? nodeResult?.report ?? null;
-        if (typeof rawText === 'string') {
+        if (typeof rawText === 'string' && !nodeResult?.__toolDefinition) {
           try {
             const stripped = rawText.trim().startsWith('```')
               ? rawText.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
@@ -347,6 +416,9 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
 
         // Update Log
         const currentLog = logs[logs.length - 1];
+
+        // Log execution progress for pulse flow visualization
+        console.log(`[Pulse] ▶ "${nodeLabel}" executed at ${new Date().toISOString()} | Status: pending | Result keys: ${Object.keys(enrichedResult || {}).join(', ')}`);
         const isFailed = nodeResult?.failed === true || !!nodeResult?.error || nodeResult?.status === 'failed';
         
         currentLog.status = nodeResult?.__toolDefinition ? 'pending' : (isFailed ? 'failed' : 'completed');
@@ -378,18 +450,28 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
           const handleKey = `@port:${targetHandle}`;
           let handleData = enrichedResult;
 
-          if (existingInput[handleKey]) {
-            const current = existingInput[handleKey];
-            handleData = Array.isArray(current) ? [...current, enrichedResult] : [current, enrichedResult];
+          // Special handling for Tools port: always accumulate as array
+          if (targetHandle.toLowerCase() === 'tools' || targetHandle.toLowerCase() === 'tool') {
+            const existingTools = existingInput[handleKey] || [];
+            handleData = Array.isArray(existingTools) ? [...existingTools, enrichedResult] : [enrichedResult];
+          } else {
+            // For other handles, handle multi-input normally
+            if (existingInput[handleKey]) {
+              const current = existingInput[handleKey];
+              handleData = Array.isArray(current) ? [...current, enrichedResult] : [current, enrichedResult];
+            }
           }
 
           pendingInputs.set(targetId, {
             ...existingInput,
-            ...enrichedResult, // Direct merge — parsed JSON fields accessible as {{ field }}
+            // Only spread enrichedResult if it's not a tool definition or it's regular data
+            ...(enrichedResult?.__toolDefinition ? {} : enrichedResult),
             [nodeLabel]: enrichedResult,     // Label-based: {{ nodes.Agent.field }}
             [edge.source]: enrichedResult,   // ID-based: {{ ids.node_1.field }}
-            [handleKey]: handleData,         // Port-based for multi-input handles
+            [handleKey]: handleData,         // Port-based for multi-input handles (critical for Tools)
           });
+
+          console.log(`[Flow] Edge: "${nodeLabel}" → (${targetHandle}) | Tool definition: ${enrichedResult?.__toolDefinition ? 'YES' : 'NO'}`);
 
           const currentInDegree = inDegree.get(targetId) || 0;
           if (currentInDegree > 1) {

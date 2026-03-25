@@ -136,26 +136,110 @@ User says: "Search Gmail for emails from john@example.com"
 Extract: operation="search", query="from:john@example.com"
 Config should be: { operation: "search", query: "from:john@example.com" }
 
+GITHUB-SPECIFIC EXTRACTION:
+User says: "Find repositories for user Mehul0161"
+  → Operation: "search"
+  → Owner: "Mehul0161"
+  → Config: { operation: "search", owner: "Mehul0161" }
+
+User says: "Create issue in microsoft/vscode"
+  → Operation: "create"
+  → Owner: "microsoft" (from "microsoft/vscode")
+  → Repo: "vscode" (from "microsoft/vscode")
+  → Config: { operation: "create", owner: "microsoft", repo: "vscode", title: "...", body: "..." }
+
+User says: "List pull requests in nodejs/node"
+  → Operation: "list"
+  → Owner: "nodejs"
+  → Repo: "node"
+  → Resource: "pull_requests"
+  → Config: { operation: "list", owner: "nodejs", repo: "node", resource: "pull_requests" }
+
 ═══ 🤖 AI AGENT NODE CONFIG (REQUIRED!) ═══
-AI Agent node MUST have these set in config (extract from user's objective/goal):
-- userMessage: The main task/goal. Extract from the user's prompt!
-  Example: "Generate a weekly report" → userMessage: "Generate a weekly report"
-  Example: "Create issue and post summary" → userMessage: "Create a GitHub issue and post a summary to Slack"
-- systemPrompt: (Optional, default is reasonable) - can customize how the agent behaves
-  Example: systemPrompt: "You are a helpful assistant. Be concise and professional."
+EVERY AI Agent node MUST have config.userMessage filled with the goal/objective!
+This is NOT optional and NOT a template reference - it's the AGENT'S TASK DEFINITION.
 
-CRITICAL: userMessage is NOT data from upstream - it's the OBJECTIVE of the workflow!
-Extract it directly from what the user is asking the workflow to do.
+How to fill userMessage:
+1. Read the user's prompt
+2. Extract the INTENT/GOAL/OBJECTIVE
+3. Convert to a clear instruction for the agent
+4. Put it DIRECTLY in config.userMessage (NOT {{ input.something }})
 
-Agent Config Examples:
+CRITICAL RULES:
+- userMessage is the CORE INSTRUCTION for what the agent should do
+- Do NOT leave it empty or undefined
+- Do NOT use {{ input.message }} - use the extracted objective from prompt
+- Do NOT expect it from upstream nodes - extract from user's request
+- Always provide a default if unclear: "Process the input and provide results"
+
+Agent Config Examples - ALWAYS DO THIS:
+
 User says: "I want an agent that creates GitHub issues"
-Agent config should be: { userMessage: "Create a GitHub issue based on the input", systemPrompt: "..." }
+Your response: {
+  userMessage: "Create a GitHub issue based on the input provided",
+  systemPrompt: "You are a helpful developer assistant..."
+}
 
-User says: "Build a workflow that sends emails when I ask"
-Agent config should be: { userMessage: "Send an email with the provided details", systemPrompt: "..." }
+User says: "Build a workflow that analyzes emails and responds"
+Your response: {
+  userMessage: "Analyze the email message and provide a helpful response",
+  systemPrompt: "..."
+}
 
-User says: "I want a chatbot that responds to messages"
-Agent config should be: { userMessage: "Respond helpfully to the user's message", systemPrompt: "..." }
+User says: "Chat trigger with an agent"
+Your response: {
+  userMessage: "Respond helpfully to the user's chat message",
+  systemPrompt: "..."
+}
+
+User says: "Process incoming data with an AI agent"
+Your response: {
+  userMessage: "Process the incoming data and extract meaningful information",
+  systemPrompt: "..."
+}
+
+═══ 🔗 INTELLIGENT FIELD MAPPING (SEMANTIC MATCHING) ═══
+When nodes are connected, field names may NOT match exactly. DO NOT FAIL.
+Instead, use SEMANTIC MATCHING based on field descriptions and context.
+
+MAPPING ALGORITHM:
+1. Look at UPSTREAM node's outputSchema (what it produces)
+2. Look at DOWNSTREAM node's requiredInputs (what it needs)
+3. Read the DESCRIPTIONS to understand what each field MEANS
+4. Match semantically: "email_address" (description: "recipient email") → "to" (description: "email recipient")
+5. Generate template reference: config.to = "{{ input.email_address }}"
+
+EXAMPLE:
+Upstream outputs:
+  { email_address (string): "The recipient email address" }
+  { full_name (string): "User's full name" }
+  { count (number): "Total items" }
+
+Downstream needs:
+  { to (string): "Email recipient address" } ← Match: email_address → email_address is about recipient
+  { subject (string): "Email subject" } ← Match: full_name → Use in subject via template
+  { body (string): "Email body" } ← No exact match, use generic or skip
+
+Your node config:
+{
+  to: "{{ input.email_address }}",      // ← Semantic match (recipient → to)
+  subject: "From {{ input.full_name }}", // ← Semantic match (name → subject)
+  body: "Please review."                 // ← Static, no mapping needed
+}
+
+KEY PRINCIPLES:
+- Field names DON'T have to match exactly
+- Use descriptions to find semantic equivalents
+- If types match and meanings are similar, create the mapping
+- Generate {{ input.fieldName }} templates automatically
+- If no upstream field matches, set static value in config
+
+FIELD SIMILARITY HINTS:
+- "email" / "email_address" / "recipient" → "to"
+- "title" / "subject" / "name" → "subject" / "title"
+- "body" / "content" / "message" / "text" → "body" / "content"
+- "sender" / "from" → "from"
+- "date" / "timestamp" / "created_at" → "timestamp"
 
 ═══ INPUT/OUTPUT CONTRACT (CRITICAL!) ═══
 Each node has:
