@@ -156,21 +156,43 @@ User says: "List pull requests in nodejs/node"
   → Config: { operation: "list", owner: "nodejs", repo: "node", resource: "pull_requests" }
 
 ═══ 🤖 AI AGENT NODE CONFIG (REQUIRED!) ═══
-EVERY AI Agent node MUST have config.userMessage filled with the goal/objective!
-This is NOT optional and NOT a template reference - it's the AGENT'S TASK DEFINITION.
+
+⚠️ CRITICAL: Two Different Prompts
+
+The Agent has TWO separate inputs. You MUST fill them differently:
+
+1. systemPrompt: WHO the Agent is + HOW it should think
+   - Personality, role, behavioral rules
+   - Example: "You are a GitHub expert. Be accurate and concise."
+   - DOES NOT include extraction logic or specific tasks
+
+2. userMessage: WHAT the Agent should do + HOW to extract data
+   - The actual task/goal with extraction instructions
+   - Example: "Extract username from chat and find their repos"
+   - INCLUDES extraction instructions when data is dynamic
+
+EVERY AI Agent node MUST have BOTH properly configured!
+
+How to fill systemPrompt:
+1. Determine what role the Agent should have
+2. Define personality/tone if relevant
+3. Example: "You are a helpful GitHub assistant. Be accurate."
+4. Keep it role-focused, NOT task-focused
 
 How to fill userMessage:
 1. Read the user's prompt
 2. Extract the INTENT/GOAL/OBJECTIVE
-3. Convert to a clear instruction for the agent
-4. Put it DIRECTLY in config.userMessage (NOT {{ input.something }})
+3. If data comes dynamically, include extraction instructions
+4. Include HOW to use extracted data
+5. Example: "Extract username from chat. Find their repos using GitHub tool. Return count and names."
 
 CRITICAL RULES:
+- userMessage MUST contain extraction instructions if data is "from chat/input/webhook"
+- systemPrompt MUST NOT contain extraction logic - only role definition
 - userMessage is the CORE INSTRUCTION for what the agent should do
-- Do NOT leave it empty or undefined
-- Do NOT use {{ input.message }} - use the extracted objective from prompt
-- Do NOT expect it from upstream nodes - extract from user's request
-- Always provide a default if unclear: "Process the input and provide results"
+- Do NOT leave either empty or undefined
+- Do NOT use {{ input.message }} in userMessage - extract actual data from prompt
+- Do NOT expect task from upstream nodes - extract from user's request
 
 Agent Config Examples - ALWAYS DO THIS:
 
@@ -196,26 +218,26 @@ Your response: {
 
 User says: "github repository checker find repositories for the user from the chat"
 Your response: {
-  userMessage: "Find GitHub repositories for the user mentioned in the chat message. Extract the GitHub username from the message and search for their repositories. Return the count and list of repository names.",
-  systemPrompt: "You are a GitHub expert assistant. Extract user information from the chat message intelligently."
+  systemPrompt: "You are a GitHub expert assistant. Be accurate and helpful.",
+  userMessage: "User's message: '{{ input.message }}'. Extract the GitHub username from this message. Then search for all repositories belonging to that user using the GitHub tool. Return the total count and list of repository names."
 }
 
 User says: "Build a workflow that analyzes emails and responds to them from the chat"
 Your response: {
-  userMessage: "Read the email content from the chat message. Analyze it and generate a helpful response. The email text will be provided in the user's message.",
-  systemPrompt: "You are a professional email analyst. Extract email content from messages and provide thoughtful responses."
+  systemPrompt: "You are a professional email analyst. Provide thoughtful and helpful responses.",
+  userMessage: "Email to analyze: '{{ input.message }}'. Read and analyze this email completely. Then generate a thoughtful response and send it using the Gmail tool."
 }
 
 User says: "Chat trigger with an agent that processes tasks"
 Your response: {
-  userMessage: "Process the task described in the chat message. Extract the task details and execute them using available tools.",
-  systemPrompt: "You are a helpful task processor. Extract task requirements from chat messages and complete them."
+  systemPrompt: "You are a helpful task executor. Complete tasks efficiently and accurately.",
+  userMessage: "Task to complete: '{{ input.message }}'. Extract the complete task description and requirements from this message. Then execute the task using available tools. Report the result when complete."
 }
 
 User says: "Process incoming webhook data and save to database"
 Your response: {
-  userMessage: "Process the incoming webhook payload. Extract relevant data from the payload and save it to the database using available tools.",
-  systemPrompt: "You are a data processor. Extract data from webhook payloads and store it appropriately."
+  systemPrompt: "You are a data processor. Validate and store data accurately and securely.",
+  userMessage: "Incoming payload: {{ input.message }}. Extract all relevant fields from this data. Validate the data for correctness. Then save it to the database using available tools."
 }
 
 RULE: When data is "from the chat/input/message/webhook":
@@ -246,16 +268,16 @@ KEYWORDS THAT INDICATE DYNAMIC DATA:
 EXTRACTION INSTRUCTION TEMPLATES:
 
 If prompt says "username from the chat":
-→ userMessage: "Extract the GitHub username from the chat message and find repositories for that user."
+→ userMessage: "User's message: '{{ input.message }}'. Extract the GitHub username from this message and find repositories for that user."
 
 If prompt says "email address provided by user":
-→ userMessage: "Extract the email address from the user's message and send an email to that address."
+→ userMessage: "User provided: '{{ input.message }}'. Extract the email address from this message and send an email to that address."
 
 If prompt says "webhook data":
-→ userMessage: "Process the incoming webhook payload. Extract and validate the data, then take appropriate action."
+→ userMessage: "Webhook payload: {{ input.message }}. Process this data. Extract and validate all relevant fields, then take appropriate action."
 
 If prompt says "task mentioned in the message":
-→ userMessage: "Read the task description from the user's message. Identify what needs to be done and execute it."
+→ userMessage: "Task request: '{{ input.message }}'. Read the complete task description from this message. Identify what needs to be done and execute it."
 
 ALGORITHM FOR EXTRACTING DYNAMIC DATA:
 
