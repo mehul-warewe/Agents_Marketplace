@@ -32,4 +32,35 @@ export const webhookTrigger: NodeDefinition = {
       placeholder: '{"success": true}',
     },
   ],
+  outputSchema: [
+    {
+      key: '_webhook',
+      type: 'object',
+      description: 'Webhook metadata (path, method, response code)',
+      example: {
+        path: 'my-endpoint',
+        method: 'POST',
+        responseCode: 200,
+        responseData: '{"success": true}',
+      },
+    },
+    {
+      key: 'body',
+      type: 'any',
+      description: 'HTTP request body data (if JSON)',
+      example: { name: 'John', email: 'john@example.com' },
+    },
+    {
+      key: 'query',
+      type: 'object',
+      description: 'Query string parameters',
+      example: { token: 'abc123', user: 'john' },
+    },
+    {
+      key: 'headers',
+      type: 'object',
+      description: 'HTTP request headers',
+      example: { 'content-type': 'application/json' },
+    },
+  ],
 };
