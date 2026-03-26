@@ -26,10 +26,16 @@ export const synthesisHandler: ToolHandler = async (context: ToolContext) => {
 
     // Tools discovery from context...
     const rawTools = incomingData['@port:Tools'] || incomingData['@port:tools'] || [];
-    const toolItems = Array.isArray(rawTools) ? rawTools : [rawTools];
-    const toolDefinitions = toolItems.filter(t => t.__toolDefinition === true);
+    const toolItems = Array.isArray(rawTools) ? rawTools : (rawTools ? [rawTools] : []);
+    const toolDefinitions = toolItems.filter((t: any) => t && t.__toolDefinition === true);
+
+    console.log(`[Synthesis] Tool Discovery: Found ${toolItems.length} items, ${toolDefinitions.length} are tool definitions`);
+    if (toolDefinitions.length > 0) {
+      console.log(`[Synthesis] Tools available: ${toolDefinitions.map((t: any) => t.label || t.executionKey).join(', ')}`);
+    }
 
     if (toolDefinitions.length === 0) {
+      console.log(`[Synthesis] No tools found - running Agent WITHOUT tools`);
       const response = await model.invoke([
         { role: 'system', content: systemMessage },
         { role: 'user', content: render(config.userMessage || 'Provide status report.') }
@@ -38,6 +44,7 @@ export const synthesisHandler: ToolHandler = async (context: ToolContext) => {
     }
 
     // Agentic execution
+    console.log(`[Synthesis] Starting agentic execution with ${toolDefinitions.length} tools`);
     const prompt = ChatPromptTemplate.fromMessages([
       ['system', systemMessage],
       ['user', '{input}'],
@@ -45,12 +52,15 @@ export const synthesisHandler: ToolHandler = async (context: ToolContext) => {
     ]);
 
     // Note: We'd need to pass the handlers for recursive agentic calling if desired
-    const tools = getLangChainTools(toolDefinitions, context.handlers || {}, context); 
+    const tools = getLangChainTools(toolDefinitions, context.handlers || {}, context);
+    console.log(`[Synthesis] Converted ${toolDefinitions.length} tool definitions to LangChain tools`);
+
     const agent = await createToolCallingAgent({ llm: model, tools, prompt });
     const executor = new AgentExecutor({ agent, tools, maxIterations: 10 });
     const result = await executor.invoke({ input: render(config.userMessage || 'Fulfill objective.') });
 
-    return { report: result.output, content: result.output };
+    console.log(`[Synthesis] Agent completed with output: ${result.output?.substring(0, 100)}...`);
+    return { report: result.output, content: result.output, toolsUsed: toolDefinitions.length };
   } catch (err: any) {
     return { error: err.message, failed: true };
   }

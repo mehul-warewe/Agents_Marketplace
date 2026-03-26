@@ -149,20 +149,32 @@ function normaliseArchitectNodes(rawNodes: any[], rawEdges: any[]) {
       ) || TOOL_REGISTRY[0]!; // Default to first node if all else fails
     }
 
+    // IMPROVEMENT: Handle flat data fields from Architect
+    // If the Architect didn't nest the config inside data.config, pull everything into config
+    const aiConfig = n.data?.config || {};
+    const flatConfig = { ...n.data };
+    delete (flatConfig as any).config;
+    delete (flatConfig as any).label;
+    delete (flatConfig as any).toolId;
+    delete (flatConfig as any).executionKey;
+    delete (flatConfig as any).isTrigger;
+    delete (flatConfig as any).status;
+
+    const mergedConfig = { ...flatConfig, ...aiConfig };
+
     return {
       id: n.id || `node_${i + 1}`,
       type: 'wareweNode',
       position: n.position || { x: 100 + i * 320, y: 200 },
       data: {
-        label: n.data?.label || resolvedTool.label,
-        toolId: resolvedTool.id,          // preserve so getToolById() works on reload
+        label: n.data?.label || n.label || resolvedTool.label,
+        toolId: resolvedTool.id,
         description: resolvedTool.description,
         executionKey: resolvedTool.executionKey,
         isTrigger: resolvedTool.isTrigger,
         status: 'idle',
-        config: n.data?.config || {}, // Preserve AI generated config!
+        config: mergedConfig,
       },
-      // If it's a sticky note, put it underneath everything else
       zIndex: resolvedTool.executionKey === 'sticky_note' ? -50 : 0,
     };
   });
@@ -552,6 +564,14 @@ function AgentBuilderInner() {
           setEdges(es as any);
           if (data.name) setName(data.name);
           if (data.description) setDescription(data.description);
+
+          // IMPORTANT: Update selected node reference if one was selected
+          // This ensures the sidebar panel sees the FRESH data.config from the Architect
+          setSelectedNode((prev: any) => {
+            if (!prev) return null;
+            const fresh = ns.find(n => n.id === prev.id);
+            return fresh || null;
+          });
         }
         // Push explanation back into the chat
         const explanation = data?.explanation || `Workflow "${data?.name || 'Unnamed'}" has been placed on the canvas. Connect your credentials to each node before running.`;

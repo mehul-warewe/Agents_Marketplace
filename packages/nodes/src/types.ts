@@ -54,6 +54,24 @@ export type NodeCategory =
   | 'Output'
   | 'Core';
 
+export type InputType = 'string' | 'number' | 'boolean' | 'object' | 'array' | 'any' | 'json';
+
+export interface NodeInput {
+  key: string;
+  label: string;
+  type: InputType;
+  required: boolean;
+  description: string;
+  example?: any;
+}
+
+export interface NodeOutput {
+  key: string;
+  type: InputType;
+  description: string;
+  example?: any;
+}
+
 export interface NodeDefinition {
   id: string;
   label: string;
@@ -80,6 +98,22 @@ export interface NodeDefinition {
   credentialTypes?: string[];
   runtime?: { timeout: number; retry: number };
   usableAsTool?: boolean;
+
+  // NEW: Input data contract — what this node expects from upstream (generic)
+  requiredInputs?: NodeInput[];
+
+  // NEW: Operation-specific input requirements
+  // e.g. { send: [...], reply: [...], search: [...] }
+  // Maps operation name to its specific required inputs
+  operationInputs?: Record<string, NodeInput[]>;
+
+  // NEW: Operation-specific output definitions
+  // e.g. { send: [...outputs...], search: [...outputs...] }
+  // Maps operation name to what data it produces
+  operationOutputs?: Record<string, NodeOutput[]>;
+
+  // NEW: Output data contract — what this node produces
+  outputSchema?: NodeOutput[];
 }
 
 export interface ToolContext {

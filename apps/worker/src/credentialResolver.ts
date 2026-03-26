@@ -31,7 +31,15 @@ export async function resolveCredential(
   if (!cred.isValid) throw new Error(`Credential "${cred.name}" is marked invalid. Please re-connect it in Settings → Integrations.`);
 
   const data = decryptCredential(cred.data);
-  return { type: cred.type, data };
+  const normalized: Record<string, any> = { ...data };
+  if (data.access_token) normalized.accessToken = data.access_token;
+  if (data.refresh_token) normalized.refreshToken = data.refresh_token;
+  if (data.refresh_token) normalized.refresh_token = data.refresh_token; // ensure both cases
+  if (data.expires_at) normalized.expiresAt = data.expires_at;
+  if (data.service_role_key) normalized.serviceRoleKey = data.service_role_key;
+  if (data.supabase_url) normalized.supabaseUrl = data.supabase_url;
+  
+  return { type: cred.type, data: normalized };
 }
 
 /**
@@ -54,7 +62,14 @@ export async function resolveDefaultCredential(
   if (!cred) return null;
 
   const data = decryptCredential(cred.data);
-  return { type: cred.type, data };
+  const normalized: Record<string, any> = { ...data };
+  if (data.access_token) normalized.accessToken = data.access_token;
+  if (data.refresh_token) normalized.refreshToken = data.refresh_token;
+  if (data.expires_at) normalized.expiresAt = data.expires_at;
+  if (data.service_role_key) normalized.serviceRoleKey = data.service_role_key;
+  if (data.supabase_url) normalized.supabaseUrl = data.supabase_url;
+
+  return { type: cred.type, data: normalized };
 }
 
 /**

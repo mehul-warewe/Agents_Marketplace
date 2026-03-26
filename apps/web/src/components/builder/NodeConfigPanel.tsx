@@ -138,6 +138,19 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
     // For tools WITHOUT operationFields, load configFields normally
     if (!(tool as any).operationFields) {
       (tool.configFields as any).forEach((f: any) => { base[f.key] = cfg[f.key] ?? ''; });
+
+      // NEW: Also load operation-specific fields if operation is set
+      const selectedOperation = cfg.operation;
+      if (selectedOperation && (tool as any).operationInputs) {
+        const operationSchema = (tool as any).operationInputs[selectedOperation];
+        if (operationSchema) {
+          operationSchema.forEach((f: any) => { 
+            if (cfg[f.key] !== undefined) base[f.key] = cfg[f.key];
+            else if (f.default !== undefined) base[f.key] = f.default;
+            else base[f.key] = '';
+          });
+        }
+      }
     }
     return base;
   });
@@ -165,8 +178,23 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
       description:  node.data.description ?? '',
       credentialId: cfg.credentialId ?? '',
     };
+    
+    // For tools WITHOUT operationFields, load configFields normally
     if (!(tool as any).operationFields) {
       (tool.configFields as any).forEach((f: any) => { base[f.key] = cfg[f.key] ?? ''; });
+
+      // NEW: Also load operation-specific fields if operation is set
+      const selectedOperation = cfg.operation;
+      if (selectedOperation && (tool as any).operationInputs) {
+        const operationSchema = (tool as any).operationInputs[selectedOperation];
+        if (operationSchema) {
+          operationSchema.forEach((f: any) => { 
+            if (cfg[f.key] !== undefined) base[f.key] = cfg[f.key];
+            else if (f.default !== undefined) base[f.key] = f.default;
+            else base[f.key] = '';
+          });
+        }
+      }
     }
     setValues(base);
 
@@ -182,7 +210,7 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
         setOperations([{ op: '' }]);
       }
     }
-  }, [node.id, tool]);
+  }, [node.id, tool, node.data.config]);
 
   // Fetch dynamic models when credential changes
   useEffect(() => {
@@ -228,16 +256,22 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
   const set = (key: string, val: any) =>
     setValues(prev => ({ ...prev, [key]: val }));
 
-  const handleSave = useCallback(() => {
-    const { label, description, ...rest } = values;
+  const handleSave = useCallback((currentValues = values, currentOps = operations) => {
+    const { label, description, ...rest } = currentValues;
     const config: Record<string, any> = { ...rest };
     if ((tool as any).operationFields) {
-      // Multi-step format: save operations array, drop any legacy flat fields
-      config.operations = operations.filter(o => o.op); // skip empty steps
+      config.operations = currentOps.filter(o => o.op);
     }
     onUpdate({ ...node.data, label, description, config });
-    onClose();
-  }, [values, operations, tool, node.data, onUpdate, onClose]);
+  }, [tool, node.data, onUpdate, values, operations]);
+
+  // AUTO-SAVE: Debounced effect to sync back to workflow
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleSave();
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [values, operations, handleSave]);
 
   const handleAddCred = async () => {
     const type = tool.credentialTypes?.[0];
@@ -599,227 +633,194 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
                     </div>
                   );
                 })() : (
-                  /* ── Regular configFields (Agent, Models, Triggers) ── */
-                  (tool.configFields as any)
-                   .filter((f: any) => 
-                      f.type !== 'notice' && 
-                      f.type !== 'hidden' && 
-                      f.key !== 'width' && 
-                      f.key !== 'height'
-                   )
-                   .map((field: any) => (
-                    <div key={field.key} className="space-y-2">
-                       <label className="text-[10px] font-bold text-muted/60 uppercase ml-1 font-inter tracking-tight">{field.label}</label>
-                      {(field.type === 'select' || field.key === 'model') ? (
-                        <CustomSelect
-                          value={values[field.key] ?? ''}
-                          onChange={val => set(field.key, val)}
-                          isLoading={isLoadingModels && field.key === 'model'}
-                          disabled={isLoadingModels && field.key === 'model'}
-                          placeholder={isLoadingModels ? 'Loading models...' : `Select ${field.label}...`}
-                          options={
-                            field.key === 'model'
-                              ? [
-                                  ...(values[field.key] && !dynamicModels.find(m => m.id === values[field.key])
-                                    ? [{ id: values[field.key], label: values[field.key] }]
-                                    : []),
-                                  ...dynamicModels
-                                ]
-                              : (field.options || []).map((o: any) => 
-                                  typeof o === 'string' ? { id: o, label: o } : { id: o.value, label: o.label }
-                                )
-                          }
-                        />
-                      ) : (field.type === 'color' || field.label.toLowerCase().includes('color')) ? (
-                        <div className="flex items-center gap-4 animate-in fade-in duration-300">
-                          <div className="relative group shrink-0">
-                            <input
-                              type="color"
-                              value={values[field.key] ?? '#FFD233'}
-                              onChange={e => set(field.key, e.target.value)}
-                              className="w-12 h-12 rounded-2xl border border-border/20 bg-foreground/[0.03] cursor-pointer overflow-hidden p-0 opacity-100"
-                              style={{ appearance: 'none', border: 'none' }}
-                            />
-                            <div 
-                              className="absolute inset-0 rounded-2xl border border-white/10 pointer-events-none transition-all group-hover:scale-105" 
-                              style={{ backgroundColor: values[field.key] ?? '#FFD233' }} 
-                            />
-                          </div>
-                          <input
-                            value={values[field.key] ?? '#FFD233'}
-                            onChange={e => set(field.key, e.target.value)}
-                            className="flex-1 px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-xl text-[12px] font-mono outline-none focus:border-foreground/40 transition-all uppercase tracking-widest text-foreground/80"
-                            placeholder="#000000"
-                          />
-                        </div>
-                      ) : field.type === 'textarea' ? (
-                        <textarea
-                          value={values[field.key] ?? ''}
-                          onChange={e => set(field.key, e.target.value)}
-                          rows={5}
-                          placeholder={field.placeholder}
-                          className="w-full px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-xl text-[12px] font-mono outline-none focus:border-foreground/40 transition-all resize-none leading-relaxed"
-                        />
-                      ) : field.type === 'boolean' ? (
-                        <div 
-                          onClick={() => set(field.key, !values[field.key])}
-                          className="flex items-center justify-between px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-xl cursor-pointer hover:bg-foreground/[0.05] transition-all"
-                        >
-                          <span className="text-[11px] text-muted/80">{field.label}</span>
-                          <div className={`w-8 h-4 rounded-full p-1 transition-all ${values[field.key] ? 'bg-accent' : 'bg-muted/20'}`}>
-                            <div className={`w-2 h-2 rounded-full bg-white transition-all ${values[field.key] ? 'translate-x-4' : 'translate-x-0'}`} />
-                          </div>
-                        </div>
-                      ) : field.type === 'filter' ? (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between border-b border-border/20 pb-2">
-                             <label className="text-[10px] font-bold text-muted/60 uppercase ml-1">{field.label}</label>
-                             <div className="flex bg-foreground/[0.05] rounded-lg p-0.5 pointer-events-auto">
-                               {['and', 'or'].map(m => (
-                                 <button
-                                   key={m}
-                                   onClick={() => set(field.key, { ...values[field.key], combine: m })}
-                                   className={`px-3 py-1 rounded-md text-[9px] font-black uppercase tracking-widest transition-all ${values[field.key]?.combine === m ? 'bg-background shadow-xs text-foreground' : 'text-muted/40 hover:text-muted'}`}
-                                 >
-                                   {m}
-                                 </button>
-                               ))}
-                             </div>
-                          </div>
+                  (() => {
+                    const fields = [...(tool.configFields as any)];
+                    const selectedOp = values.operation;
+                    if (selectedOp && (tool as any).operationInputs?.[selectedOp]) {
+                      const opInputs = (tool as any).operationInputs[selectedOp];
+                      // Add fields that aren't already in configFields
+                      opInputs.forEach((f: any) => {
+                        if (!fields.find(cf => cf.key === f.key)) {
+                          fields.push(f);
+                        }
+                      });
+                    }
 
-                          <div className="space-y-3">
-                            {((values[field.key] as any)?.conditions || []).map((cond: any, cIdx: number) => (
-                              <div key={cIdx} className="p-4 bg-foreground/[0.01] border border-border/20 rounded-xl space-y-4 relative group/cond border-l-2 border-l-foreground/10 transition-all hover:bg-foreground/[0.03]">
-                                <div className="flex items-center justify-between mb-2">
-                                   <span className="text-[9px] font-black uppercase text-muted/30 tracking-widest">
-                                     Condition {cIdx + 1}
-                                   </span>
-                                   <button 
-                                      onClick={() => {
-                                        const newConds = [...(values[field.key].conditions)];
-                                        newConds.splice(cIdx, 1);
-                                        set(field.key, { ...values[field.key], conditions: newConds });
-                                      }}
-                                      className="p-1.5 text-muted/30 hover:text-red-500 transition-all"
-                                    >
-                                      <Trash2 size={12} />
-                                    </button>
-                                </div>
-                                
-                                <div className="space-y-4">
-                                  {/* Left and Operator Row */}
-                                  <div className="grid grid-cols-5 gap-3">
-                                    <div className="col-span-3 space-y-1.5">
-                                      <label className="text-[9px] font-bold text-muted/40 uppercase ml-0.5">Value 1</label>
-                                      <input
-                                        value={cond.leftValue || ''}
-                                        onChange={e => {
+                    return fields
+                      .filter((f: any) => 
+                        f.type !== 'notice' && 
+                        f.type !== 'hidden' && 
+                        f.key !== 'width' && 
+                        f.key !== 'height'
+                      )
+                      .map((field: any) => (
+                        <div key={field.key} className="space-y-2">
+                          <label className="text-[10px] font-bold text-muted/60 uppercase ml-1 flex items-center gap-1.5">
+                            {field.label}
+                            {field.required && <span className="text-[#f04e3a]">*</span>}
+                          </label>
+
+                          {(field.type === 'select' || field.key === 'model') ? (
+                            <CustomSelect
+                              value={values[field.key] ?? ''}
+                              onChange={val => set(field.key, val)}
+                              isLoading={isLoadingModels && field.key === 'model'}
+                              disabled={isLoadingModels && field.key === 'model'}
+                              placeholder={isLoadingModels ? 'Loading models...' : `Select ${field.label}...`}
+                              options={
+                                field.key === 'model'
+                                  ? [
+                                      ...(values[field.key] && !dynamicModels.find(m => m.id === values[field.key])
+                                        ? [{ id: values[field.key], label: values[field.key] }]
+                                        : []),
+                                      ...dynamicModels
+                                    ]
+                                  : (field.options || []).map((o: any) => 
+                                      typeof o === 'string' ? { id: o, label: o } : { id: o.value, label: o.label }
+                                    )
+                              }
+                            />
+                          ) : (field.type === 'color' || field.label.toLowerCase().includes('color')) ? (
+                            <div className="flex items-center gap-4">
+                              <div className="relative group shrink-0">
+                                <input
+                                  type="color"
+                                  value={values[field.key] ?? '#FFD233'}
+                                  onChange={e => set(field.key, e.target.value)}
+                                  className="w-12 h-12 rounded-2xl border border-border/20 bg-foreground/[0.03] cursor-pointer overflow-hidden p-0 opacity-0"
+                                />
+                                <div 
+                                  className="absolute inset-0 rounded-2xl border border-white/10 pointer-events-none transition-all group-hover:scale-105" 
+                                  style={{ backgroundColor: values[field.key] ?? '#FFD233' }} 
+                                />
+                              </div>
+                              <input
+                                value={values[field.key] ?? '#FFD233'}
+                                onChange={e => set(field.key, e.target.value)}
+                                className="flex-1 px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-xl text-[12px] font-mono outline-none"
+                                placeholder="#000000"
+                              />
+                            </div>
+                          ) : (field.type === 'textarea' || field.type === 'json') ? (
+                            <textarea
+                              value={values[field.key] ?? ''}
+                              onChange={e => set(field.key, e.target.value)}
+                              rows={5}
+                              placeholder={field.placeholder || field.example || 'Enter value...'}
+                              className="w-full px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-xl text-[12px] font-mono outline-none focus:border-foreground/40 transition-all resize-none leading-relaxed"
+                            />
+                          ) : field.type === 'boolean' ? (
+                            <div 
+                              onClick={() => set(field.key, !values[field.key])}
+                              className="flex items-center justify-between px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-xl cursor-pointer hover:bg-foreground/[0.05] transition-all"
+                            >
+                              <span className="text-[11px] text-muted/80">{field.label}</span>
+                              <div className={`w-8 h-4 rounded-full p-1 transition-all ${values[field.key] ? 'bg-accent' : 'bg-muted/20'}`}>
+                                <div className={`w-2 h-2 rounded-full bg-white transition-all ${values[field.key] ? 'translate-x-4' : 'translate-x-0'}`} />
+                              </div>
+                            </div>
+                          ) : field.type === 'filter' ? (
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between border-b border-border/20 pb-2">
+                                 <label className="text-[10px] font-bold text-muted/60 uppercase ml-1">{field.label}</label>
+                                 <div className="flex bg-foreground/[0.05] rounded-lg p-0.5 pointer-events-auto">
+                                   {['and', 'or'].map(m => (
+                                     <button
+                                       key={m}
+                                       onClick={() => set(field.key, { ...values[field.key], combine: m })}
+                                       className={`px-3 py-1 rounded-md text-[9px] font-black uppercase tracking-widest transition-all ${values[field.key]?.combine === m ? 'bg-background shadow-xs text-foreground' : 'text-muted/40 hover:text-muted'}`}
+                                     >
+                                       {m}
+                                     </button>
+                                   ))}
+                                 </div>
+                              </div>
+                              <div className="space-y-3">
+                                {((values[field.key] as any)?.conditions || []).map((cond: any, cIdx: number) => (
+                                  <div key={cIdx} className="p-4 bg-foreground/[0.01] border border-border/20 rounded-xl space-y-4 relative group/cond border-l-2 border-l-foreground/10 transition-all hover:bg-foreground/[0.03]">
+                                    <div className="flex items-center justify-between mb-2">
+                                       <span className="text-[9px] font-black uppercase text-muted/30 tracking-widest">Condition {cIdx + 1}</span>
+                                       <button onClick={() => {
+                                         const newConds = [...(values[field.key].conditions)];
+                                         newConds.splice(cIdx, 1);
+                                         set(field.key, { ...values[field.key], conditions: newConds });
+                                       }} className="p-1.5 text-muted/30 hover:text-red-500 transition-all">
+                                         <Trash2 size={12} />
+                                       </button>
+                                    </div>
+                                    <div className="grid grid-cols-5 gap-3">
+                                      <div className="col-span-3 space-y-1.5">
+                                        <label className="text-[9px] font-bold text-muted/40 uppercase ml-0.5">Value 1</label>
+                                        <input value={cond.leftValue || ''} onChange={e => {
                                           const newConds = [...(values[field.key].conditions)];
                                           newConds[cIdx] = { ...newConds[cIdx], leftValue: e.target.value };
                                           set(field.key, { ...values[field.key], conditions: newConds });
-                                        }}
-                                        placeholder="{{ $json.field }}"
-                                        className="w-full px-3 py-2 bg-background border border-border/40 rounded-lg text-[11px] outline-none focus:border-foreground/40 transition-all"
-                                      />
-                                    </div>
-                                    <div className="col-span-2 space-y-1.5">
-                                      <label className="text-[9px] font-bold text-muted/40 uppercase ml-0.5">Operator</label>
-                                      <CustomSelect
-                                        value={cond.operator || 'equal'}
-                                        onChange={val => {
+                                        }} placeholder="{{ $json.field }}" className="w-full px-3 py-2 bg-background border border-border/40 rounded-lg text-[11px] outline-none" />
+                                      </div>
+                                      <div className="col-span-2 space-y-1.5">
+                                        <label className="text-[9px] font-bold text-muted/40 uppercase ml-0.5">Operator</label>
+                                        <CustomSelect value={cond.operator || 'equal'} onChange={val => {
                                           const newConds = [...(values[field.key].conditions)];
                                           newConds[cIdx] = { ...newConds[cIdx], operator: val };
                                           set(field.key, { ...values[field.key], conditions: newConds });
-                                        }}
-                                        options={[
-                                          { id: 'equal', label: '==' },
-                                          { id: 'notEqual', label: '!=' },
-                                          { id: 'contains', label: 'Contains' },
-                                          { id: 'notContains', label: '!Contains' },
-                                          { id: 'startsWith', label: 'Starts' },
-                                          { id: 'gt', label: 'Greater' },
-                                          { id: 'lt', label: 'Less' },
-                                          { id: 'isEmpty', label: 'Empty' },
-                                          { id: 'isNotEmpty', label: '!Empty' },
-                                        ]}
-                                      />
+                                        }} options={[{ id: 'equal', label: '==' }, { id: 'notEqual', label: '!=' }, { id: 'contains', label: 'Contains' }, { id: 'startsWith', label: 'Starts' }, { id: 'gt', label: 'Greater' }, { id: 'lt', label: 'Less' }, { id: 'isEmpty', label: 'Empty' }, { id: 'isNotEmpty', label: '!Empty' }]} />
+                                      </div>
                                     </div>
-                                  </div>
-                                  
-                                  {/* Right Value Box */}
-                                  {!['isEmpty', 'isNotEmpty'].includes(cond.operator) && (
-                                    <div className="space-y-1.5">
-                                      <label className="text-[9px] font-bold text-muted/40 uppercase ml-0.5">Value 2</label>
-                                      <input
-                                        value={cond.rightValue || ''}
-                                        onChange={e => {
+                                    {!['isEmpty', 'isNotEmpty'].includes(cond.operator) && (
+                                      <div className="space-y-1.5">
+                                        <label className="text-[9px] font-bold text-muted/40 uppercase ml-0.5">Value 2</label>
+                                        <input value={cond.rightValue || ''} onChange={e => {
                                           const newConds = [...(values[field.key].conditions)];
                                           newConds[cIdx] = { ...newConds[cIdx], rightValue: e.target.value };
                                           set(field.key, { ...values[field.key], conditions: newConds });
-                                        }}
-                                        placeholder="Compare to..."
-                                        className="w-full px-3 py-2 bg-background border border-border/40 rounded-lg text-[11px] outline-none focus:border-foreground/40 transition-all"
-                                      />
-                                    </div>
-                                  )}
-                                </div>
+                                        }} placeholder="Compare to..." className="w-full px-3 py-2 bg-background border border-border/40 rounded-lg text-[11px] outline-none" />
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                                <button onClick={() => {
+                                  const current = values[field.key] || { conditions: [], combine: 'and' };
+                                  const newConds = [...(current.conditions || []), { leftValue: '', operator: 'equal', rightValue: '' }];
+                                  set(field.key, { ...current, conditions: newConds });
+                                }} className="w-full py-2.5 bg-foreground/5 hover:bg-foreground/10 border border-border/20 rounded-xl text-[10px] font-black uppercase text-muted/70 transition-all flex items-center justify-center gap-2">
+                                  + Add Boolean Condition
+                                </button>
                               </div>
-                            ))}
-                            <button
-                              onClick={() => {
-                                const current = values[field.key] || { conditions: [], combine: 'and' };
-                                const newConds = [...(current.conditions || []), { leftValue: '', operator: 'equal', rightValue: '' }];
-                                set(field.key, { ...current, conditions: newConds });
-                              }}
-                              className="w-full py-2.5 bg-foreground/5 hover:bg-foreground/10 border border-border/20 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted/70 hover:text-foreground transition-all flex items-center justify-center gap-2"
-                            >
-                              + Add Boolean Condition
-                            </button>
-                          </div>
+                            </div>
+                          ) : field.type === 'chat_test' ? (
+                            <div className="space-y-4 pt-2">
+                               <div className="flex items-center justify-between mb-1 px-1">
+                                 <label className="text-[10px] font-bold text-muted/60 uppercase">Manual Trigger Input</label>
+                                 <div className="text-[9px] text-accent/80 font-bold px-2 py-0.5 bg-accent/10 rounded-full border border-accent/20">Active Session</div>
+                               </div>
+                               <div className="relative group/chatbox">
+                                 <textarea value={values[field.key] || ''} onChange={e => set(field.key, e.target.value)} rows={4} placeholder="Type a message to test..." className="w-full px-4 py-4 bg-foreground/[0.03] border border-border/40 rounded-2xl text-[12px] font-medium outline-none transition-all resize-none shadow-sm" />
+                                 <div className="absolute bottom-3 right-3">
+                                   <button onClick={(e) => { e.stopPropagation(); onTrigger?.(node.id, { message: values[field.key] }); }} className="flex items-center gap-1.5 px-4 py-1.5 bg-accent text-white rounded-full text-[11px] font-black hover:bg-accent-light transition-all shadow-lg">
+                                     <Play size={10} fill="currentColor" /> Execute workflow
+                                   </button>
+                                 </div>
+                               </div>
+                            </div>
+                          ) : (
+                            <input
+                              type={field.type === 'password' ? 'password' : field.type === 'number' ? 'number' : 'text'}
+                              value={values[field.key] ?? ''}
+                              onChange={e => set(field.key, field.type === 'number' ? (e.target.value ? Number(e.target.value) : '') : e.target.value)}
+                              placeholder={field.placeholder || field.example || field.description || 'Enter value...'}
+                              className="w-full px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-xl text-[12px] font-medium outline-none focus:border-foreground/40 transition-all"
+                            />
+                          )}
+
+                          {(field.description || field.example) && (
+                            <div className="space-y-1 pt-1 opacity-60">
+                              {field.description && <p className="text-[9px] text-muted leading-tight ml-1">{field.description}</p>}
+                              {field.example && <p className="text-[9px] text-muted italic ml-1">Example: {field.example}</p>}
+                            </div>
+                          )}
                         </div>
-                      ) : field.type === 'chat_test' ? (
-                        <div className="space-y-4 pt-2">
-                           <div className="flex items-center justify-between mb-1 px-1">
-                             <label className="text-[10px] font-bold text-muted/60 uppercase">Manual Trigger Input</label>
-                             <div className="text-[9px] text-accent/80 font-bold px-2 py-0.5 bg-accent/10 rounded-full border border-accent/20">Active Session</div>
-                           </div>
-                           <div className="relative group/chatbox">
-                             <textarea
-                               value={values[field.key] || ''}
-                               onChange={e => set(field.key, e.target.value)}
-                               rows={4}
-                               placeholder="Type a message to test the workflow..."
-                               className="w-full px-4 py-4 bg-foreground/[0.03] border border-border/40 rounded-2xl text-[12px] font-medium outline-none focus:border-accent/40 focus:ring-4 focus:ring-accent/5 transition-all resize-none shadow-sm group-hover/chatbox:border-border/60"
-                             />
-                             <div className="absolute bottom-3 right-3">
-                               <button
-                                 onClick={(e) => {
-                                   e.stopPropagation();
-                                   onTrigger?.(node.id, { message: values[field.key] });
-                                 }}
-                                 className="flex items-center gap-1.5 px-4 py-1.5 bg-accent text-white rounded-full text-[11px] font-black hover:bg-accent-light hover:scale-105 active:scale-95 transition-all shadow-lg"
-                               >
-                                 <Play size={10} fill="currentColor" />
-                                 Execute workflow
-                               </button>
-                             </div>
-                           </div>
-                           <p className="text-[9px] text-muted/50 px-2 flex items-center gap-1.5">
-                             <Zap size={10} className="text-accent" />
-                             Entering text and clicking execute will simulate a live chat event.
-                           </p>
-                        </div>
-                      ) : (
-                        <input
-                          type={field.type === 'password' ? 'password' : 'text'}
-                          value={values[field.key] ?? ''}
-                          onChange={e => set(field.key, e.target.value)}
-                          placeholder={field.placeholder || 'Enter value...'}
-                          className="w-full px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-xl text-[12px] font-medium outline-none focus:border-foreground/40 transition-all font-mono"
-                        />
-                      )}
-                    </div>
-                  ))
+                      ));
+                  })()
                 )}
               </div>
             </div>

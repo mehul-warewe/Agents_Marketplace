@@ -37,7 +37,7 @@ export const aiAgentNode: NodeDefinition = {
       key: 'userMessage',
       label: 'Prompt (User Message)',
       type: 'textarea',
-      placeholder: '{{ message }}',
+      placeholder: '{{ input.message }}',
     },
     { key: 'requireFormat', label: 'Require Specific Output Format', type: 'boolean' },
     { key: 'enableFallback', label: 'Enable Fallback Model', type: 'boolean' },
@@ -46,6 +46,36 @@ export const aiAgentNode: NodeDefinition = {
       label: 'System Prompt (Agent Personality)',
       type: 'textarea',
       placeholder: 'You are a professional assistant...',
+    },
+  ],
+  requiredInputs: [
+    {
+      key: 'userMessage',
+      label: 'User Message / Objective',
+      type: 'string',
+      required: true,
+      description: 'The prompt or objective for the AI agent to process',
+      example: 'Send an email to john@example.com with the meeting notes',
+    },
+  ],
+  outputSchema: [
+    {
+      key: 'text',
+      type: 'string',
+      description: 'Primary response from the AI agent',
+      example: 'Email sent successfully to john@example.com',
+    },
+    {
+      key: 'toolCalls',
+      type: 'array',
+      description: 'Tools called by the agent during execution',
+      example: [{ tool: 'google_gmail', action: 'send', result: 'success' }],
+    },
+    {
+      key: 'result',
+      type: 'any',
+      description: 'Structured result if output parser was connected',
+      example: { status: 'completed' },
     },
   ],
 };

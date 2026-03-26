@@ -25,4 +25,22 @@ export const codeNode: NodeDefinition = {
       placeholder: 'Write your JS here...',
     },
   ],
+  requiredInputs: [
+    {
+      key: 'input',
+      label: 'Input Data',
+      type: 'any',
+      required: false,
+      description: 'Any data passed from the previous node (optional - code can work without it)',
+      example: { message: 'hello', data: {} },
+    },
+  ],
+  outputSchema: [
+    {
+      key: 'result',
+      type: 'any',
+      description: 'Whatever the JavaScript code returns',
+      example: { timestamp: '2024-03-25T10:30:00Z' },
+    },
+  ],
 };

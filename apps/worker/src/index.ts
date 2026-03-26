@@ -346,17 +346,31 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
             const handler = WORKER_NODES[execKey];
             if (handler) {
               // Resolve node-specific credentials: Use selected or find default for user
-              let nodeCredentials = null;
+              let nodeCredentials: any = null;
+              const isGoogleNode = execKey.startsWith('google_');
+
               if (config.credentialId) {
-                const res = await resolveCredential(config.credentialId, job.data.userId);
-                nodeCredentials = res.data;
+                if (isGoogleNode) {
+                  // AUTO-REFRESH: Specially handle Google tokens to ensure they aren't expired
+                  const token = await resolveGoogleToken(config.credentialId, job.data.userId);
+                  const res = await resolveCredential(config.credentialId, job.data.userId);
+                  nodeCredentials = { ...res.data, accessToken: token };
+                } else {
+                  const res = await resolveCredential(config.credentialId, job.data.userId);
+                  nodeCredentials = res.data;
+                }
               } else {
                 // Automatic lookup: if user has a credential for this node type, use the newest valid one
                 if (nodeDef?.credentialTypes && nodeDef.credentialTypes.length > 0) {
                   const res = await resolveDefaultCredential(nodeDef.credentialTypes, job.data.userId);
                   if (res) {
                     console.log(`[Flow] Using default saved credential for "${nodeLabel}" (${res.type})`);
-                    nodeCredentials = res.data;
+                    if (isGoogleNode && (node.data.config as any)?.credentialId) {
+                       const token = await resolveGoogleToken((node.data.config as any).credentialId, job.data.userId);
+                       nodeCredentials = { ...res.data, accessToken: token };
+                    } else {
+                       nodeCredentials = res.data;
+                    }
                   }
                 }
               }

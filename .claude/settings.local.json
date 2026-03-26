@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(git checkout:*)",
-      "Bash(find C:/Users/syste/Desktop/hub -type f -name *credential*)"
+      "Bash(find C:/Users/syste/Desktop/hub -type f -name *credential*)",
+      "Bash(pnpm build:*)",
+      "Bash(tee build-output.log)",
+      "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
+      "Bash(npm install:*)",
+      "Bash(pnpm install:*)",
+      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
+      "Bash(find C:UserssysteDesktophubappsweb -type f -name *canvas*)"
     ]
   }
 }

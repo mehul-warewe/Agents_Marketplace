@@ -52,4 +52,13 @@ export const chatTrigger: NodeDefinition = {
       example: '2026-03-25T08:18:31.615Z',
     },
   ],
+  operationOutputs: {
+    default: [
+      { key: 'message', type: 'string', description: 'The chat message from the user' },
+      { key: 'input', type: 'string', description: 'Alias for message field' },
+      { key: 'userId', type: 'string', description: 'ID of user who sent message' },
+      { key: 'timestamp', type: 'string', description: 'ISO 8601 timestamp when message was received' },
+      { key: 'source', type: 'string', description: 'Message source (usually "chat")' },
+    ],
+  },
 };
