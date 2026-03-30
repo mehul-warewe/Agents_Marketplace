@@ -10,6 +10,7 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
   const headers = { Authorization: `Bearer ${token}` };
 
   try {
+    let result: any;
     switch (operation) {
       case 'searchVideos': {
         const query = render(config.query);
@@ -19,7 +20,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           params: { part: 'snippet', q: query, maxResults, order, type: 'video' },
           headers,
         });
-        return { success: true, videos: res.data.items || [], totalResults: res.data.pageInfo?.totalResults };
+        result = res.data;
+        break;
       }
 
       case 'getVideo': {
@@ -28,7 +30,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           params: { part: 'snippet,statistics,contentDetails', id: videoId },
           headers,
         });
-        return { success: true, video: res.data.items?.[0] };
+        result = res.data;
+        break;
       }
 
       case 'listVideos': {
@@ -37,7 +40,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
         const params: any = { part: 'snippet', maxResults, order: 'date' };
         if (channelId) params.channelId = channelId;
         const res = await axios.get('https://www.googleapis.com/youtube/v3/search', { params, headers });
-        return { success: true, videos: res.data.items || [] };
+        result = res.data;
+        break;
       }
 
       case 'getVideoStats': {
@@ -46,8 +50,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           params: { part: 'statistics,snippet', id: videoId },
           headers,
         });
-        const video = res.data.items?.[0];
-        return { success: true, videoId, stats: video?.statistics || {} };
+        result = res.data;
+        break;
       }
 
       case 'getComments': {
@@ -57,7 +61,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           params: { part: 'snippet', videoId, maxResults, textFormat: 'plainText' },
           headers,
         });
-        return { success: true, comments: res.data.items || [] };
+        result = res.data;
+        break;
       }
 
       case 'listPlaylists': {
@@ -67,7 +72,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
         if (channelId) params.channelId = channelId;
         else params.mine = true;
         const res = await axios.get('https://www.googleapis.com/youtube/v3/playlists', { params, headers });
-        return { success: true, playlists: res.data.items || [] };
+        result = res.data;
+        break;
       }
 
       case 'getPlaylist': {
@@ -76,7 +82,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           params: { part: 'snippet,contentDetails', id: playlistId },
           headers,
         });
-        return { success: true, playlist: res.data.items?.[0] };
+        result = res.data;
+        break;
       }
 
       case 'createPlaylist': {
@@ -87,7 +94,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           snippet: { title, description },
           status: { privacyStatus },
         }, { params: { part: 'snippet,status' }, headers });
-        return { success: true, playlistId: res.data.id, playlist: res.data };
+        result = res.data;
+        break;
       }
 
       case 'updatePlaylist': {
@@ -102,7 +110,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           params: { part: 'snippet' },
           headers,
         });
-        return { success: true, playlistId, updated: true };
+        result = res.data;
+        break;
       }
 
       case 'deletePlaylist': {
@@ -111,7 +120,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           params: { id: playlistId },
           headers,
         });
-        return { success: true, playlistId, deleted: true };
+        result = { status: 'deleted' };
+        break;
       }
 
       case 'addToPlaylist': {
@@ -120,7 +130,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
         const res = await axios.post('https://www.googleapis.com/youtube/v3/playlistItems', {
           snippet: { playlistId, resourceId: { kind: 'youtube#video', videoId } },
         }, { params: { part: 'snippet' }, headers });
-        return { success: true, playlistId, videoId, itemId: res.data.id };
+        result = res.data;
+        break;
       }
 
       case 'removeFromPlaylist': {
@@ -129,7 +140,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           params: { id: playlistItemId },
           headers,
         });
-        return { success: true, itemId: playlistItemId, removed: true };
+        result = { status: 'removed' };
+        break;
       }
 
       case 'getChannel': {
@@ -140,7 +152,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
         else if (forUsername) params.forUsername = forUsername;
         else params.mine = true;
         const res = await axios.get('https://www.googleapis.com/youtube/v3/channels', { params, headers });
-        return { success: true, channel: res.data.items?.[0] };
+        result = res.data;
+        break;
       }
 
       case 'listChannelVideos': {
@@ -150,7 +163,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           params: { part: 'snippet', channelId, maxResults, order: 'date', type: 'video' },
           headers,
         });
-        return { success: true, videos: res.data.items || [] };
+        result = res.data;
+        break;
       }
 
       case 'getChannelStats': {
@@ -159,20 +173,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           params: { part: 'statistics,snippet', id: channelId },
           headers,
         });
-        const channel = res.data.items?.[0];
-        const stats = channel?.statistics || {};
-        // Flatten stats to top level so {{input.viewCount}}, {{input.subscriberCount}}, etc. work
-        return {
-          success: true,
-          channelId,
-          title: channel?.snippet?.title || '',
-          description: channel?.snippet?.description || '',
-          viewCount: stats.viewCount ?? '0',
-          subscriberCount: stats.subscriberCount ?? '0',
-          hiddenSubscriberCount: stats.hiddenSubscriberCount ?? false,
-          videoCount: stats.videoCount ?? '0',
-          stats, // also keep nested for legacy access
-        };
+        result = res.data;
+        break;
       }
 
       case 'getSubscribers': {
@@ -181,16 +183,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           params: { part: 'statistics', id: channelId },
           headers,
         });
-        const stats = res.data.items?.[0]?.statistics || {};
-        // Flatten all stats to top level so downstream {{input.X}} references resolve
-        return {
-          success: true,
-          channelId,
-          subscriberCount: stats.subscriberCount ?? '0',
-          viewCount: stats.viewCount ?? '0',
-          hiddenSubscriberCount: stats.hiddenSubscriberCount ?? false,
-          videoCount: stats.videoCount ?? '0',
-        };
+        result = res.data;
+        break;
       }
 
       case 'createComment': {
@@ -199,7 +193,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
         const res = await axios.post('https://www.googleapis.com/youtube/v3/commentThreads', {
           snippet: { videoId, topLevelComment: { snippet: { textDisplay: text } } },
         }, { params: { part: 'snippet' }, headers });
-        return { success: true, commentId: res.data.id };
+        result = res.data;
+        break;
       }
 
       case 'updateComment': {
@@ -209,7 +204,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           id: commentId,
           snippet: { textDisplay: text },
         }, { params: { part: 'snippet' }, headers });
-        return { success: true, commentId, updated: true };
+        result = res.data;
+        break;
       }
 
       case 'deleteComment': {
@@ -218,7 +214,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           params: { id: commentId },
           headers,
         });
-        return { success: true, commentId, deleted: true };
+        result = { status: 'deleted' };
+        break;
       }
 
       case 'replyComment': {
@@ -227,16 +224,27 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
         const res = await axios.post('https://www.googleapis.com/youtube/v3/comments', {
           snippet: { parentId: parentCommentId, textDisplay: text },
         }, { params: { part: 'snippet' }, headers });
-        return { success: true, commentId: res.data.id };
+        result = res.data;
+        break;
       }
 
       case 'analytics': {
+        const ids = render(config.ids || 'channel==MINE');
         const startDate = render(config.startDate);
         const endDate = render(config.endDate);
-        const metrics = render(config.metrics || 'views,likes,comments');
-        const dimensions = render(config.dimensions || 'day');
-        // YouTube Analytics uses separate endpoint - simplified version
-        return { success: true, startDate, endDate, metrics, message: 'Analytics requires YouTube Analytics API scope' };
+        const metrics = render(config.metrics);
+        const dimensions = render(config.dimensions || '');
+        const filters = render(config.filters || '');
+        const params: any = { ids, startDate, endDate, metrics };
+        if (dimensions) params.dimensions = dimensions;
+        if (filters) params.filters = filters;
+
+        const res = await axios.get('https://youtubeanalytics.googleapis.com/v2/reports', {
+          params,
+          headers,
+        });
+        result = res.data;
+        break;
       }
 
       case 'channel_stats': {
@@ -244,19 +252,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           params: { part: 'statistics,snippet,contentDetails', mine: true },
           headers,
         });
-        const ch = res.data.items?.[0];
-        const statistics = ch?.statistics || {};
-        // Flatten stats to top level so {{input.viewCount}}, {{input.subscriberCount}}, {{input.videoCount}} work
-        return {
-          success: true,
-          viewCount: statistics.viewCount ?? '0',
-          subscriberCount: statistics.subscriberCount ?? '0',
-          hiddenSubscriberCount: statistics.hiddenSubscriberCount ?? false,
-          videoCount: statistics.videoCount ?? '0',
-          title: ch?.snippet?.title || '',
-          description: ch?.snippet?.description || '',
-          stats: statistics, // keep nested copy for legacy access
-        };
+        result = res.data;
+        break;
       }
 
       case 'list_my_videos': {
@@ -265,7 +262,8 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           params: { part: 'snippet', forMine: true, type: 'video', maxResults, order: 'date' },
           headers,
         });
-        return { success: true, videos: res.data.items || [] };
+        result = res.data;
+        break;
       }
 
       case 'video_stats': {
@@ -274,12 +272,15 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           params: { part: 'statistics,snippet', id: videoId },
           headers,
         });
-        return { success: true, video: res.data.items?.[0] };
+        result = res.data;
+        break;
       }
 
       default:
         throw new Error(`Unknown YouTube operation: ${operation}`);
     }
+
+    return { status: 'success', data: result };
   } catch (err: any) {
     const msg = err.response?.data?.error?.message || err.message;
     throw new Error(`[YouTube Error] ${msg}`);

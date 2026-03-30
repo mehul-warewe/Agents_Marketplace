@@ -30,25 +30,25 @@ export async function generateWorkflow(prompt: string): Promise<any> {
 
     const modelWithTools = model.bindTools(allArchitectTools);
 
-    const systemPrompt = `You are the Linear Aether Workflow Architect. 
-Your goal is to build SEQUENTIAL, ONE-WAY workflows (Node A → Node B → Node C).
+    const systemPrompt = `You are the Aether Workflow Architect. 
+Your goal is to build linear, sequential workflows that start with exactly ONE trigger.
 
-═══════════════════════════════ LINEAR ENGINE RULES ══════════════════════════════
+═══════════════════════════════ ARCHITECT RULES ══════════════════════════════
 
-1. SEQUENTIAL ONLY: Build a single, unbroken chain of events. No branching or complex webs.
-2. DIRECT LLM NODES: Use specific provider nodes like 'Gemini' (llm.gemini) or 'OpenAI' (llm.openai) for ALL text-based processing. 
-3. NO AGENT/SYNTHESIS: Do not use the generic 'Agent' or 'Synthesis' nodes. Connect triggers directly to Model Action nodes.
-4. AUTO-WIRING: Simply provide the 'nodes' array in strict order.
-5. DATA PIPELINE:
-   - {{ input.message }} → Direct data from the trigger.
-   - {{ nodes.ID.output }} → Text result from a specific LLM node.
+1. SINGLE TRIGGER: Every workflow MUST start with exactly one trigger (Chat, Manual, or Webhook).
+2. SEQUENTIAL ONLY: Build a single, unbroken chain of events (Trigger → Node 1 → Node 2).
+3. CLEAN IDs: Identify nodes using the format 'type_provider_index' (e.g., trigger_chat_1, llm_gemini_1, tool_slack_1).
+4. FLAT VARIABLES: Use simple, flat variable syntax for data flow:
+   - {{ message }} → Data from the Chat trigger.
+   - {{ llm_gemini_1.result }} → Text result from a specific Gemini node.
+   - {{ tool_github_1.result }} → Data from a platform tool.
+5. NO GENERIC NODES: Use specific provider nodes (llm.gemini, llm.openai) for all AI logic.
 
-═══════════════════════════════ NODE DEFINITIONS ══════════════════════════════════
+═══════════════════════════════ NODE TYPES ═══════════════════════════════════
 
-- Gemini (llm.gemini): Direct LLM action. Config: { model: "google/gemini-2.0-flash-001", prompt: "..." }
-- OpenAI (llm.openai): Direct LLM action.
-- Platforms: Use 'get_platform_operations' for Gmail, Slack, etc.
-- Triggers: Manual, Chat, or Webhook.
+- Triggers: trigger.chat, trigger.manual, trigger.webhook.
+- Models: llm.gemini (Gemini 2.0 Flash), llm.openai (GPT-4o).
+- Tools: Use 'get_platform_operations' to explore Gmail, Slack, GitHub, etc.
 `;
 
     const userMessage = `Build a workflow for: ${prompt}

@@ -194,6 +194,132 @@ export const sheetsNode: NodeDefinition = {
       { key: 'title', label: 'Title', type: 'string', required: true, description: 'Spreadsheet title', example: 'My Sheet' },
     ],
   },
+  operationOutputs: {
+    createSheet: [
+      { key: 'status', type: 'string' },
+      { key: 'data.spreadsheetId', type: 'string' },
+      { key: 'data.replies[0].addSheet.properties.title', type: 'string' },
+      { key: 'data.replies[0].addSheet.properties.sheetId', type: 'number' },
+    ],
+    deleteSheet: [
+      { key: 'status', type: 'string' },
+    ],
+    listSheets: [
+      { key: 'status', type: 'string' },
+      { key: 'data.sheets[0].properties.title', type: 'string' },
+      { key: 'data.sheets[0].properties.sheetId', type: 'number' },
+    ],
+    renameSheet: [
+      { key: 'status', type: 'string' },
+    ],
+    duplicateSheet: [
+      { key: 'status', type: 'string' },
+    ],
+    readCell: [
+      { key: 'status', type: 'string' },
+      { key: 'data.values[0][0]', type: 'string' },
+    ],
+    readRange: [
+      { key: 'status', type: 'string' },
+      { key: 'data.values[0]', type: 'array' },
+      { key: 'data.values[0][0]', type: 'string' },
+    ],
+    readSheet: [
+      { key: 'status', type: 'string' },
+      { key: 'data.values[0]', type: 'array' },
+    ],
+    writeCell: [
+      { key: 'status', type: 'string' },
+      { key: 'data.updatedRange', type: 'string' },
+      { key: 'data.updatedCells', type: 'number' },
+    ],
+    writeRange: [
+      { key: 'status', type: 'string' },
+      { key: 'data.updatedRange', type: 'string' },
+      { key: 'data.updatedCells', type: 'number' },
+    ],
+    appendRow: [
+      { key: 'status', type: 'string' },
+      { key: 'data.updates.updatedRange', type: 'string' },
+      { key: 'data.updates.updatedRows', type: 'number' },
+    ],
+    appendRows: [
+      { key: 'status', type: 'string' },
+      { key: 'data.updates.updatedRange', type: 'string' },
+    ],
+    insertRow: [
+      { key: 'status', type: 'string' },
+    ],
+    deleteRow: [
+      { key: 'status', type: 'string' },
+    ],
+    insertColumn: [
+      { key: 'status', type: 'string' },
+    ],
+    deleteColumn: [
+      { key: 'status', type: 'string' },
+    ],
+    clearRange: [
+      { key: 'status', type: 'string' },
+      { key: 'data.clearedRange', type: 'string' },
+    ],
+    formatCell: [
+      { key: 'status', type: 'string' },
+    ],
+    setColumnWidth: [
+      { key: 'status', type: 'string' },
+    ],
+    setRowHeight: [
+      { key: 'status', type: 'string' },
+    ],
+    freezeRows: [
+      { key: 'status', type: 'string' },
+    ],
+    mergeCell: [
+      { key: 'status', type: 'string' },
+    ],
+    addFormula: [
+      { key: 'status', type: 'string' },
+    ],
+    updateFormula: [
+      { key: 'status', type: 'string' },
+    ],
+    copyFormula: [
+      { key: 'status', type: 'string' },
+    ],
+    sortRange: [
+      { key: 'status', type: 'string' },
+    ],
+    filterRange: [
+      { key: 'status', type: 'string' },
+    ],
+    createChart: [
+      { key: 'status', type: 'string' },
+    ],
+    createPivotTable: [
+      { key: 'status', type: 'string' },
+    ],
+    append: [
+      { key: 'status', type: 'string' },
+      { key: 'data.updates.updatedRange', type: 'string' },
+    ],
+    read: [
+      { key: 'status', type: 'string' },
+      { key: 'data.values[0]', type: 'array' },
+    ],
+    update: [
+      { key: 'status', type: 'string' },
+      { key: 'data.updatedRange', type: 'string' },
+    ],
+    clear: [
+      { key: 'status', type: 'string' },
+    ],
+    create: [
+      { key: 'status', type: 'string' },
+      { key: 'data.spreadsheetId', type: 'string' },
+      { key: 'data.spreadsheetUrl', type: 'string' },
+    ],
+  },
   requiredInputs: [
     {
       key: 'operation',
@@ -205,9 +331,7 @@ export const sheetsNode: NodeDefinition = {
     },
   ],
   outputSchema: [
-    { key: 'spreadsheetId', type: 'string', description: 'Spreadsheet ID', example: '1BxiMV...' },
-    { key: 'range', type: 'string', description: 'Updated range', example: 'Sheet1!A1:B2' },
-    { key: 'values', type: 'array', description: 'Values returned', example: [] },
     { key: 'status', type: 'string', description: 'Operation status', example: 'success' },
+    { key: 'data', type: 'any', description: 'Operational result' },
   ],
 };

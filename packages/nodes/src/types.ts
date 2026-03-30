@@ -68,7 +68,7 @@ export interface NodeInput {
 export interface NodeOutput {
   key: string;
   type: InputType;
-  description: string;
+  description?: string;
   example?: any;
 }
 

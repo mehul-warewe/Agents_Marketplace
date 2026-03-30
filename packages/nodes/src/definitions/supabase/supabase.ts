@@ -141,6 +141,114 @@ export const supabaseNode: NodeDefinition = {
       { key: 'params', label: 'Parameters', type: 'string', required: false, description: 'Function args', example: '{}' },
     ],
   },
+  operationOutputs: {
+    listTables: [
+      { key: 'status', type: 'string' },
+      { key: 'data[0].name', type: 'string' },
+    ],
+    getTable: [
+      { key: 'status', type: 'string' },
+      { key: 'data.name', type: 'string' },
+      { key: 'data.columns', type: 'array' },
+    ],
+    createTable: [
+      { key: 'status', type: 'string' },
+    ],
+    listRows: [
+      { key: 'status', type: 'string' },
+      { key: 'data[0]', type: 'object' },
+      { key: 'data[0].id', type: 'string' },
+    ],
+    getRow: [
+      { key: 'status', type: 'string' },
+      { key: 'data', type: 'object' },
+      { key: 'data.id', type: 'string' },
+    ],
+    createRow: [
+      { key: 'status', type: 'string' },
+      { key: 'data[0].id', type: 'string' },
+    ],
+    updateRow: [
+      { key: 'status', type: 'string' },
+      { key: 'data[0].id', type: 'string' },
+    ],
+    deleteRow: [
+      { key: 'status', type: 'string' },
+    ],
+    bulkInsert: [
+      { key: 'status', type: 'string' },
+      { key: 'data[0].id', type: 'string' },
+    ],
+    bulkUpdate: [
+      { key: 'status', type: 'string' },
+    ],
+    bulkDelete: [
+      { key: 'status', type: 'string' },
+    ],
+    searchRows: [
+      { key: 'status', type: 'string' },
+      { key: 'data[0].id', type: 'string' },
+    ],
+    filterRows: [
+      { key: 'status', type: 'string' },
+      { key: 'data[0].id', type: 'string' },
+    ],
+    sortRows: [
+      { key: 'status', type: 'string' },
+      { key: 'data[0].id', type: 'string' },
+    ],
+    listUsers: [
+      { key: 'status', type: 'string' },
+      { key: 'data.users[0].id', type: 'string' },
+      { key: 'data.users[0].email', type: 'string' },
+    ],
+    getUser: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+      { key: 'data.email', type: 'string' },
+    ],
+    updateUser: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+    ],
+    deleteUser: [
+      { key: 'status', type: 'string' },
+    ],
+    uploadFile: [
+      { key: 'status', type: 'string' },
+      { key: 'data.path', type: 'string' },
+    ],
+    downloadFile: [
+      { key: 'status', type: 'string' },
+      { key: 'data', type: 'any' },
+    ],
+    listFiles: [
+      { key: 'status', type: 'string' },
+      { key: 'data[0].name', type: 'string' },
+    ],
+    deleteFile: [
+      { key: 'status', type: 'string' },
+    ],
+    select: [
+      { key: 'status', type: 'string' },
+      { key: 'data[0]', type: 'object' },
+      { key: 'data[0].id', type: 'string' },
+    ],
+    insert: [
+      { key: 'status', type: 'string' },
+      { key: 'data[0].id', type: 'string' },
+    ],
+    update: [
+      { key: 'status', type: 'string' },
+    ],
+    delete: [
+      { key: 'status', type: 'string' },
+    ],
+    rpc: [
+      { key: 'status', type: 'string' },
+      { key: 'data', type: 'any' },
+    ],
+  },
   requiredInputs: [
     {
       key: 'operation',
@@ -153,7 +261,6 @@ export const supabaseNode: NodeDefinition = {
   ],
   outputSchema: [
     { key: 'data', type: 'any', description: 'Query results', example: {} },
-    { key: 'rowCount', type: 'number', description: 'Rows affected', example: 1 },
     { key: 'status', type: 'string', description: 'Operation status', example: 'success' },
   ],
 };

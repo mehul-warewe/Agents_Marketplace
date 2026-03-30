@@ -4,7 +4,7 @@ import type { ToolHandler, ToolContext } from '../../types.js';
 export const notionHandler: ToolHandler = async (ctx: ToolContext) => {
   const { config, render, credentials } = ctx;
   const operation = config.operation;
-  const token = credentials?.integrationToken;
+  const token = credentials?.notionToken || credentials?.accessToken || credentials?.apiKey;
 
   if (!token) throw new Error('Notion node requires a valid integration token.');
 
@@ -17,56 +17,58 @@ export const notionHandler: ToolHandler = async (ctx: ToolContext) => {
   const baseUrl = 'https://api.notion.com/v1';
 
   try {
+    let result: any;
     switch (operation) {
       case 'listDatabases': {
-        const res = await axios.get(`${baseUrl}/search`, {
-          params: { filter: { value: 'database', property: 'object' } },
-          headers,
-        });
-        return { success: true, databases: res.data.results };
+        const res = await axios.post(`${baseUrl}/search`, {
+          filter: { property: 'object', value: 'database' }
+        }, { headers });
+        result = res.data.results;
+        break;
       }
 
       case 'getDatabase': {
         const databaseId = render(config.databaseId);
         const res = await axios.get(`${baseUrl}/databases/${databaseId}`, { headers });
-        return { success: true, database: res.data };
+        result = res.data;
+        break;
       }
 
       case 'createDatabase': {
-        const title = render(config.title);
         const parentId = render(config.parentId);
-        const payload: any = {
-          parent: parentId ? { page_id: parentId } : { type: 'workspace' },
+        const title = render(config.title);
+        const res = await axios.post(`${baseUrl}/databases`, {
+          parent: { page_id: parentId },
           title: [{ text: { content: title } }],
-          properties: { Name: { title: {} } },
-        };
-        const res = await axios.post(`${baseUrl}/databases`, payload, { headers });
-        return { success: true, database: res.data };
+          properties: { Name: { title: {} } }
+        }, { headers });
+        result = res.data;
+        break;
       }
 
       case 'updateDatabase': {
         const databaseId = render(config.databaseId);
-        const title = render(config.title || '');
-        const payload: any = {};
-        if (title) payload.title = [{ text: { content: title } }];
-        const res = await axios.patch(`${baseUrl}/databases/${databaseId}`, payload, { headers });
-        return { success: true, database: res.data };
+        const title = render(config.title);
+        const res = await axios.patch(`${baseUrl}/databases/${databaseId}`, {
+          title: [{ text: { content: title } }]
+        }, { headers });
+        result = res.data;
+        break;
       }
 
       case 'listPages': {
-        const parentId = render(config.parentId || '');
-        const filter = parentId ? { value: 'page', property: 'object' } : undefined;
-        const res = await axios.get(`${baseUrl}/search`, {
-          params: filter ? { filter } : {},
-          headers,
-        });
-        return { success: true, pages: res.data.results };
+        const res = await axios.post(`${baseUrl}/search`, {
+          filter: { property: 'object', value: 'page' }
+        }, { headers });
+        result = res.data.results;
+        break;
       }
 
       case 'getPage': {
         const pageId = render(config.pageId);
         const res = await axios.get(`${baseUrl}/pages/${pageId}`, { headers });
-        return { success: true, page: res.data };
+        result = res.data;
+        break;
       }
 
       case 'createPage': {
@@ -77,18 +79,31 @@ export const notionHandler: ToolHandler = async (ctx: ToolContext) => {
         try {
           properties = JSON.parse(propertiesStr);
         } catch {
-          properties = { Title: { title: [{ text: { content: title } }] } };
+          properties = {};
         }
 
-        const payload: any = {
-          parent: { page_id: parentId },
+        // Logic to detect if parent is a database or page
+        // For simplicity, we assume if it's long uuid it might be a database if used with properties
+        const isDatabase = parentId.length > 20 && Object.keys(properties).length > 0;
+        
+        const body: any = {
+          parent: isDatabase ? { database_id: parentId } : { page_id: parentId },
           properties: {
-            title: [{ text: { content: title } }],
-            ...properties,
-          },
+            title: isDatabase ? undefined : [{ text: { content: title } }],
+            ...properties
+          }
         };
-        const res = await axios.post(`${baseUrl}/pages`, payload, { headers });
-        return { success: true, page: res.data };
+
+        // If it's a database page, the title property name might vary (usually 'Name' or 'title')
+        if (isDatabase) {
+           // We try to find a title-type property or fallback to 'Name'
+           const titleKey = Object.keys(properties).find(k => properties[k].title) || 'Name';
+           body.properties[titleKey] = { title: [{ text: { content: title } }] };
+        }
+
+        const res = await axios.post(`${baseUrl}/pages`, body, { headers });
+        result = res.data;
+        break;
       }
 
       case 'updatePage': {
@@ -100,190 +115,62 @@ export const notionHandler: ToolHandler = async (ctx: ToolContext) => {
         } catch {
           properties = {};
         }
-
-        if (config.title) {
-          properties.title = [{ text: { content: render(config.title) } }];
-        }
-
-        const payload = { properties };
-        const res = await axios.patch(`${baseUrl}/pages/${pageId}`, payload, { headers });
-        return { success: true, page: res.data };
-      }
-
-      case 'deletePage': {
-        const pageId = render(config.pageId);
-        const payload = { archived: true };
-        const res = await axios.patch(`${baseUrl}/pages/${pageId}`, payload, { headers });
-        return { success: true, pageId, archived: true };
+        const res = await axios.patch(`${baseUrl}/pages/${pageId}`, { properties }, { headers });
+        result = res.data;
+        break;
       }
 
       case 'archivePage': {
         const pageId = render(config.pageId);
-        const payload = { archived: true };
-        const res = await axios.patch(`${baseUrl}/pages/${pageId}`, payload, { headers });
-        return { success: true, pageId, archived: true };
+        const res = await axios.patch(`${baseUrl}/pages/${pageId}`, { archived: true }, { headers });
+        result = res.data;
+        break;
       }
 
       case 'listBlocks': {
-        const pageId = render(config.pageId);
-        const res = await axios.get(`${baseUrl}/blocks/${pageId}/children`, { headers });
-        return { success: true, blocks: res.data.results };
-      }
-
-      case 'getBlock': {
-        const blockId = render(config.blockId);
-        const res = await axios.get(`${baseUrl}/blocks/${blockId}`, { headers });
-        return { success: true, block: res.data };
-      }
-
-      case 'createBlock': {
-        const pageId = render(config.pageId);
-        const type = render(config.type);
-        const content = render(config.content);
-
-        const blockData: any = {
-          object: 'block',
-          type,
-        };
-
-        if (type === 'paragraph') {
-          blockData.paragraph = { text: [{ type: 'text', text: { content } }] };
-        } else if (type === 'heading_1' || type === 'heading_2' || type === 'heading_3') {
-          blockData[type] = { text: [{ type: 'text', text: { content } }] };
-        }
-
-        const payload = { children: [blockData] };
-        const res = await axios.patch(`${baseUrl}/blocks/${pageId}/children`, payload, { headers });
-        return { success: true, block: res.data.results?.[0] };
-      }
-
-      case 'updateBlock': {
-        const blockId = render(config.blockId);
-        const content = render(config.content);
-
-        const payload: any = {
-          paragraph: { text: [{ type: 'text', text: { content } }] },
-        };
-        const res = await axios.patch(`${baseUrl}/blocks/${blockId}`, payload, { headers });
-        return { success: true, block: res.data };
-      }
-
-      case 'deleteBlock': {
-        const blockId = render(config.blockId);
-        const payload = { archived: true };
-        const res = await axios.patch(`${baseUrl}/blocks/${blockId}`, payload, { headers });
-        return { success: true, blockId, archived: true };
+        const blockId = render(config.pageId || config.blockId);
+        const res = await axios.get(`${baseUrl}/blocks/${blockId}/children`, { headers });
+        result = res.data.results;
+        break;
       }
 
       case 'appendBlock': {
-        const pageId = render(config.pageId);
-        const type = render(config.type);
+        const blockId = render(config.pageId || config.blockId);
+        const type = render(config.type || 'paragraph');
         const content = render(config.content);
-
-        const blockData: any = {
-          object: 'block',
-          type,
-        };
-
-        if (type === 'paragraph') {
-          blockData.paragraph = { text: [{ type: 'text', text: { content } }] };
-        } else if (type === 'heading_1' || type === 'heading_2' || type === 'heading_3') {
-          blockData[type] = { text: [{ type: 'text', text: { content } }] };
-        }
-
-        const payload = { children: [blockData] };
-        const res = await axios.patch(`${baseUrl}/blocks/${pageId}/children`, payload, { headers });
-        return { success: true, block: res.data.results?.[0] };
-      }
-
-      case 'listRecords': {
-        const databaseId = render(config.databaseId);
-        const res = await axios.post(`${baseUrl}/databases/${databaseId}/query`, {}, { headers });
-        return { success: true, records: res.data.results };
-      }
-
-      case 'getRecord': {
-        const pageId = render(config.pageId);
-        const res = await axios.get(`${baseUrl}/pages/${pageId}`, { headers });
-        return { success: true, record: res.data };
-      }
-
-      case 'createRecord': {
-        const databaseId = render(config.databaseId);
-        const propertiesStr = render(config.properties);
-        let properties: any = {};
-        try {
-          properties = JSON.parse(propertiesStr);
-        } catch {
-          properties = { title: [{ text: { content: propertiesStr } }] };
-        }
-
-        const payload = {
-          parent: { database_id: databaseId },
-          properties,
-        };
-        const res = await axios.post(`${baseUrl}/pages`, payload, { headers });
-        return { success: true, record: res.data };
-      }
-
-      case 'updateRecord': {
-        const pageId = render(config.pageId);
-        const propertiesStr = render(config.properties);
-        let properties: any = {};
-        try {
-          properties = JSON.parse(propertiesStr);
-        } catch {
-          properties = {};
-        }
-
-        const payload = { properties };
-        const res = await axios.patch(`${baseUrl}/pages/${pageId}`, payload, { headers });
-        return { success: true, record: res.data };
-      }
-
-      case 'deleteRecord': {
-        const pageId = render(config.pageId);
-        const payload = { archived: true };
-        const res = await axios.patch(`${baseUrl}/pages/${pageId}`, payload, { headers });
-        return { success: true, pageId, archived: true };
+        const res = await axios.patch(`${baseUrl}/blocks/${blockId}/children`, {
+          children: [{
+            object: 'block',
+            type,
+            [type]: { rich_text: [{ text: { content } }] }
+          }]
+        }, { headers });
+        result = res.data;
+        break;
       }
 
       case 'search': {
         const query = render(config.query);
         const res = await axios.post(`${baseUrl}/search`, { query }, { headers });
-        return { success: true, results: res.data.results };
+        result = res.data.results;
+        break;
       }
 
       case 'filterDatabase': {
         const databaseId = render(config.databaseId);
-        const filterStr = render(config.filter);
-        let filter: any = {};
-        try {
-          filter = JSON.parse(filterStr);
-        } catch {
-          filter = { property: config.filter, text: { contains: config.filter } };
-        }
-
-        const payload = { filter };
-        const res = await axios.post(`${baseUrl}/databases/${databaseId}/query`, payload, { headers });
-        return { success: true, records: res.data.results };
-      }
-
-      case 'sortDatabase': {
-        const databaseId = render(config.databaseId);
-        const property = render(config.property);
-        const direction = render(config.direction || 'ascending');
-
-        const payload = {
-          sorts: [{ property, direction }],
-        };
-        const res = await axios.post(`${baseUrl}/databases/${databaseId}/query`, payload, { headers });
-        return { success: true, records: res.data.results };
+        const filterStr = render(config.filter || '{}');
+        let filter = {};
+        try { filter = JSON.parse(filterStr); } catch { filter = {}; }
+        const res = await axios.post(`${baseUrl}/databases/${databaseId}/query`, { filter }, { headers });
+        result = res.data.results;
+        break;
       }
 
       default:
         throw new Error(`Unknown Notion operation: ${operation}`);
     }
+
+    return { status: 'success', data: result };
   } catch (err: any) {
     const msg = err.response?.data?.message || err.message;
     throw new Error(`[Notion Error] ${msg}`);

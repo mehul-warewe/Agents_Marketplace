@@ -16,6 +16,7 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
   const graphqlUrl = 'https://api.linear.app/graphql';
 
   try {
+    let result: any;
     switch (operation) {
       case 'listIssues': {
         const first = parseInt(render(config.first || '50'), 10) || 50;
@@ -34,7 +35,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         `;
         const res = await axios.post(graphqlUrl, { query }, { headers });
-        return { success: true, issues: res.data.data?.issues?.edges || [] };
+        result = res.data.data;
+        break;
       }
 
       case 'getIssue': {
@@ -47,7 +49,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         `;
         const res = await axios.post(graphqlUrl, { query }, { headers });
-        return { success: true, issue: res.data.data?.issue };
+        result = res.data.data;
+        break;
       }
 
       case 'createIssue': {
@@ -55,16 +58,28 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
         const title = render(config.title);
         const description = render(config.description || '');
         const priority = parseInt(render(config.priority || '0'), 10) || 0;
+        const assigneeId = render(config.assigneeId || '');
+        const stateId = render(config.stateId || '');
+        const labelIds = render(config.labelIds || '');
+
+        let inputStr = `teamId: "${teamId}", title: "${title.replace(/"/g, '\\"')}", description: "${description.replace(/"/g, '\\"')}", priority: ${priority}`;
+        if (assigneeId) inputStr += `, assigneeId: "${assigneeId}"`;
+        if (stateId) inputStr += `, stateId: "${stateId}"`;
+        if (labelIds) {
+          const ids = labelIds.split(',').map(id => `"${id.trim()}"`).join(', ');
+          inputStr += `, labelIds: [${ids}]`;
+        }
 
         const mutation = `
           mutation {
-            issueCreate(input: { teamId: "${teamId}", title: "${title.replace(/"/g, '\\"')}", description: "${description.replace(/"/g, '\\"')}", priority: ${priority} }) {
+            issueCreate(input: { ${inputStr} }) {
               success issue { id number title }
             }
           }
         `;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: true, issue: res.data.data?.issueCreate?.issue };
+        result = res.data.data?.issueCreate;
+        break;
       }
 
       case 'updateIssue': {
@@ -86,28 +101,32 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         `;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: true, issue: res.data.data?.issueUpdate?.issue };
+        result = res.data.data?.issueUpdate;
+        break;
       }
 
       case 'deleteIssue': {
         const issueId = render(config.issueId);
         const mutation = `mutation { issueDelete(id: "${issueId}") { success } }`;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: res.data.data?.issueDelete?.success };
+        result = res.data.data?.issueDelete;
+        break;
       }
 
       case 'archiveIssue': {
         const issueId = render(config.issueId);
         const mutation = `mutation { issueArchive(id: "${issueId}") { success } }`;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: res.data.data?.issueArchive?.success };
+        result = res.data.data?.issueArchive;
+        break;
       }
 
       case 'unarchiveIssue': {
         const issueId = render(config.issueId);
         const mutation = `mutation { issueUnarchive(id: "${issueId}") { success } }`;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: res.data.data?.issueUnarchive?.success };
+        result = res.data.data?.issueUnarchive;
+        break;
       }
 
       case 'assignIssue': {
@@ -115,14 +134,16 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
         const userId = render(config.userId);
         const mutation = `mutation { issueUpdate(id: "${issueId}", input: { assigneeId: "${userId}" }) { success issue { id } } }`;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: true, issueId, assignedTo: userId };
+        result = res.data.data?.issueUpdate;
+        break;
       }
 
       case 'unassignIssue': {
         const issueId = render(config.issueId);
         const mutation = `mutation { issueUpdate(id: "${issueId}", input: { assigneeId: null }) { success issue { id } } }`;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: true, issueId, unassigned: true };
+        result = res.data.data?.issueUpdate;
+        break;
       }
 
       case 'changeStatus': {
@@ -130,7 +151,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
         const state = render(config.state);
         const mutation = `mutation { issueUpdate(id: "${issueId}", input: { state: "${state}" }) { success issue { id state { name } } } }`;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: true, issueId, newState: state };
+        result = res.data.data?.issueUpdate;
+        break;
       }
 
       case 'changePriority': {
@@ -138,7 +160,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
         const priority = parseInt(render(config.priority), 10) || 0;
         const mutation = `mutation { issueUpdate(id: "${issueId}", input: { priority: ${priority} }) { success issue { id priority } } }`;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: true, issueId, priority };
+        result = res.data.data?.issueUpdate;
+        break;
       }
 
       case 'addLabel': {
@@ -146,7 +169,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
         const labelId = render(config.labelId);
         const mutation = `mutation { issueAddLabel(id: "${issueId}", labelId: "${labelId}") { success issue { id labels { edges { node { id name } } } } } }`;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: true, issueId, labelAdded: labelId };
+        result = res.data.data?.issueAddLabel;
+        break;
       }
 
       case 'removeLabel': {
@@ -154,7 +178,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
         const labelId = render(config.labelId);
         const mutation = `mutation { issueRemoveLabel(id: "${issueId}", labelId: "${labelId}") { success issue { id } } }`;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: true, issueId, labelRemoved: labelId };
+        result = res.data.data?.issueRemoveLabel;
+        break;
       }
 
       case 'addToProject': {
@@ -162,7 +187,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
         const projectId = render(config.projectId);
         const mutation = `mutation { issueAddToProject(id: "${issueId}", projectId: "${projectId}") { success issue { id } } }`;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: true, issueId, addedToProject: projectId };
+        result = res.data.data?.issueAddToProject;
+        break;
       }
 
       case 'removeFromProject': {
@@ -170,7 +196,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
         const projectId = render(config.projectId);
         const mutation = `mutation { issueRemoveFromProject(id: "${issueId}", projectId: "${projectId}") { success issue { id } } }`;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: true, issueId, removedFromProject: projectId };
+        result = res.data.data?.issueRemoveFromProject;
+        break;
       }
 
       case 'listComments': {
@@ -185,7 +212,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         `;
         const res = await axios.post(graphqlUrl, { query }, { headers });
-        return { success: true, comments: res.data.data?.issue?.comments?.edges || [] };
+        result = res.data.data?.issue;
+        break;
       }
 
       case 'createComment': {
@@ -199,7 +227,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         `;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: true, comment: res.data.data?.commentCreate?.comment };
+        result = res.data.data?.commentCreate;
+        break;
       }
 
       case 'updateComment': {
@@ -213,14 +242,16 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         `;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: true, comment: res.data.data?.commentUpdate?.comment };
+        result = res.data.data?.commentUpdate;
+        break;
       }
 
       case 'deleteComment': {
         const commentId = render(config.commentId);
         const mutation = `mutation { commentDelete(id: "${commentId}") { success } }`;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: res.data.data?.commentDelete?.success };
+        result = res.data.data?.commentDelete;
+        break;
       }
 
       case 'listProjects': {
@@ -233,7 +264,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         `;
         const res = await axios.post(graphqlUrl, { query }, { headers });
-        return { success: true, projects: res.data.data?.projects?.edges || [] };
+        result = res.data.data;
+        break;
       }
 
       case 'getProject': {
@@ -246,7 +278,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         `;
         const res = await axios.post(graphqlUrl, { query }, { headers });
-        return { success: true, project: res.data.data?.project };
+        result = res.data.data;
+        break;
       }
 
       case 'createProject': {
@@ -260,7 +293,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         `;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: true, project: res.data.data?.projectCreate?.project };
+        result = res.data.data?.projectCreate;
+        break;
       }
 
       case 'updateProject': {
@@ -281,14 +315,16 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         `;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: true, project: res.data.data?.projectUpdate?.project };
+        result = res.data.data?.projectUpdate;
+        break;
       }
 
       case 'deleteProject': {
         const projectId = render(config.projectId);
         const mutation = `mutation { projectDelete(id: "${projectId}") { success } }`;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: res.data.data?.projectDelete?.success };
+        result = res.data.data?.projectDelete;
+        break;
       }
 
       case 'listTeams': {
@@ -300,7 +336,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         `;
         const res = await axios.post(graphqlUrl, { query }, { headers });
-        return { success: true, teams: res.data.data?.teams?.edges || [] };
+        result = res.data.data;
+        break;
       }
 
       case 'getTeam': {
@@ -313,7 +350,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         `;
         const res = await axios.post(graphqlUrl, { query }, { headers });
-        return { success: true, team: res.data.data?.team };
+        result = res.data.data;
+        break;
       }
 
       case 'createTeam': {
@@ -327,7 +365,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         `;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: true, team: res.data.data?.teamCreate?.team };
+        result = res.data.data?.teamCreate;
+        break;
       }
 
       case 'listMembers': {
@@ -342,7 +381,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         `;
         const res = await axios.post(graphqlUrl, { query }, { headers });
-        return { success: true, members: res.data.data?.team?.members?.edges || [] };
+        result = res.data.data?.team;
+        break;
       }
 
       case 'listCycles': {
@@ -355,7 +395,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         `;
         const res = await axios.post(graphqlUrl, { query }, { headers });
-        return { success: true, cycles: res.data.data?.cycles?.edges || [] };
+        result = res.data.data;
+        break;
       }
 
       case 'getCycle': {
@@ -368,7 +409,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         `;
         const res = await axios.post(graphqlUrl, { query }, { headers });
-        return { success: true, cycle: res.data.data?.cycle };
+        result = res.data.data;
+        break;
       }
 
       case 'createCycle': {
@@ -384,7 +426,8 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         `;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: true, cycle: res.data.data?.cycleCreate?.cycle };
+        result = res.data.data?.cycleCreate;
+        break;
       }
 
       case 'updateCycle': {
@@ -406,12 +449,15 @@ export const linearHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         `;
         const res = await axios.post(graphqlUrl, { query: mutation }, { headers });
-        return { success: true, cycle: res.data.data?.cycleUpdate?.cycle };
+        result = res.data.data?.cycleUpdate;
+        break;
       }
 
       default:
         throw new Error(`Unknown Linear operation: ${operation}`);
     }
+
+    return { status: 'success', data: result };
   } catch (err: any) {
     const msg = err.response?.data?.errors?.[0]?.message || err.message;
     throw new Error(`[Linear Error] ${msg}`);

@@ -108,35 +108,39 @@ function DeletableEdge({
 
 // ─── normalise architect output ─────────────────────────────────────────────────
 function normaliseArchitectNodes(rawNodes: any[], rawEdges: any[]) {
+  const nodeCounters: Record<string, number> = {};
+  const idMap: Record<string, string> = {};
+
   const nodes = rawNodes.map((n: any, i: number) => {
     const knownIds = new Set(TOOL_REGISTRY.map(t => t.id));
-    const knownExecKeys = new Set(TOOL_REGISTRY.map(t => t.executionKey));
+    const knownExecKeys = new Set(TOOL_REGISTRY.map(t => n.data?.executionKey === t.executionKey));
 
-    // Primary: match by toolId
     let resolvedTool = (n.data?.toolId && knownIds.has(n.data.toolId))
       ? TOOL_REGISTRY.find(t => t.id === n.data.toolId)!
       : null;
 
-    // Fallback 1: match by executionKey
     if (!resolvedTool) {
       const execKey = n.data?.executionKey;
-      if (execKey && knownExecKeys.has(execKey)) {
-        resolvedTool = TOOL_REGISTRY.find(t => t.executionKey === execKey) ?? null;
-      }
+      resolvedTool = TOOL_REGISTRY.find(t => t.executionKey === execKey) ?? null;
     }
 
-    // Fallback 2: fuzzy label/description match against ALL nodes in registry
     if (!resolvedTool) {
       const query = (n.data?.label || n.label || n.name || '').toLowerCase();
       resolvedTool = TOOL_REGISTRY.find(t => 
         query.includes(t.label.toLowerCase()) || 
-        query.includes(t.name.toLowerCase()) ||
-        t.label.toLowerCase().includes(query)
-      ) || TOOL_REGISTRY[0]!; // Default to first node if all else fails
+        query.includes(t.name.toLowerCase())
+      ) || TOOL_REGISTRY[0]!;
     }
 
-    // IMPROVEMENT: Handle flat data fields from Architect
-    // If the Architect didn't nest the config inside data.config, pull everything into config
+    // GENERATE CLEAN ID: e.g. llm_gemini_1
+    const prefix = resolvedTool.id.replace('.', '_');
+    nodeCounters[prefix] = (nodeCounters[prefix] || 0) + 1;
+    const newId = (resolvedTool.isTrigger && !prefix.includes('trigger')) 
+       ? `trigger_${prefix}_${nodeCounters[prefix]}`
+       : `${prefix}_${nodeCounters[prefix]}`;
+    
+    idMap[n.id] = newId;
+
     const aiConfig = n.data?.config || {};
     const flatConfig = { ...n.data };
     delete (flatConfig as any).config;
@@ -146,10 +150,8 @@ function normaliseArchitectNodes(rawNodes: any[], rawEdges: any[]) {
     delete (flatConfig as any).isTrigger;
     delete (flatConfig as any).status;
 
-    const mergedConfig = { ...flatConfig, ...aiConfig };
-
     return {
-      id: n.id || `node_${i + 1}`,
+      id: newId,
       type: 'wareweNode',
       position: n.position || { x: 100 + i * 320, y: 200 },
       data: {
@@ -159,17 +161,34 @@ function normaliseArchitectNodes(rawNodes: any[], rawEdges: any[]) {
         executionKey: resolvedTool.executionKey,
         isTrigger: resolvedTool.isTrigger,
         status: 'idle',
-        config: mergedConfig,
+        config: { ...flatConfig, ...aiConfig },
       },
       zIndex: resolvedTool.executionKey === 'sticky_note' ? -50 : 0,
     };
   });
 
+  // Re-map edges using NEW IDs
   const edges = (rawEdges || []).map((e: any, idx: number) => ({ 
     ...e, 
-    id: e.id || `e-${e.source}-${e.target}-${idx}-${Date.now()}`,
+    id: `e-${idMap[e.source] || e.source}-${idMap[e.target] || e.target}-${idx}`,
+    source: idMap[e.source] || e.source,
+    target: idMap[e.target] || e.target,
     ...EDGE_DEFAULTS 
   }));
+
+  // Re-map variables in config to use NEW IDs
+  nodes.forEach(node => {
+     const cfg = node.data.config;
+     Object.keys(cfg).forEach(key => {
+        if (typeof cfg[key] === 'string') {
+           Object.keys(idMap).forEach(oldId => {
+              const regex = new RegExp(`\\{\\{\\s*${oldId}\\.`, 'g');
+              cfg[key] = cfg[key].replace(regex, `{{ ${idMap[oldId]}.`);
+           });
+        }
+     });
+  });
+
   return { nodes, edges };
 }
 

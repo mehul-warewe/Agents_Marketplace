@@ -152,6 +152,113 @@ export const slackNode: NodeDefinition = {
       { key: 'ts', label: 'Timestamp', type: 'string', required: true, description: 'Message timestamp', example: '1234567890.123456' },
     ],
   },
+  operationOutputs: {
+    send: [
+      { key: 'status', type: 'string' },
+      { key: 'data.ok', type: 'boolean' },
+      { key: 'data.ts', type: 'string' },
+      { key: 'data.channel', type: 'string' },
+      { key: 'data.message.text', type: 'string' },
+    ],
+    sendDirect: [
+      { key: 'status', type: 'string' },
+      { key: 'data.ok', type: 'boolean' },
+      { key: 'data.ts', type: 'string' },
+      { key: 'data.channel', type: 'string' },
+    ],
+    sendChannel: [
+      { key: 'status', type: 'string' },
+      { key: 'data.ok', type: 'boolean' },
+      { key: 'data.ts', type: 'string' },
+    ],
+    sendThread: [
+      { key: 'status', type: 'string' },
+      { key: 'data.ok', type: 'boolean' },
+      { key: 'data.ts', type: 'string' },
+    ],
+    update: [
+      { key: 'status', type: 'string' },
+      { key: 'data.ok', type: 'boolean' },
+      { key: 'data.text', type: 'string' },
+    ],
+    delete: [
+      { key: 'status', type: 'string' },
+      { key: 'data.ok', type: 'boolean' },
+    ],
+    get: [
+      { key: 'status', type: 'string' },
+      { key: 'data.ok', type: 'boolean' },
+      { key: 'data.messages[0].text', type: 'string' },
+      { key: 'data.messages[0].user', type: 'string' },
+    ],
+    list: [
+      { key: 'status', type: 'string' },
+      { key: 'data.ok', type: 'boolean' },
+      { key: 'data.channels[0].id', type: 'string' },
+      { key: 'data.channels[0].name', type: 'string' },
+    ],
+    search: [
+      { key: 'status', type: 'string' },
+      { key: 'data.ok', type: 'boolean' },
+      { key: 'data.messages.matches[0].text', type: 'string' },
+    ],
+    create: [
+      { key: 'status', type: 'string' },
+      { key: 'data.ok', type: 'boolean' },
+      { key: 'data.channel.id', type: 'string' },
+    ],
+    archive: [{ key: 'status', type: 'string' }],
+    unarchive: [{ key: 'status', type: 'string' }],
+    join: [
+      { key: 'status', type: 'string' },
+      { key: 'data.ok', type: 'boolean' },
+    ],
+    leave: [{ key: 'status', type: 'string' }],
+    invite: [{ key: 'status', type: 'string' }],
+    remove: [{ key: 'status', type: 'string' }],
+    setTopic: [{ key: 'status', type: 'string' }, { key: 'data.topic', type: 'string' }],
+    setDescription: [{ key: 'status', type: 'string' }],
+    add: [{ key: 'status', type: 'string' }],
+    removeReaction: [{ key: 'status', type: 'string' }],
+    getReactions: [
+      { key: 'status', type: 'string' },
+      { key: 'data.ok', type: 'boolean' },
+      { key: 'data.message.reactions[0].name', type: 'string' },
+    ],
+    getUserInfo: [
+      { key: 'status', type: 'string' },
+      { key: 'data.ok', type: 'boolean' },
+      { key: 'data.user.name', type: 'string' },
+      { key: 'data.user.profile.email', type: 'string' },
+    ],
+    updateProfile: [{ key: 'status', type: 'string' }],
+    getStatus: [
+      { key: 'status', type: 'string' },
+      { key: 'data.user.profile.status_text', type: 'string' },
+    ],
+    upload: [
+      { key: 'status', type: 'string' },
+      { key: 'data.file.id', type: 'string' },
+    ],
+    listFiles: [
+      { key: 'status', type: 'string' },
+      { key: 'data.files[0].name', type: 'string' },
+    ],
+    deleteFile: [{ key: 'status', type: 'string' }],
+    getFileInfo: [
+      { key: 'status', type: 'string' },
+      { key: 'data.file.name', type: 'string' },
+    ],
+    listThreads: [
+      { key: 'status', type: 'string' },
+      { key: 'data.messages[0].text', type: 'string' },
+    ],
+    getThread: [
+      { key: 'status', type: 'string' },
+      { key: 'data.messages[0].text', type: 'string' },
+    ],
+    markRead: [{ key: 'status', type: 'string' }],
+  },
   requiredInputs: [
     {
       key: 'operation',
@@ -164,16 +271,9 @@ export const slackNode: NodeDefinition = {
   ],
   outputSchema: [
     {
-      key: 'messageId',
-      type: 'string',
-      description: 'Slack message timestamp/ID',
-      example: '1234567890.123456',
-    },
-    {
-      key: 'channelId',
-      type: 'string',
-      description: 'Channel ID',
-      example: 'C12345678',
+      key: 'data',
+      type: 'object',
+      description: 'Raw Slack API response data',
     },
     {
       key: 'status',

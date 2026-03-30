@@ -69,19 +69,26 @@ export const githubHandler: ToolHandler = async (ctx: ToolContext) => {
       const title = render(config.title || '');
       const body = render(config.body || '');
       const labels = render(config.labels || '');
+      const assignees = render(config.assignees || '');
+      const milestone = render(config.milestone || '');
       url = `${baseUrl}/repos/${owner}/${repo}/issues`;
       method = 'post';
       data = { title, body };
       if (labels) data.labels = labels.split(',').map(l => l.trim());
+      if (assignees) data.assignees = assignees.split(',').map(a => a.trim());
+      if (milestone) data.milestone = parseInt(milestone, 10);
     } else if (operation === 'updateIssue') {
       const owner = render(config.owner || '');
       const repo = render(config.repo || '');
       const issueNumber = render(config.issueNumber || '');
+      const assignees = render(config.assignees || '');
       url = `${baseUrl}/repos/${owner}/${repo}/issues/${issueNumber}`;
       method = 'patch';
       data = {};
       if (config.state) data.state = render(config.state);
       if (config.title) data.title = render(config.title);
+      if (config.body) data.body = render(config.body);
+      if (assignees) data.assignees = assignees.split(',').map(a => a.trim());
     } else if (operation === 'closeIssue') {
       const owner = render(config.owner || '');
       const repo = render(config.repo || '');
@@ -135,6 +142,16 @@ export const githubHandler: ToolHandler = async (ctx: ToolContext) => {
       url = `${baseUrl}/repos/${owner}/${repo}/pulls`;
       method = 'post';
       data = { title, head, base, body };
+    } else if (operation === 'updatePullRequest') {
+      const owner = render(config.owner || '');
+      const repo = render(config.repo || '');
+      const prNumber = render(config.prNumber || '');
+      url = `${baseUrl}/repos/${owner}/${repo}/pulls/${prNumber}`;
+      method = 'patch';
+      data = {};
+      if (config.state) data.state = render(config.state);
+      if (config.title) data.title = render(config.title);
+      if (config.body) data.body = render(config.body);
     } else if (operation === 'mergePullRequest') {
       const owner = render(config.owner || '');
       const repo = render(config.repo || '');

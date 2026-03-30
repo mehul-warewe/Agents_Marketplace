@@ -14,41 +14,41 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
     'Authorization': `Bearer ${key}`,
     'apikey': key,
     'Content-Type': 'application/json',
+    'Prefer': 'return=representation',
   };
 
   try {
+    let result: any;
     switch (operation) {
       case 'listTables': {
         const res = await axios.get(`${baseUrl}/rest/v1/?apikey=${key}`, { headers });
-        return { success: true, tables: res.data };
+        result = { tables: res.data };
+        break;
       }
 
       case 'getTable': {
         const tableName = render(config.tableName);
         const res = await axios.get(`${baseUrl}/rest/v1/${tableName}?limit=1&apikey=${key}`, { headers });
-        return { success: true, table: { name: tableName, rowCount: res.data.length } };
+        result = { table: { name: tableName, rowCount: res.data.length } };
+        break;
       }
 
       case 'createTable': {
         const tableName = render(config.tableName);
-        const schemaStr = render(config.schema);
-        let schema: any = {};
-        try {
-          schema = JSON.parse(schemaStr);
-        } catch {
-          schema = { id: 'uuid', name: 'text' };
-        }
-        return { success: true, tableName, created: true };
+        result = { tableName, created: true };
+        break;
       }
 
       case 'updateTable': {
         const tableName = render(config.tableName);
-        return { success: true, tableName, updated: true };
+        result = { tableName, updated: true };
+        break;
       }
 
       case 'deleteTable': {
         const tableName = render(config.tableName);
-        return { success: true, tableName, deleted: true };
+        result = { tableName, deleted: true };
+        break;
       }
 
       case 'listRows': {
@@ -56,14 +56,16 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
         const limit = parseInt(render(config.limit || '100'), 10) || 100;
         const offset = parseInt(render(config.offset || '0'), 10) || 0;
         const res = await axios.get(`${baseUrl}/rest/v1/${table}?limit=${limit}&offset=${offset}&apikey=${key}`, { headers });
-        return { success: true, rows: res.data, rowCount: res.data.length };
+        result = { rows: res.data, rowCount: res.data.length };
+        break;
       }
 
       case 'getRow': {
         const table = render(config.table);
         const id = render(config.id);
         const res = await axios.get(`${baseUrl}/rest/v1/${table}?id=eq.${id}&apikey=${key}`, { headers });
-        return { success: true, row: res.data[0] };
+        result = { row: res.data[0] };
+        break;
       }
 
       case 'createRow': {
@@ -76,7 +78,8 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
           values = { data: valuesStr };
         }
         const res = await axios.post(`${baseUrl}/rest/v1/${table}?apikey=${key}`, values, { headers });
-        return { success: true, row: res.data?.[0] };
+        result = { row: res.data?.[0] };
+        break;
       }
 
       case 'updateRow': {
@@ -90,14 +93,16 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
           values = { data: valuesStr };
         }
         const res = await axios.patch(`${baseUrl}/rest/v1/${table}?id=eq.${id}&apikey=${key}`, values, { headers });
-        return { success: true, row: res.data?.[0] };
+        result = { row: res.data?.[0] };
+        break;
       }
 
       case 'deleteRow': {
         const table = render(config.table);
         const id = render(config.id);
         await axios.delete(`${baseUrl}/rest/v1/${table}?id=eq.${id}&apikey=${key}`, { headers });
-        return { success: true, deleted: true };
+        result = { deleted: true };
+        break;
       }
 
       case 'bulkInsert': {
@@ -110,19 +115,14 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
           rows = [{ data: rowsStr }];
         }
         const res = await axios.post(`${baseUrl}/rest/v1/${table}?apikey=${key}`, rows, { headers });
-        return { success: true, inserted: rows.length, rows: res.data };
+        result = { inserted: rows.length, rows: res.data };
+        break;
       }
 
       case 'bulkUpdate': {
         const table = render(config.table);
-        const updatesStr = render(config.updates);
-        let updates: any = {};
-        try {
-          updates = JSON.parse(updatesStr);
-        } catch {
-          updates = { where: { id: 1 }, set: { data: updatesStr } };
-        }
-        return { success: true, updated: true };
+        result = { updated: true };
+        break;
       }
 
       case 'bulkDelete': {
@@ -131,7 +131,8 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
         for (const id of ids) {
           await axios.delete(`${baseUrl}/rest/v1/${table}?id=eq.${id}&apikey=${key}`, { headers });
         }
-        return { success: true, deleted: ids.length };
+        result = { deleted: ids.length };
+        break;
       }
 
       case 'searchRows': {
@@ -139,7 +140,8 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
         const column = render(config.column);
         const query = render(config.query);
         const res = await axios.get(`${baseUrl}/rest/v1/${table}?${column}=ilike.%${query}%&apikey=${key}`, { headers });
-        return { success: true, rows: res.data, rowCount: res.data.length };
+        result = { rows: res.data, rowCount: res.data.length };
+        break;
       }
 
       case 'filterRows': {
@@ -155,7 +157,8 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
           .map(([k, v]) => `${k}=eq.${v}`)
           .join('&');
         const res = await axios.get(`${baseUrl}/rest/v1/${table}?${filterQuery}&apikey=${key}`, { headers });
-        return { success: true, rows: res.data };
+        result = { rows: res.data };
+        break;
       }
 
       case 'sortRows': {
@@ -163,18 +166,21 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
         const column = render(config.column);
         const direction = render(config.direction || 'asc');
         const res = await axios.get(`${baseUrl}/rest/v1/${table}?order=${column}.${direction}&apikey=${key}`, { headers });
-        return { success: true, rows: res.data };
+        result = { rows: res.data };
+        break;
       }
 
       case 'listUsers': {
         const res = await axios.get(`${baseUrl}/auth/v1/admin/users?apikey=${key}`, { headers });
-        return { success: true, users: res.data.users };
+        result = { users: res.data.users };
+        break;
       }
 
       case 'getUser': {
         const userId = render(config.userId);
         const res = await axios.get(`${baseUrl}/auth/v1/admin/users/${userId}?apikey=${key}`, { headers });
-        return { success: true, user: res.data };
+        result = { user: res.data };
+        break;
       }
 
       case 'updateUser': {
@@ -190,13 +196,15 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
           }
         }
         const res = await axios.put(`${baseUrl}/auth/v1/admin/users/${userId}?apikey=${key}`, payload, { headers });
-        return { success: true, user: res.data };
+        result = { user: res.data };
+        break;
       }
 
       case 'deleteUser': {
         const userId = render(config.userId);
         await axios.delete(`${baseUrl}/auth/v1/admin/users/${userId}?apikey=${key}`, { headers });
-        return { success: true, deleted: true };
+        result = { deleted: true };
+        break;
       }
 
       case 'uploadFile': {
@@ -204,28 +212,32 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
         const path = render(config.path);
         const file = render(config.file);
         const res = await axios.post(`${baseUrl}/storage/v1/object/${bucket}/${path}?apikey=${key}`, file, { headers });
-        return { success: true, path, bucket };
+        result = { path, bucket };
+        break;
       }
 
       case 'downloadFile': {
         const bucket = render(config.bucket);
         const path = render(config.path);
         const res = await axios.get(`${baseUrl}/storage/v1/object/${bucket}/${path}?apikey=${key}`, { headers });
-        return { success: true, file: res.data };
+        result = { file: res.data };
+        break;
       }
 
       case 'listFiles': {
         const bucket = render(config.bucket);
         const prefix = render(config.prefix || '');
         const res = await axios.get(`${baseUrl}/storage/v1/object/list/${bucket}${prefix ? `/${prefix}` : ''}?apikey=${key}`, { headers });
-        return { success: true, files: res.data.name || [] };
+        result = { files: res.data.name || [] };
+        break;
       }
 
       case 'deleteFile': {
         const bucket = render(config.bucket);
         const path = render(config.path);
         await axios.delete(`${baseUrl}/storage/v1/object/${bucket}/${path}?apikey=${key}`, { headers });
-        return { success: true, deleted: true };
+        result = { deleted: true };
+        break;
       }
 
       case 'select': {
@@ -240,7 +252,8 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
           });
         }
         const res = await axios.get(query + `&apikey=${key}`, { headers });
-        return { success: true, data: res.data };
+        result = { data: res.data };
+        break;
       }
 
       case 'insert': {
@@ -253,7 +266,8 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
           values = { data: valuesStr };
         }
         const res = await axios.post(`${baseUrl}/rest/v1/${table}?apikey=${key}`, values, { headers });
-        return { success: true, data: res.data };
+        result = { data: res.data };
+        break;
       }
 
       case 'update': {
@@ -273,7 +287,8 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
           .map(([k, v]) => `${k}=eq.${v}`)
           .join('&');
         const res = await axios.patch(`${baseUrl}/rest/v1/${table}?${filterQuery}&apikey=${key}`, values, { headers });
-        return { success: true, data: res.data };
+        result = { data: res.data };
+        break;
       }
 
       case 'delete': {
@@ -289,7 +304,8 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
           .map(([k, v]) => `${k}=eq.${v}`)
           .join('&');
         await axios.delete(`${baseUrl}/rest/v1/${table}?${filterQuery}&apikey=${key}`, { headers });
-        return { success: true };
+        result = { success: true };
+        break;
       }
 
       case 'rpc': {
@@ -302,12 +318,14 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
           params = {};
         }
         const res = await axios.post(`${baseUrl}/rest/v1/rpc/${functionName}?apikey=${key}`, params, { headers });
-        return { success: true, result: res.data };
+        result = { result: res.data };
+        break;
       }
-
       default:
         throw new Error(`Unknown Supabase operation: ${operation}`);
     }
+
+    return { status: 'success', data: result };
   } catch (err: any) {
     const msg = err.response?.data?.message || err.message;
     throw new Error(`[Supabase Error] ${msg}`);

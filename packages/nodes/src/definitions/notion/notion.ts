@@ -113,6 +113,113 @@ export const notionNode: NodeDefinition = {
       { key: 'direction', label: 'Direction', type: 'string', required: false, description: 'ascending or descending', example: 'descending' },
     ],
   },
+  operationOutputs: {
+    listDatabases: [
+      { key: 'status', type: 'string' },
+      { key: 'data.results[0].id', type: 'string' },
+      { key: 'data.results[0].title[0].plain_text', type: 'string' },
+    ],
+    getDatabase: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+      { key: 'data.title[0].plain_text', type: 'string' },
+    ],
+    createDatabase: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+    ],
+    updateDatabase: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+    ],
+    listPages: [
+      { key: 'status', type: 'string' },
+      { key: 'data.results[0].id', type: 'string' },
+      { key: 'data.results[0].url', type: 'string' },
+    ],
+    getPage: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+      { key: 'data.url', type: 'string' },
+      { key: 'data.properties', type: 'object' },
+    ],
+    createPage: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+      { key: 'data.url', type: 'string' },
+    ],
+    updatePage: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+    ],
+    deletePage: [
+      { key: 'status', type: 'string' },
+      { key: 'data.archived', type: 'boolean' },
+    ],
+    archivePage: [
+      { key: 'status', type: 'string' },
+      { key: 'data.archived', type: 'boolean' },
+    ],
+    listBlocks: [
+      { key: 'status', type: 'string' },
+      { key: 'data.results[0].id', type: 'string' },
+      { key: 'data.results[0].type', type: 'string' },
+    ],
+    getBlock: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+    ],
+    createBlock: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+    ],
+    updateBlock: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+    ],
+    deleteBlock: [
+      { key: 'status', type: 'string' },
+      { key: 'data.archived', type: 'boolean' },
+    ],
+    appendBlock: [
+      { key: 'status', type: 'string' },
+      { key: 'data.results[0].id', type: 'string' },
+    ],
+    listRecords: [
+      { key: 'status', type: 'string' },
+      { key: 'data.results[0].id', type: 'string' },
+      { key: 'data.results[0].properties', type: 'object' },
+    ],
+    getRecord: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+    ],
+    createRecord: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+    ],
+    updateRecord: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+    ],
+    deleteRecord: [
+      { key: 'status', type: 'string' },
+      { key: 'data.archived', type: 'boolean' },
+    ],
+    search: [
+      { key: 'status', type: 'string' },
+      { key: 'data.results[0].id', type: 'string' },
+      { key: 'data.results[0].object', type: 'string' },
+    ],
+    filterDatabase: [
+      { key: 'status', type: 'string' },
+      { key: 'data.results[0].id', type: 'string' },
+    ],
+    sortDatabase: [
+      { key: 'status', type: 'string' },
+      { key: 'data.results[0].id', type: 'string' },
+    ],
+  },
   requiredInputs: [
     {
       key: 'operation',
@@ -124,9 +231,17 @@ export const notionNode: NodeDefinition = {
     },
   ],
   outputSchema: [
-    { key: 'id', type: 'string', description: 'Page/Record ID', example: 'page_123' },
-    { key: 'title', type: 'string', description: 'Page title', example: 'Page Title' },
-    { key: 'url', type: 'string', description: 'Notion URL', example: 'https://notion.so/...' },
-    { key: 'status', type: 'string', description: 'Operation status', example: 'success' },
+    {
+      key: 'status',
+      type: 'string',
+      description: 'Operation status (success/error)',
+      example: 'success',
+    },
+    {
+      key: 'data',
+      type: 'any',
+      description: 'Raw API response from Notion',
+      example: {},
+    },
   ],
 };

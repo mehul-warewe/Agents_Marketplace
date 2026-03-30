@@ -142,11 +142,132 @@ export const driveNode: NodeDefinition = {
       example: 'uploadFile',
     },
   ],
+  operationOutputs: {
+    listFiles: [
+      { key: 'status', type: 'string' },
+      { key: 'data.files[0].id', type: 'string' },
+      { key: 'data.files[0].name', type: 'string' },
+      { key: 'data.files[0].mimeType', type: 'string' },
+      { key: 'data.files[0].webViewLink', type: 'string' },
+    ],
+    getFile: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+      { key: 'data.name', type: 'string' },
+      { key: 'data.mimeType', type: 'string' },
+      { key: 'data.size', type: 'string' },
+      { key: 'data.webViewLink', type: 'string' },
+    ],
+    createFile: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+      { key: 'data.name', type: 'string' },
+      { key: 'data.mimeType', type: 'string' },
+    ],
+    uploadFile: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+      { key: 'data.name', type: 'string' },
+      { key: 'data.mimeType', type: 'string' },
+    ],
+    downloadFile: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+      { key: 'data.name', type: 'string' },
+      { key: 'data.content', type: 'string' },
+    ],
+    updateFile: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+      { key: 'data.name', type: 'string' },
+    ],
+    deleteFile: [
+      { key: 'status', type: 'string' },
+    ],
+    trashFile: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+      { key: 'data.trashed', type: 'boolean' },
+    ],
+    restoreFile: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+      { key: 'data.trashed', type: 'boolean' },
+    ],
+    permanentlyDelete: [
+      { key: 'status', type: 'string' },
+    ],
+    createFolder: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+      { key: 'data.name', type: 'string' },
+    ],
+    listFolder: [
+      { key: 'status', type: 'string' },
+      { key: 'data.files[0].id', type: 'string' },
+      { key: 'data.files[0].name', type: 'string' },
+      { key: 'data.files[0].mimeType', type: 'string' },
+    ],
+    deleteFolder: [
+      { key: 'status', type: 'string' },
+    ],
+    emptyTrash: [
+      { key: 'status', type: 'string' },
+    ],
+    shareFile: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+      { key: 'data.role', type: 'string' },
+      { key: 'data.type', type: 'string' },
+    ],
+    unshareFile: [
+      { key: 'status', type: 'string' },
+    ],
+    listSharedWith: [
+      { key: 'status', type: 'string' },
+      { key: 'data.permissions[0].id', type: 'string' },
+      { key: 'data.permissions[0].emailAddress', type: 'string' },
+      { key: 'data.permissions[0].role', type: 'string' },
+    ],
+    updatePermissions: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+      { key: 'data.role', type: 'string' },
+    ],
+    changeOwner: [
+      { key: 'status', type: 'string' },
+    ],
+    searchFiles: [
+      { key: 'status', type: 'string' },
+      { key: 'data.files[0].id', type: 'string' },
+      { key: 'data.files[0].name', type: 'string' },
+      { key: 'data.files[0].webViewLink', type: 'string' },
+    ],
+    searchByMimeType: [
+      { key: 'status', type: 'string' },
+      { key: 'data.files[0].id', type: 'string' },
+      { key: 'data.files[0].name', type: 'string' },
+    ],
+    addComment: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+      { key: 'data.content', type: 'string' },
+    ],
+    listComments: [
+      { key: 'status', type: 'string' },
+      { key: 'data.comments[0].id', type: 'string' },
+      { key: 'data.comments[0].content', type: 'string' },
+    ],
+    deleteComment: [
+      { key: 'status', type: 'string' },
+    ],
+    replyComment: [
+      { key: 'status', type: 'string' },
+      { key: 'data.id', type: 'string' },
+    ],
+  },
   outputSchema: [
-    { key: 'fileId', type: 'string', description: 'File ID from Google Drive', example: '1BxiMV...' },
-    { key: 'name', type: 'string', description: 'File or folder name', example: 'report.txt' },
-    { key: 'mimeType', type: 'string', description: 'File MIME type', example: 'text/plain' },
-    { key: 'webViewLink', type: 'string', description: 'Link to view in Drive', example: 'https://drive.google.com/file/d/...' },
     { key: 'status', type: 'string', description: 'Operation status', example: 'success' },
+    { key: 'data', type: 'any', description: 'Raw API result from Drive', example: {} },
   ],
 };

@@ -139,36 +139,51 @@ export const generateFinalWorkflowTool = new DynamicTool({
   func: async (input: string) => {
     try {
       const data = JSON.parse(input);
-      const { nodes, edges = [], name = 'My Workflow', description = '' } = data;
+      const { nodes: rawNodes, edges = [], name = 'My Workflow', description = '' } = data;
       
-      if (!nodes || !Array.isArray(nodes) || nodes.length === 0) {
-        return JSON.stringify({ error: 'MANDATORY: You must provide a "nodes" array. Empty workflows are not allowed.' });
+      if (!rawNodes || !Array.isArray(rawNodes) || rawNodes.length === 0) {
+        return JSON.stringify({ error: 'MANDATORY: You must provide a "nodes" array.' });
       }
 
       const builtNodes: any[] = [];
+      const nodeCounters: Record<string, number> = {};
 
-      for (const spec of nodes) {
-        // Safe position handling to prevent NaN in frontend
+      // 1. ENSURE SINGLE TRIGGER: Find triggers, pick first, or default to manual
+      let triggerIndex = rawNodes.findIndex(n => n.type === 'trigger' || n.category === 'Triggers' || (n.label || '').toLowerCase().includes('trigger'));
+      if (triggerIndex === -1) {
+        // Insert a manual trigger at the start if missing
+        rawNodes.unshift({ type: 'trigger', operation: 'manual', label: 'Manual Trigger' });
+        triggerIndex = 0;
+      }
+      
+      // Re-order nodes so trigger is FIRST and there is ONLY ONE
+      const triggerNode = rawNodes[triggerIndex];
+      const otherNodes = rawNodes.filter((_, i) => i !== triggerIndex && !((_ as any).type === 'trigger' || (_ as any).category === 'Triggers'));
+      const finalRawNodes = [triggerNode, ...otherNodes];
+
+      for (const spec of finalRawNodes) {
         const position = {
           x: typeof spec.position?.x === 'number' ? spec.position.x : builtNodes.length * 300,
           y: typeof spec.position?.y === 'number' ? spec.position.y : 150
         };
-        const { type } = spec;
+        
         const labelStr = (spec.label || spec.platform || spec.name || '').toLowerCase();
-        const id = spec.id || `node-${Math.random().toString(36).substr(2, 9)}`;
         const userConfig = spec.config || {};
         
-        // 1. Triggers
-        if (type === 'trigger' || spec.category === 'Triggers' || labelStr.includes('trigger')) {
+        // A. Trigger Handling
+        if (builtNodes.length === 0) {
           const triggerKey = spec.operation || spec.trigger || (labelStr.includes('chat') ? 'chat' : labelStr.includes('webhook') ? 'webhook' : 'manual');
           const tDef = NODE_REGISTRY.find(n => n.id === `trigger.${triggerKey}`) || NODE_REGISTRY.find(n => n.id === 'trigger.chat')!;
           const labels: any = { chat: 'When chat message received', manual: 'Manual Trigger', webhook: 'Webhook Incoming' };
+          
+          const id = `trigger_${triggerKey}_1`;
           builtNodes.push({
-            id: id,
+            id,
             label: labels[triggerKey] || tDef.label,
             data: { 
               label: labels[triggerKey] || tDef.label, 
-              isTrigger: true, // Crucial for UI and wiring engine
+              toolId: tDef.id,
+              isTrigger: true,
               config: { trigger: triggerKey, ...userConfig } 
             },
             position
@@ -176,113 +191,56 @@ export const generateFinalWorkflowTool = new DynamicTool({
           continue;
         }
 
-        // 2. Platforms
+        // B. Action Nodes
         const platformName = spec.platform || spec.label || spec.name;
         const pDef = NODE_REGISTRY.find(n => platformName && n.label.toLowerCase() === platformName.toLowerCase());
-        
-        if (pDef && !pDef.isTrigger) {
-          const operation = spec.operation || userConfig.operation || Object.keys(pDef.operationInputs || {})[0];
-          const schema = pDef.operationInputs?.[operation] || [];
-          const finalConfig = { operation, ...userConfig };
-          
-          // 1. SMART CONFIG MAPPING: If a required field is missing, look for common trigger aliases or UPSTREAM nodes
-          schema.filter(i => i.required && !(i.key in finalConfig)).forEach(i => {
-            const upstreams = [...builtNodes].reverse();
-            
-            // A) UPSTREAM CHECK: Look for closest node providing this key or a generic result
-            for (const up of upstreams) {
-              // Priority 1: AI Agents always provide 'result'
-              if (up.data?.executionKey === 'synthesis' || up.id.includes('agent')) {
-                finalConfig[i.key] = `{{ nodes.${up.id}.result }}`;
-                return;
-              }
-              // Priority 2: Key Match in Upstream Schema (Fuzzy/Exact)
-              const upDef = NODE_REGISTRY.find(n => n.id === up.data.toolId || n.label === up.label);
-              if (upDef?.outputSchema?.some(o => o.key === i.key || o.key.includes(i.key))) {
-                finalConfig[i.key] = `{{ nodes.${up.id}.${i.key} }}`;
-                return;
-              }
-              // Priority 3: Fallback to generic '.output' for platforms
-              if (!up.data?.isTrigger) {
-                finalConfig[i.key] = `{{ nodes.${up.id}.output }}`;
-                return;
-              }
-            }
+        const isLLM = spec.type === 'llm' || spec.category === 'Models' || labelStr.includes('gemini') || labelStr.includes('openai');
 
-            // B) TRIGGER FALLBACK: If no upstream node found, use the workflow trigger
-            const triggerSpec = nodes.find((n: any) => n.type === 'trigger' || n.category === 'Triggers' || (n.label || '').toLowerCase().includes('trigger'));
-            const triggerType = triggerSpec?.operation || triggerSpec?.trigger || (triggerSpec?.label?.toLowerCase().includes('chat') ? 'chat' : 'manual');
-            
-            if (triggerType === 'chat') {
-              const textKeys = ['message', 'text', 'body', 'name', 'title', 'query', 'prompt', 'videoId', 'id'];
-              finalConfig[i.key] = textKeys.includes(i.key) ? '{{ input.message }}' : `{{ input.${i.key} }}`;
-            } else if (triggerType === 'webhook') {
-              finalConfig[i.key] = `{{ input.body.${i.key} }}`;
-            } else {
-              finalConfig[i.key] = `{{ input.${i.key} }}`;
+        if (pDef || isLLM) {
+          let toolId = pDef?.id;
+          if (isLLM) {
+             toolId = labelStr.includes('openai') ? 'llm.openai' : 
+                      labelStr.includes('claude') ? 'llm.claude' : 'llm.gemini';
+          }
+          if (!toolId) continue;
+
+          // Generate Human-Readable ID
+          const prefix = toolId.replace('.', '_');
+          nodeCounters[prefix] = (nodeCounters[prefix] || 0) + 1;
+          const id = `${prefix}_${nodeCounters[prefix]}`;
+
+          const finalConfig = { ...userConfig };
+          if (pDef && !pDef.isTrigger) {
+             finalConfig.operation = spec.operation || userConfig.operation || Object.keys(pDef.operationInputs || {})[0];
+          } else if (isLLM) {
+             finalConfig.model = userConfig.model || (toolId === 'llm.openai' ? 'openai/gpt-4o' : 'google/gemini-2.0-flash-001');
+             finalConfig.prompt = userConfig.prompt || userConfig.userMessage || '{{ input.message }}';
+          }
+
+          // SMART VARIABLE MAPPING (New Format {{ id.field }})
+          // We apply this to any string field that looks like a variable placeholder
+          Object.keys(finalConfig).forEach(key => {
+            if (typeof finalConfig[key] === 'string') {
+              // Replace old {{ nodes.ID.field }} with {{ ID.field }}
+              finalConfig[key] = finalConfig[key].replace(/\{\{\s*nodes\.([\s\S]+?)\.([\s\S]+?)\s*\}\}/g, '{{ $1.$2 }}');
+              // Replace {{ input.message }} with {{ message }} (cleaner)
+              finalConfig[key] = finalConfig[key].replace(/\{\{\s*input\.message\s*\}\}/g, '{{ message }}');
             }
           });
 
-          const op = finalConfig.operation || '';
-          const cleanOp = typeof op === 'string' ? op.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()) : '';
-          const finalLabel = cleanOp ? `${pDef.label} - ${cleanOp}` : pDef.label;
+          const label = spec.label || pDef?.label || (toolId === 'llm.openai' ? 'OpenAI' : 'Gemini');
 
           builtNodes.push({
-            id: id,
-            label: finalLabel,
-            data: { label: finalLabel, toolId: pDef.id, config: finalConfig },
+            id,
+            label,
+            data: { label, toolId, config: finalConfig },
             position
           });
           continue;
         }
-
-        // 3. Model Actions (Gemini, OpenAI, Claude, OpenRouter)
-        if (type === 'llm' || type === 'ai_agent' || spec.category === 'Models' || spec.category === 'AI' || spec.executionKey === 'synthesis' || spec.executionKey === 'llm_run') {
-          // Resolve provider
-          const provider = (spec.label || spec.name || '').toLowerCase();
-          const toolId = provider.includes('openai') ? 'llm.openai' : 
-                         provider.includes('claude') ? 'llm.claude' : 
-                         'llm.gemini';
-          
-          const modelId = typeof userConfig.model === 'object' ? (userConfig.model.value || userConfig.model.id) : String(userConfig.model || '');
-
-          builtNodes.push({
-            id: id || `llm-${builtNodes.length}`,
-            label: (spec as any).label || (toolId === 'llm.openai' ? 'OpenAI' : 'Gemini'), 
-            data: { 
-              label: (spec as any).label || (toolId === 'llm.openai' ? 'OpenAI' : 'Gemini'), 
-              toolId: toolId,
-              executionKey: 'llm_run', 
-              config: { 
-                model: modelId || (toolId === 'llm.openai' ? 'openai/gpt-4o' : 'google/gemini-2.0-flash-001'),
-                prompt: userConfig.prompt || userConfig.userMessage || '{{ input.message }}',
-                ...userConfig 
-              } 
-            },
-            position
-          });
-          continue;
-        }
-
-        // 5. Logic / CoreFallback
-        const label = spec.label || spec.platform || 'Node';
-        const coreDef = NODE_REGISTRY.find(n => n.label.toLowerCase() === label.toLowerCase()) || 
-                       NODE_REGISTRY.find(n => n.category === 'Logic' && n.label.toLowerCase().includes((type || '').toLowerCase()));
-        
-        builtNodes.push({
-          id: id || `node-${builtNodes.length}`,
-          label: label,
-          data: { 
-            label: label, 
-            toolId: coreDef?.id || 'unknown',
-            executionKey: coreDef?.executionKey || 'unknown',
-            config: userConfig 
-          },
-          position
-        });
       }
 
-      // LINEAR WIRING: Auto-connect in strict sequential order (0 -> 1 -> 2)
+      // LINEAR WIRING: Auto-connect
       const builtEdges = builtNodes.slice(0, -1).map((node, i) => {
         const nextNode = builtNodes[i + 1];
         return {
@@ -299,7 +257,7 @@ export const generateFinalWorkflowTool = new DynamicTool({
         description, 
         nodes: builtNodes, 
         edges: builtEdges, 
-        status: 'Linear workflow built successfully' 
+        status: 'Sequential workflow built successfully' 
       });
     } catch (err: any) {
       return JSON.stringify({ error: `Failed to build workflow: ${err.message}` });

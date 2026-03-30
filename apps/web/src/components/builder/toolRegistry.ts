@@ -204,8 +204,8 @@ export const makeNode = (toolId: string, position: { x: number; y: number }, nod
   const tool = TOOL_REGISTRY.find((t) => t.id === baseId);
   if (!tool) return null;
 
-  // Generate Human-Readable ID: e.g. llm_gemini_1, tool_github_2
-  const prefix = tool.id.replace('.', '_');
+  // Generate Human-Readable ID: e.g. gemini_1, github_2
+  const prefix = tool.name.toLowerCase().replace(/\s+/g, '_');
   const existingCount = nodes.filter(n => n.id.startsWith(prefix)).length;
   const id = `${prefix}_${existingCount + 1}`;
   

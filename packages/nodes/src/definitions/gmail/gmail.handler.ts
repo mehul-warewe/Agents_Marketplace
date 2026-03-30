@@ -52,7 +52,7 @@ export const gmailHandler: ToolHandler = async (ctx: ToolContext) => {
         { raw },
         { headers },
       );
-      return { success: true, messageId: res.data.id };
+      return { status: 'success', data: res.data };
     }
 
     case 'search': {
@@ -62,7 +62,7 @@ export const gmailHandler: ToolHandler = async (ctx: ToolContext) => {
         'https://gmail.googleapis.com/gmail/v1/users/me/messages',
         { params: { q: query || undefined, maxResults }, headers },
       );
-      return { success: true, emails: listRes.data.messages || [], total: listRes.data.resultSizeEstimate };
+      return { status: 'success', data: listRes.data };
     }
 
     case 'get': {
@@ -71,13 +71,12 @@ export const gmailHandler: ToolHandler = async (ctx: ToolContext) => {
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`,
         { headers },
       );
-      return { success: true, ...res.data };
+      return { status: 'success', data: res.data };
     }
 
     case 'reply': {
       const messageId = resolveId(render(config.messageId));
       const replyBody = render(config.body);
-      // Get original message to extract headers
       const msgRes = await axios.get(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`,
         { headers },
@@ -90,38 +89,39 @@ export const gmailHandler: ToolHandler = async (ctx: ToolContext) => {
         { raw, threadId: msgRes.data.threadId },
         { headers },
       );
-      return { success: true, messageId: replyRes.data.id, repliedTo: messageId };
+      return { status: 'success', data: replyRes.data };
     }
 
     case 'mark_read': {
       const messageId = resolveId(render(config.messageId));
       const markAs = render(config.markAs || 'read');
       const body = markAs === 'unread' ? { addLabelIds: ['UNREAD'] } : { removeLabelIds: ['UNREAD'] };
-      await axios.post(
+      const res = await axios.post(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`,
         body,
         { headers },
       );
-      return { success: true, messageId, markedAs: markAs };
+      return { status: 'success', data: res.data };
     }
 
     case 'delete': {
       const messageId = resolveId(render(config.messageId));
-      await axios.delete(
+      const res = await axios.post(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/trash`,
+        {},
         { headers },
       );
-      return { success: true, messageId, trashed: true };
+      return { status: 'success', data: res.data };
     }
 
     case 'archive': {
       const messageId = resolveId(render(config.messageId));
-      await axios.post(
+      const res = await axios.post(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`,
         { removeLabelIds: ['INBOX'] },
         { headers },
       );
-      return { success: true, messageId, archived: true };
+      return { status: 'success', data: res.data };
     }
 
     case 'list': {
@@ -132,7 +132,7 @@ export const gmailHandler: ToolHandler = async (ctx: ToolContext) => {
         params: { q: query || undefined, maxResults, pageToken: pageToken || undefined },
         headers,
       });
-      return { success: true, messages: res.data.messages || [], nextPageToken: res.data.nextPageToken };
+      return { status: 'success', data: res.data };
     }
 
     case 'getAttachment': {
@@ -142,29 +142,29 @@ export const gmailHandler: ToolHandler = async (ctx: ToolContext) => {
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/attachments/${attachmentId}`,
         { headers },
       );
-      return { success: true, attachment: res.data };
+      return { status: 'success', data: res.data };
     }
 
     case 'addLabel': {
       const messageId = resolveId(render(config.messageId));
       const label = render(config.label);
-      await axios.post(
+      const res = await axios.post(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`,
         { addLabelIds: [label] },
         { headers },
       );
-      return { success: true, messageId, labelAdded: label };
+      return { status: 'success', data: res.data };
     }
 
     case 'removeLabel': {
       const messageId = resolveId(render(config.messageId));
       const label = render(config.label);
-      await axios.post(
+      const res = await axios.post(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`,
         { removeLabelIds: [label] },
         { headers },
       );
-      return { success: true, messageId, labelRemoved: label };
+      return { status: 'success', data: res.data };
     }
 
     case 'forward': {
@@ -183,7 +183,7 @@ export const gmailHandler: ToolHandler = async (ctx: ToolContext) => {
         { raw },
         { headers },
       );
-      return { success: true, messageId: res.data.id, forwardedTo: forwardTo };
+      return { status: 'success', data: res.data };
     }
 
     case 'draftCreate': {
@@ -196,7 +196,7 @@ export const gmailHandler: ToolHandler = async (ctx: ToolContext) => {
         { message: { raw } },
         { headers },
       );
-      return { success: true, draftId: res.data.id };
+      return { status: 'success', data: res.data };
     }
 
     case 'draftSend': {
@@ -206,45 +206,45 @@ export const gmailHandler: ToolHandler = async (ctx: ToolContext) => {
         {},
         { headers },
       );
-      return { success: true, messageId: res.data.id, draftSent: true };
+      return { status: 'success', data: res.data };
     }
 
     case 'draftDelete': {
       const draftId = resolveId(render(config.draftId));
-      await axios.delete(
+      const res = await axios.delete(
         `https://gmail.googleapis.com/gmail/v1/users/me/drafts/${draftId}`,
         { headers },
       );
-      return { success: true, draftId, deleted: true };
+      return { status: 'success', data: res.data };
     }
 
     case 'moveToTrash': {
       const messageId = resolveId(render(config.messageId));
-      await axios.post(
+      const res = await axios.post(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/trash`,
         {},
         { headers },
       );
-      return { success: true, messageId, movedToTrash: true };
+      return { status: 'success', data: res.data };
     }
 
     case 'permanentlyDelete': {
       const messageId = resolveId(render(config.messageId));
-      await axios.delete(
+      const res = await axios.delete(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}`,
         { headers },
       );
-      return { success: true, messageId, permanentlyDeleted: true };
+      return { status: 'success', data: res.data };
     }
 
     case 'restoreFromTrash': {
       const messageId = resolveId(render(config.messageId));
-      await axios.post(
+      const res = await axios.post(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/untrash`,
         {},
         { headers },
       );
-      return { success: true, messageId, restored: true };
+      return { status: 'success', data: res.data };
     }
 
     case 'getThread': {
@@ -253,7 +253,7 @@ export const gmailHandler: ToolHandler = async (ctx: ToolContext) => {
         `https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}?format=full`,
         { headers },
       );
-      return { success: true, thread: res.data };
+      return { status: 'success', data: res.data };
     }
 
     case 'listThreads': {
@@ -263,27 +263,27 @@ export const gmailHandler: ToolHandler = async (ctx: ToolContext) => {
         params: { q: query || undefined, maxResults },
         headers,
       });
-      return { success: true, threads: res.data.threads || [] };
+      return { status: 'success', data: res.data };
     }
 
     case 'markAsSpam': {
       const messageId = resolveId(render(config.messageId));
-      await axios.post(
+      const res = await axios.post(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`,
         { addLabelIds: ['SPAM'] },
         { headers },
       );
-      return { success: true, messageId, markedAsSpam: true };
+      return { status: 'success', data: res.data };
     }
 
     case 'unmarkAsSpam': {
       const messageId = resolveId(render(config.messageId));
-      await axios.post(
+      const res = await axios.post(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`,
         { removeLabelIds: ['SPAM'] },
         { headers },
       );
-      return { success: true, messageId, unmarkedAsSpam: true };
+      return { status: 'success', data: res.data };
     }
 
     case 'createFilter': {
@@ -300,7 +300,7 @@ export const gmailHandler: ToolHandler = async (ctx: ToolContext) => {
         { criteria, action: { skip_trash: action === 'skip_trash', archive: action === 'archive' } },
         { headers },
       );
-      return { success: true, filterId: res.data.id, filterCreated: true };
+      return { status: 'success', data: res.data };
     }
 
     case 'createSignature': {
@@ -310,7 +310,7 @@ export const gmailHandler: ToolHandler = async (ctx: ToolContext) => {
         { signature },
         { headers },
       );
-      return { success: true, signature: res.data.signature, created: true };
+      return { status: 'success', data: res.data };
     }
 
     default:

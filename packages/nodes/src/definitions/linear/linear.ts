@@ -33,10 +33,13 @@ export const linearNode: NodeDefinition = {
       { key: 'issueId', label: 'Issue ID', type: 'string', required: true, description: 'Issue to fetch', example: 'LINEAR-123' },
     ],
     createIssue: [
-      { key: 'teamId', label: 'Team ID', type: 'string', required: true, description: 'Team for issue', example: 'team_123' },
-      { key: 'title', label: 'Title', type: 'string', required: true, description: 'Issue title', example: 'Bug: Login fails' },
-      { key: 'description', label: 'Description', type: 'string', required: false, description: 'Issue description', example: 'Steps to reproduce...' },
-      { key: 'priority', label: 'Priority', type: 'string', required: false, description: '0-4 scale', example: '2' },
+      { key: 'teamId', label: 'Team ID', type: 'string', required: true, description: 'Target team ID', example: 'team-123' },
+      { key: 'title', label: 'Title', type: 'string', required: true, description: 'Issue title', example: 'Bug: Fix login' },
+      { key: 'description', label: 'Description', type: 'string', required: false, description: 'Issue details', example: 'Error occurs on...' },
+      { key: 'priority', label: 'Priority', type: 'string', required: false, description: '0 to 4 (0=none)', example: '1' },
+      { key: 'assigneeId', label: 'Assignee ID', type: 'string', required: false, description: 'User ID to assign', example: 'user-456' },
+      { key: 'stateId', label: 'State ID', type: 'string', required: false, description: 'Status state ID', example: 'state-uuid' },
+      { key: 'labelIds', label: 'Label IDs', type: 'string', required: false, description: 'Comma-separated label IDs', example: 'label-1,label-2' },
     ],
     updateIssue: [
       { key: 'issueId', label: 'Issue ID', type: 'string', required: true, description: 'Issue to update', example: 'LINEAR-123' },
@@ -153,9 +156,126 @@ export const linearNode: NodeDefinition = {
       example: 'listIssues',
     },
   ],
+  operationOutputs: {
+    listIssues: [
+      { key: 'status', type: 'string' },
+      { key: 'data.issues[0].id', type: 'string' },
+      { key: 'data.issues[0].title', type: 'string' },
+      { key: 'data.issues[0].status', type: 'string' },
+    ],
+    getIssue: [
+      { key: 'status', type: 'string' },
+      { key: 'data.issue.id', type: 'string' },
+      { key: 'data.issue.title', type: 'string' },
+    ],
+    createIssue: [
+      { key: 'status', type: 'string' },
+      { key: 'data.issue.id', type: 'string' },
+    ],
+    updateIssue: [
+      { key: 'status', type: 'string' },
+      { key: 'data.issue.id', type: 'string' },
+    ],
+    deleteIssue: [
+      { key: 'status', type: 'string' },
+    ],
+    archiveIssue: [
+      { key: 'status', type: 'string' },
+    ],
+    unarchiveIssue: [
+      { key: 'status', type: 'string' },
+    ],
+    assignIssue: [
+      { key: 'status', type: 'string' },
+      { key: 'data.issue.id', type: 'string' },
+    ],
+    unassignIssue: [
+      { key: 'status', type: 'string' },
+    ],
+    changeStatus: [
+      { key: 'status', type: 'string' },
+      { key: 'data.issue.state.name', type: 'string' },
+    ],
+    changePriority: [
+      { key: 'status', type: 'string' },
+    ],
+    addLabel: [
+      { key: 'status', type: 'string' },
+    ],
+    removeLabel: [
+      { key: 'status', type: 'string' },
+    ],
+    addToProject: [
+      { key: 'status', type: 'string' },
+    ],
+    removeFromProject: [
+      { key: 'status', type: 'string' },
+    ],
+    listComments: [
+      { key: 'status', type: 'string' },
+      { key: 'data.comments[0].body', type: 'string' },
+    ],
+    createComment: [
+      { key: 'status', type: 'string' },
+      { key: 'data.comment.id', type: 'string' },
+    ],
+    updateComment: [
+      { key: 'status', type: 'string' },
+    ],
+    deleteComment: [
+      { key: 'status', type: 'string' },
+    ],
+    listProjects: [
+      { key: 'status', type: 'string' },
+      { key: 'data.projects[0].name', type: 'string' },
+    ],
+    getProject: [
+      { key: 'status', type: 'string' },
+      { key: 'data.project.name', type: 'string' },
+    ],
+    createProject: [
+      { key: 'status', type: 'string' },
+      { key: 'data.project.id', type: 'string' },
+    ],
+    updateProject: [
+      { key: 'status', type: 'string' },
+    ],
+    deleteProject: [
+      { key: 'status', type: 'string' },
+    ],
+    listTeams: [
+      { key: 'status', type: 'string' },
+      { key: 'data.teams[0].name', type: 'string' },
+    ],
+    getTeam: [
+      { key: 'status', type: 'string' },
+      { key: 'data.team.name', type: 'string' },
+    ],
+    createTeam: [
+      { key: 'status', type: 'string' },
+      { key: 'data.team.id', type: 'string' },
+    ],
+    listMembers: [
+      { key: 'status', type: 'string' },
+      { key: 'data.members[0].name', type: 'string' },
+    ],
+    listCycles: [
+      { key: 'status', type: 'string' },
+      { key: 'data.cycles[0].name', type: 'string' },
+    ],
+    getCycle: [
+      { key: 'status', type: 'string' },
+      { key: 'data.cycle.name', type: 'string' },
+    ],
+    createCycle: [
+      { key: 'status', type: 'string' },
+    ],
+    updateCycle: [
+      { key: 'status', type: 'string' },
+    ],
+  },
   outputSchema: [
-    { key: 'id', type: 'string', description: 'Issue/Project ID', example: 'LINEAR-123' },
-    { key: 'title', type: 'string', description: 'Title', example: 'Issue title' },
     { key: 'status', type: 'string', description: 'Operation status', example: 'success' },
+    { key: 'data', type: 'any', description: 'Raw GraphQL data from Linear', example: {} },
   ],
 };

@@ -120,48 +120,82 @@ const RichTextarea = ({ value, onChange, placeholder, rows = 4, className }: any
   };
 
   const highlighted = useMemo(() => {
-    if (!value) return '';
-    return value.replace(/\{\{\s*([\s\S]+?)\s*\}\}/g, (match: string) => {
-      return `<span style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0px 0px; border-radius: 4px; box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.1); color: transparent; display: inline-block;">${match}</span>`;
-    }).replace(/\n/g, '<br/>');
+    const stringValue = String(value ?? '');
+    if (!stringValue) return '';
+    // Highlight {{ variable.path }} or {{ variable }}
+    // Use an approach that strictly replaces only the matches to preserve alignment
+    const parts = stringValue.split(/(\{\{\s*[\s\S]+?\s*\}\})/g);
+    return parts.map((part: string) => {
+      if (part.startsWith('{{') && part.endsWith('}}')) {
+        return `<span style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; font-weight: bold; border-radius: 4px; padding: 0px 1px;">${part}</span>`;
+      }
+      return part;
+    }).join('').replace(/\n/g, '<br/>');
   }, [value]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Backspace') {
-      const pos = e.currentTarget.selectionStart;
-      const endPos = e.currentTarget.selectionEnd;
-      if (pos === endPos && pos > 2) {
-         const textBefore = value.substring(0, pos);
-         if (textBefore.endsWith('}}')) {
-            const startIdx = textBefore.lastIndexOf('{{');
-            if (startIdx !== -1 && startIdx < pos) {
-               e.preventDefault();
-               const newVal = value.substring(0, startIdx) + value.substring(pos);
-               onChange({ target: { value: newVal } } as any);
-               setTimeout(() => {
-                 if (textareaRef.current) {
-                   textareaRef.current.selectionStart = startIdx;
-                   textareaRef.current.selectionEnd = startIdx;
-                 }
-               }, 0);
-            }
-         }
-      }
+    const pos = e.currentTarget.selectionStart;
+    const endPos = e.currentTarget.selectionEnd;
+
+    // 1. Backspace: remove whole variable if cursor is at the end or inside
+    if (e.key === 'Backspace' && pos === endPos) {
+       const textBefore = value.substring(0, pos);
+       const textAfter = value.substring(pos);
+
+       // Check if we are at the end of a variable: foo {{var}}|
+       if (textBefore.endsWith('}}')) {
+          const startIdx = textBefore.lastIndexOf('{{');
+          if (startIdx !== -1) {
+             e.preventDefault();
+             const newVal = value.substring(0, startIdx) + textAfter;
+             onChange({ target: { value: newVal } } as any);
+             return;
+          }
+       }
+       // Check if we are inside a variable: {{v|ar}}
+       const lastStart = textBefore.lastIndexOf('{{');
+       const lastEnd = textBefore.lastIndexOf('}}');
+       const nextEnd = textAfter.indexOf('}}');
+       const nextStart = textAfter.indexOf('{{');
+
+       if (lastStart > lastEnd && nextEnd !== -1 && (nextStart === -1 || nextEnd < nextStart)) {
+          // We are inside!
+          e.preventDefault();
+          const newVal = value.substring(0, lastStart) + value.substring(pos + nextEnd + 2);
+          onChange({ target: { value: newVal } } as any);
+          return;
+       }
+    }
+
+    // 2. Auto-close: {{ -> {{}}
+    if (e.key === '{') {
+       const { value: val } = e.currentTarget;
+       if (val.charAt(pos - 1) === '{') {
+          e.preventDefault();
+          const newVal = val.substring(0, pos) + '}}' + val.substring(pos);
+          onChange({ target: { value: newVal } } as any);
+          setTimeout(() => {
+             if (textareaRef.current) {
+                textareaRef.current.selectionStart = pos;
+                textareaRef.current.selectionEnd = pos;
+             }
+          }, 0);
+       }
     }
   };
 
   return (
-    <div className="relative w-full group">
+    <div className="relative w-full group overflow-hidden">
       <div 
         ref={backdropRef}
         aria-hidden="true"
         className={`absolute inset-0 px-4 py-3 text-[12px] font-medium pointer-events-none whitespace-pre-wrap break-words overflow-auto no-scrollbar scroll-smooth antialiased ${className}`}
         style={{ 
-          color: 'transparent', 
-          whiteSpace: 'pre-wrap', 
+          color: 'white', 
           lineHeight: '1.5',
           fontFamily: 'inherit',
-          letterSpacing: 'normal'
+          letterSpacing: 'normal',
+          wordBreak: 'break-word'
         }}
         dangerouslySetInnerHTML={{ __html: highlighted + '<br/>' }}
       />
@@ -176,10 +210,12 @@ const RichTextarea = ({ value, onChange, placeholder, rows = 4, className }: any
         className={`relative w-full px-4 py-3 bg-foreground/[0.01] border border-border/40 rounded-xl text-[12px] outline-none focus:border-foreground/20 transition-all font-medium custom-scrollbar antialiased ${className}`}
         style={{ 
           background: 'transparent',
+          color: 'transparent',
           lineHeight: '1.5',
           fontFamily: 'inherit',
           resize: 'none',
-          caretColor: 'white'
+          caretColor: 'white',
+          wordBreak: 'break-word'
         }}
       />
     </div>
@@ -260,16 +296,19 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
       ? (operations[opIdx][targetKey] || '')
       : (values[targetKey] || '');
     
-    // We already have typed '{{'
-    // We want to replace the '{{' plus whatever followed it (if we were typing)
-    // Actually simplicity: typing '{{' makes pos be index after second '{'.
-    // We replace the character before (the second '{') and first '{'.
-    
+    // We typed '{{'
+    // cursorPos is right after second '{'
     const prefix = currentVal.substring(0, cursorPos - 2);
     const suffix = currentVal.substring(cursorPos);
     
-    // Use the variable as-is (e.g. {{ Gemini_1.result }})
-    const newVal = prefix + variable + suffix;
+    // Smart Brace insertion: Check if suffix already contains closing braces from auto-close
+    let insertSuffix = ' }}';
+    let remainingSuffix = suffix;
+    if (suffix.startsWith('}}')) {
+       remainingSuffix = suffix.substring(2);
+    }
+    
+    const newVal = prefix + '{{ ' + variable + insertSuffix + remainingSuffix;
     
     if (isOpField && typeof opIdx === 'number') {
       setOperations(ops => ops.map((o, i) => i === opIdx ? { ...o, [targetKey]: newVal } : o));
