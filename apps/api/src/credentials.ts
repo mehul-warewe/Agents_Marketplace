@@ -45,20 +45,28 @@ router.get('/proxy/models', passport.authenticate('jwt', { session: false }), as
       const r = await axios.get(`${baseUrl}/models`, {
         headers: { 'Authorization': `Bearer ${apiKey}` }
       });
-      // OpenAI and OpenRouter have slightly different structures for the data array
-      const models = r.data.data.map((m: any) => ({
-        id: m.id,
-        label: m.id,
-      }));
+      // Filter for chat-capable models (openai/gpt or openrouter mappings)
+      const models = r.data.data
+        .filter((m: any) => {
+           const id = m.id.toLowerCase();
+           if (cred.type === 'openai_api_key') return id.startsWith('gpt') || id.startsWith('o1') || id.startsWith('o3');
+           return true; // OpenRouter handles everything
+        })
+        .map((m: any) => ({
+          id: cred.type === 'openai_api_key' ? `openai/${m.id}` : m.id,
+          label: m.id,
+        }));
       return res.json(models);
     } 
     
     if (cred.type === 'google_api_key') {
       const r = await axios.get(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-      const models = r.data.models.map((m: any) => ({
-        id: m.name.replace('models/', ''),
-        label: m.displayName || m.name,
-      }));
+      const models = r.data.models
+        .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+        .map((m: any) => ({
+          id: `google/${m.name.replace('models/', '')}`,
+          label: m.displayName || m.name,
+        }));
       return res.json(models);
     }
 

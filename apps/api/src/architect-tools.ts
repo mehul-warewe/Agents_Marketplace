@@ -1,963 +1,336 @@
 import { DynamicTool } from '@langchain/core/tools';
 import { NODE_REGISTRY } from '@repo/nodes';
-import OpenAI from 'openai';
-
-// Ensure OPENAI_API_KEY is set to OPENROUTER_API_KEY for the OpenAI client
-if (!process.env.OPENAI_API_KEY && process.env.OPENROUTER_API_KEY) {
-  process.env.OPENAI_API_KEY = process.env.OPENROUTER_API_KEY;
-}
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY,
-  baseURL: 'https://openrouter.ai/api/v1',
-  defaultHeaders: {
-    'HTTP-Referer': 'http://localhost:3000',
-    'X-Title': 'warewe AI Architect',
-  },
-});
 
 /**
- * Tool 0: Choose Trigger Type
- * Determines which trigger should start the workflow
+ * Tool 0: Get Architect Context (Discovery)
+ * Returns triggers, platform tools, and all node types in a single turn.
  */
-export const chooseTriggerTool = new DynamicTool({
-  name: 'choose_trigger',
-  description:
-    'Choose the appropriate trigger for the workflow. Input: user prompt. Returns: trigger type (chat/manual/webhook)',
+export const getArchitectContextTool = new DynamicTool({
+  name: 'get_architect_context',
+  description: 'Returns available triggers, platform tools, AI nodes, and logic nodes. Use once at the start to find what you need. Input: filter string (optional).',
   func: async (input: string) => {
     try {
-      // Find trigger node definitions
-      const triggerNode = NODE_REGISTRY.find(
-        (n) => n.label.toLowerCase().includes('chat message') ||
-               n.id === 'trigger.chat'
-      );
-      const manualNode = NODE_REGISTRY.find((n) => n.id === 'trigger.manual');
-      const webhookNode = NODE_REGISTRY.find((n) => n.id === 'trigger.webhook');
+      const filter = (input || '').toLowerCase().trim();
+      
+      const triggers = NODE_REGISTRY.filter(n => n.isTrigger).map(n => ({
+        id: n.id,
+        label: n.label,
+        description: n.description,
+        type: n.id.split('.')[1] || 'manual'
+      }));
 
-      const response = await openai.chat.completions.create({
-        model: 'google/gemini-2.0-flash-001',
-        max_tokens: 256,
-        messages: [
-          {
-            role: 'system',
-            content: `Choose the best trigger for a workflow based on the user's prompt.
-
-Trigger options:
-1. "chat" - Chat Trigger - for interactive chat workflows. Use when: "chat", "message", "user sends", "interactive", "ask"
-2. "manual" - Manual Trigger - for manual/automated tasks. Use when: regular automation, batch job, scheduled task, or default
-3. "webhook" - Webhook Trigger - for external integrations. Use when: "webhook", "API", "HTTP", "external system", "integration"
-
-Return ONLY a JSON object: { "trigger": "chat|manual|webhook", "reason": "brief reason" }`,
-          },
-          {
-            role: 'user',
-            content: `Choose trigger for: "${input}"`,
-          },
-        ],
-      });
-
-      const content = response.choices[0]?.message.content || '{}';
-      const parsed = JSON.parse(content);
-
-      if (!['chat', 'manual', 'webhook'].includes(parsed.trigger)) {
-        return JSON.stringify({
-          trigger: 'chat', // Default to chat
-          reason: 'Could not determine, defaulting to chat trigger',
-        });
-      }
-
-      return JSON.stringify(parsed);
-    } catch (err) {
-      return JSON.stringify({
-        trigger: 'chat',
-        reason: 'Error in selection, defaulting to chat',
-      });
-    }
-  },
-});
-
-/**
- * Tool 1: Extract Intent from User Prompt
- */
-export const extractIntentTool = new DynamicTool({
-  name: 'extract_intent',
-  description:
-    'Extract structured intent: platforms, operations, static values, dynamic fields. Returns data to build node configs.',
-  func: async (input: string) => {
-    try {
-      const response = await openai.chat.completions.create({
-        model: 'google/gemini-2.0-flash-001',
-        max_tokens: 1024,
-        messages: [
-          {
-            role: 'system',
-            content: `Extract all actionable information from the user prompt to build workflow nodes.
-
-Return JSON ONLY (no explanations):
-
-{
-  "platforms": ["Gmail", "GitHub"],
-  "primaryOperation": "send",  // The main action
-  "additionalOperations": [],  // Other operations if multiple actions
-  "intent": "One sentence describing what the workflow does",
-  "staticFields": {
-    "to": "john@example.com",    // Literal values explicitly in prompt
-    "owner": "microsoft",
-    "repo": "vscode"
-  },
-  "dynamicFields": {
-    "subject": "subject",        // Field name → how to reference it ({{ input.subject }})
-    "body": "message",          // { body: "message" } means use {{ input.message }}
-    "email": "recipientEmail"   // { email: "recipientEmail" } means use {{ input.recipientEmail }}
-  },
-  "dataFlow": "single|multiple",  // single: one action. multiple: chain of actions
-  "explanation": "Brief explanation of extracted values"
-}
-
-RULES FOR EXTRACTION:
-1. staticFields: Any value explicitly named in prompt is literal
-   - "send to alice@example.com" → staticFields.to = "alice@example.com"
-   - "create in microsoft/vscode repo" → staticFields.owner = "microsoft", repo = "vscode"
-
-2. dynamicFields: Any value marked as "from user", "from chat", "provided" is dynamic
-   - "send to the user's email from chat" → dynamicFields.to = "email" (use {{ input.email }})
-   - "message from chat input" → dynamicFields.body = "message" (use {{ input.message }})
-
-3. primaryOperation: The main operation (send, create, search, etc)
-
-4. dataFlow:
-   - "single" if one action (e.g., just send email)
-   - "multiple" if chain (e.g., search GitHub then send results via email)`,
-          },
-          {
-            role: 'user',
-            content: `Extract intent from: "${input}"`,
-          },
-        ],
-      });
-
-      const content = response.choices[0]?.message.content || '{}';
-      return content;
-    } catch (err) {
-      return JSON.stringify({ error: String(err) });
-    }
-  },
-});
-
-/**
- * Tool 2: List All Operations
- */
-export const listOperationsTool = new DynamicTool({
-  name: 'list_all_operations',
-  description:
-    'Get all available operations. Pass platform name to filter (GitHub, Slack, Gmail, etc.)',
-  func: async (input: string) => {
-    try {
-      const platform = input || '';
-      const operations: any[] = [];
+      const platforms: any[] = [];
+      const core: any[] = [];
 
       for (const node of NODE_REGISTRY) {
-        if (platform && node.label.toLowerCase() !== platform.toLowerCase()) {
-          continue;
-        }
+        if (node.isTrigger) continue;
+        if (filter && !node.label.toLowerCase().includes(filter) && !node.category.toLowerCase().includes(filter)) continue;
 
-        const operationInputs = node.operationInputs || {};
+        const data: any = {
+          label: node.label,
+          category: node.category,
+          description: node.description,
+          credentialTypes: node.credentialTypes,
+        };
 
-        for (const [operation, inputs] of Object.entries(operationInputs)) {
-          const requiredInputs = (inputs as any[])
-            .filter((i: any) => i.required)
-            .map((i: any) => i.key);
-          const optionalInputs = (inputs as any[])
-            .filter((i: any) => !i.required)
-            .map((i: any) => i.key);
-
-          // Infer resource for Google nodes
-          const resourceField = node.configFields.find(f => f.key === 'resource');
-          const resources = Array.isArray(resourceField?.options) 
-            ? (resourceField!.options as any[]).map(o => typeof o === 'string' ? o : o.value)
-            : [];
-          
-          let potentialResource = "";
-          if (resources.length > 0) {
-              potentialResource = resources.find(r => 
-                operation.toLowerCase().includes(r.toLowerCase()) || 
-                r.toLowerCase().includes(operation.toLowerCase())
-              ) || resources[0] || "";
-          }
-
-          operations.push({
-            platform: node.label,
-            operation,
-            resource: potentialResource,
-            required: requiredInputs,
-            optional: optionalInputs,
-            description: (inputs as any[])?.[0]?.description ? `${node.description} - ${(inputs as any[])[0].description}` : node.description,
-          });
-        }
-      }
-
-      return JSON.stringify({
-        total: operations.length,
-        operations: operations.slice(0, 20), // Limit output
-      });
-    } catch (err) {
-      return JSON.stringify({ error: String(err) });
-    }
-  },
-});
-
-/**
- * Tool 3: Get Operation Schema
- */
-export const getOperationSchemaTool = new DynamicTool({
-  name: 'get_operation_schema',
-  description:
-    'Get schema for specific operation. Pass JSON: {platform, operation}',
-  func: async (input: string | any) => {
-    try {
-      let platform, operation;
-
-      // Handle both string and object inputs
-      let data = input;
-      if (typeof input === 'string') {
-        if (input.startsWith('{')) {
-          data = JSON.parse(input);
+        if (node.operationInputs) {
+          // SHRUNK: Only return names, not full schemas to avoid token bloat
+          data.operations = Object.keys(node.operationInputs).map(op => ({
+            name: op,
+            description: (node.operationOutputs?.[op]?.[0]?.description) || `Operation: ${op}`
+          }));
+          platforms.push(data);
         } else {
-          const parts = input.split(',').map((s) => s.trim());
-          data = { platform: parts[0], operation: parts[1] };
+          data.configFields = node.configFields.filter(f => f.type !== 'notice').map(f => ({
+            key: f.key,
+            label: f.label,
+            type: f.type,
+            required: (f as any).required || false,
+            default: f.default
+          }));
+          data.inputs = node.inputs;
+          data.outputs = node.outputs;
+          core.push(data);
         }
       }
 
-      platform = data.platform;
-      operation = data.operation;
-
-      if (!platform || !operation) {
-        return JSON.stringify({
-          error: 'Invalid input format. Use: platform,operation',
-        });
-      }
-
-      const node = NODE_REGISTRY.find(
-        (n) => n.label.toLowerCase() === platform.toLowerCase()
-      );
-
-      if (!node) {
-        return JSON.stringify({
-          error: `Platform "${platform}" not found`,
-        });
-      }
-
-      const allOps: any[] = [];
-      NODE_REGISTRY.forEach(n => {
-        Object.keys(n.operationInputs || {}).forEach(op => {
-          allOps.push({ platform: n.label, operation: op, node: n });
-        });
-      });
-
-      const matchedOp = allOps.find(o => 
-        o.platform.toLowerCase() === platform.toLowerCase() && 
-        o.operation.toLowerCase() === operation.toLowerCase()
-      );
-
-      const opNode = matchedOp?.node || node;
-      const canonicalOp = matchedOp?.operation || operation;
-      const schema = opNode.operationInputs?.[canonicalOp];
-
-      if (!schema) {
-        return JSON.stringify({
-          error: `Operation "${operation}" not found for platform "${platform}"`,
-        });
-      }
-
-      // Infer resource
-      const resourceField = opNode.configFields.find((f: any) => f.key === 'resource');
-      const resources = Array.isArray(resourceField?.options) 
-        ? (resourceField!.options as any[]).map(o => typeof o === 'string' ? o : o.value)
-        : [];
-      const resource = resources.find((r: string) => 
-        canonicalOp.toLowerCase().includes(r.toLowerCase()) || 
-        r.toLowerCase().includes(canonicalOp.toLowerCase())
-      ) || resources[0] || "";
-
       return JSON.stringify({
-        platform,
-        operation: canonicalOp,
-        resource,
-        inputs: schema.map((i: any) => ({
-          key: i.key,
-          required: i.required,
-          type: i.type,
-          description: i.description,
-        })),
+        triggers,
+        platforms: platforms.slice(0, 100),
+        coreNodes: core,
       });
     } catch (err) {
       return JSON.stringify({ error: String(err) });
     }
-  },
+  }
 });
 
 /**
- * Tool 4: Validate Configuration
+ * Tool 0.5: Get Platform Operations (Optional Deep-Dive)
  */
-export const validateConfigTool = new DynamicTool({
-  name: 'validate_config',
-  description:
-    'Validate node config. Pass JSON: {platform, operation, config_object}',
+export const getPlatformOperationsTool = new DynamicTool({
+  name: 'get_platform_operations',
+  description: 'Returns the full input/output schema for a specific platform (e.g. YouTube, GitHub). Use if you need to know exact field names.',
   func: async (input: string) => {
     try {
-      let platform, operation, configStr;
-
-      // Try to parse as JSON first
-      if (input.startsWith('{')) {
-        const parsed = JSON.parse(input);
-        platform = parsed.platform;
-        operation = parsed.operation;
-        configStr = JSON.stringify(parsed.config_object || parsed.config || {});
-      } else {
-        // Fall back to separator-based parsing
-        const parts = input.split('|||');
-        platform = parts[0]?.trim();
-        operation = parts[1]?.trim();
-        configStr = parts[2]?.trim();
-      }
-
-      if (!platform || !operation || !configStr) {
-        return JSON.stringify({ valid: false, error: 'Invalid input format' });
-      }
-
-      const node = NODE_REGISTRY.find(
-        (n) => n.label.toLowerCase() === platform.toLowerCase()
-      );
-
-      if (!node) {
-        return JSON.stringify({ valid: false, error: 'Platform not found' });
-      }
-
-      const schema = node.operationInputs?.[operation];
-
-      if (!schema) {
-        return JSON.stringify({ valid: false, error: 'Operation not found' });
-      }
-
-      const config = JSON.parse(configStr);
-      const errors: string[] = [];
-
-      for (const requiredInput of schema.filter((i: any) => i.required)) {
-        if (!config[requiredInput.key]) {
-          errors.push(`Missing: ${requiredInput.key}`);
-        }
-      }
-
-      if (errors.length > 0) {
-        return JSON.stringify({ valid: false, errors });
-      }
-
-      return JSON.stringify({ valid: true });
+      const platform = (input || '').toLowerCase().trim();
+      const node = NODE_REGISTRY.find(n => n.label.toLowerCase() === platform || n.id.toLowerCase().includes(platform));
+      if (!node) return JSON.stringify({ error: `Platform '${platform}' not found` });
+      
+      const ops = Object.keys(node.operationInputs || {}).map(op => ({
+        name: op,
+        inputs: node.operationInputs![op],
+        outputs: node.operationOutputs?.[op] || []
+      }));
+      return JSON.stringify({ platform: node.label, operations: ops });
     } catch (err) {
-      return JSON.stringify({ valid: false, error: String(err) });
-    }
-  },
-});
-
-/**
- * Tool 4b: Transform Config Values (NEW)
- * Convert placeholder/test values to dynamic references where needed
- */
-export const transformConfigTool = new DynamicTool({
-  name: 'transform_config',
-  description:
-    'Transform node config to use dynamic references based on intent analysis. Input: JSON with {config, dynamicFields, staticFields}',
-  func: async (input: string) => {
-    try {
-      let data;
-      if (input.startsWith('{')) {
-        data = JSON.parse(input);
-      } else {
-        data = JSON.parse(input);
-      }
-
-      const config = data.config || {};
-      const dynamicFields = data.dynamicFields || {}; // { fieldKey: "inputName" }
-      const staticFields = data.staticFields || {}; // { fieldKey: "value" }
-
-      // Transform config values
-      const transformed: any = {};
-
-      for (const [key, value] of Object.entries(config)) {
-        // Check if this field is marked as dynamic from intent extraction
-        if (dynamicFields[key]) {
-          transformed[key] = `{{ input.${dynamicFields[key]} }}`;
-        }
-        // Check if this field is marked as static with explicit value
-        else if (staticFields[key]) {
-          transformed[key] = staticFields[key];
-        }
-        // Heuristic: detect placeholder/test values and convert to dynamic
-        else if (typeof value === 'string' &&
-                   (value === 'test_user' || value === 'example' || value === 'placeholder' ||
-                    value.includes('given') || value === 'user' || value === 'test' ||
-                    value.match(/^[A-Z_\s]+$/) && value.length > 3)) {
-          // These look like placeholders - suggest dynamic reference
-          const suggestedField = key === 'owner' ? 'githubUser' :
-                               key === 'username' ? 'githubUser' :
-                               key === 'query' ? 'searchQuery' :
-                               key === 'q' ? 'searchQuery' :
-                               key === 'channel' ? 'channelName' :
-                               key === 'email' ? 'userEmail' :
-                               key === 'message' ? 'message' : key;
-          transformed[key] = `{{ input.${suggestedField} }}`;
-        } else {
-          // Keep literal values as-is
-          transformed[key] = value;
-        }
-      }
-
-      return JSON.stringify({
-        config: transformed,
-        notes: 'Config transformed: dynamic fields use {{ input.name }}, static fields kept as literals',
-      });
-    } catch (err: any) {
-      console.error('[transformConfigTool] Error:', err.message);
       return JSON.stringify({ error: String(err) });
     }
-  },
+  }
 });
 
 /**
- * Tool 5: Assemble Node Config
- * Builds the complete config object for a node based on operation schema and extracted intent
+ * Tool 1: Assemble Node Config
+ * Builds the complete config object for a node based on operation schema and intent.
  */
 export const assembleNodeConfigTool = new DynamicTool({
   name: 'assemble_node_config',
-  description:
-    'Builds complete node config. Input: {platform, operation, operationSchema, staticFields, dynamicFields}. Output: complete config object',
+  description: 'Builds complete node config. Input JSON: {platform, operation, staticFields, dynamicFields}.',
   func: async (input: string) => {
     try {
-      let data;
-      if (input.startsWith('{')) {
-        data = JSON.parse(input);
-      } else {
-        return JSON.stringify({
-          error: 'Input must be JSON object with platform, operation, operationSchema, staticFields, dynamicFields',
-        });
+      const data = JSON.parse(input);
+      const { platform, operation, staticFields = {}, dynamicFields = {} } = data;
+
+      if (!platform || !operation) {
+        return JSON.stringify({ error: 'Missing: platform or operation' });
       }
 
-      const { platform, operation, operationSchema, staticFields = {}, dynamicFields = {} } = data;
-
-      if (!platform || !operation || !operationSchema) {
-        return JSON.stringify({
-          error: 'Missing: platform, operation, or operationSchema',
-        });
-      }
-
-      // Check if schema is a raw array or the full object from get_operation_schema
-      const inputs = Array.isArray(operationSchema) 
-        ? operationSchema 
-        : (operationSchema.inputs || []);
-
-      if (!Array.isArray(inputs)) {
-        return JSON.stringify({ error: 'operationSchema must be an array or contain an inputs array' });
-      }
-
-      // Build config by iterating through operation schema
-      const config: any = {
-        operation,
-      };
-
-      const missingRequired: string[] = [];
+      const nodeDef = NODE_REGISTRY.find(n => n.label.toLowerCase() === platform.toLowerCase());
+      const inputs = nodeDef?.operationInputs?.[operation] || [];
+      const config: any = { operation };
+      const missing: string[] = [];
 
       for (const inputDef of inputs) {
         const { key, required } = inputDef;
-
-        // Check: is this in staticFields (literal value)?
         if (key in staticFields) {
           config[key] = staticFields[key];
-          continue;
-        }
-
-        // Check: is this in dynamicFields (from user input)?
-        if (key in dynamicFields) {
-          const inputName = dynamicFields[key];
-          config[key] = `{{ input.${inputName} }}`;
-          continue;
-        }
-
-        // Check: is this required?
-        if (required) {
-          // Use dynamic reference - field name as the input name
+        } else if (key in dynamicFields) {
+          config[key] = `{{ input.${dynamicFields[key]} }}`;
+        } else if (required) {
           config[key] = `{{ input.${key} }}`;
-          missingRequired.push(key);
+          missing.push(key);
         }
-        // else: optional field not provided, skip it
       }
 
-      return JSON.stringify({
-        config,
-        resource: data.resource || "",
-        missingRequired: missingRequired.length > 0 ? missingRequired : [],
-        status: missingRequired.length > 0 ? 'Config built with dynamic references for missing required fields' : 'Config complete',
-      });
+      return JSON.stringify({ config, missingRequired: missing });
     } catch (err: any) {
-      return JSON.stringify({ error: `Error assembling config: ${err.message}` });
+      return JSON.stringify({ error: `Error: ${err.message}` });
     }
   },
 });
 
 /**
- * Tool 6: Build Nodes (including triggers)
- * Constructs proper node objects with complete data fields
+ * Tool 2: Generate Final Workflow (One-Step Build)
+ * Converts an abstract node list into a fully formed executable workflow.
  */
-export const buildNodesTool = new DynamicTool({
-  name: 'build_nodes',
-  description:
-    'Build complete node objects with ALL parameters. Input: JSON with {nodes: [{type: "trigger|platform", trigger: "chat|manual|webhook", platform, operation, config, id, position}]}',
+export const generateFinalWorkflowTool = new DynamicTool({
+  name: 'generate_final_workflow',
+  description: 'Creates a complete workflow in ONE step. Input JSON: {name, description, nodes: [{type, platform, operation, config, label, id, position}], edges: [{source, target}]}.',
   func: async (input: string) => {
     try {
-      let spec: any;
+      const data = JSON.parse(input);
+      const { nodes, edges = [], name = 'My Workflow', description = '' } = data;
+      
+      if (!nodes || !Array.isArray(nodes) || nodes.length === 0) {
+        return JSON.stringify({ error: 'MANDATORY: You must provide a "nodes" array. Empty workflows are not allowed.' });
+      }
 
-      if (input.startsWith('{')) {
-        spec = JSON.parse(input);
-      } else {
-        return JSON.stringify({
-          error: 'Input must be JSON object with nodes array',
+      const builtNodes: any[] = [];
+
+      for (const spec of nodes) {
+        // Safe position handling to prevent NaN in frontend
+        const position = {
+          x: typeof spec.position?.x === 'number' ? spec.position.x : builtNodes.length * 300,
+          y: typeof spec.position?.y === 'number' ? spec.position.y : 150
+        };
+        const { type } = spec;
+        const labelStr = (spec.label || spec.platform || spec.name || '').toLowerCase();
+        const id = spec.id || `node-${Math.random().toString(36).substr(2, 9)}`;
+        const userConfig = spec.config || {};
+        
+        // 1. Triggers
+        if (type === 'trigger' || spec.category === 'Triggers' || labelStr.includes('trigger')) {
+          const triggerKey = spec.operation || spec.trigger || (labelStr.includes('chat') ? 'chat' : labelStr.includes('webhook') ? 'webhook' : 'manual');
+          const tDef = NODE_REGISTRY.find(n => n.id === `trigger.${triggerKey}`) || NODE_REGISTRY.find(n => n.id === 'trigger.chat')!;
+          const labels: any = { chat: 'When chat message received', manual: 'Manual Trigger', webhook: 'Webhook Incoming' };
+          builtNodes.push({
+            id: id,
+            label: labels[triggerKey] || tDef.label,
+            data: { 
+              label: labels[triggerKey] || tDef.label, 
+              isTrigger: true, // Crucial for UI and wiring engine
+              config: { trigger: triggerKey, ...userConfig } 
+            },
+            position
+          });
+          continue;
+        }
+
+        // 2. Platforms
+        const platformName = spec.platform || spec.label || spec.name;
+        const pDef = NODE_REGISTRY.find(n => platformName && n.label.toLowerCase() === platformName.toLowerCase());
+        
+        if (pDef && !pDef.isTrigger) {
+          const operation = spec.operation || userConfig.operation || Object.keys(pDef.operationInputs || {})[0];
+          const schema = pDef.operationInputs?.[operation] || [];
+          const finalConfig = { operation, ...userConfig };
+          
+          // 1. SMART CONFIG MAPPING: If a required field is missing, look for common trigger aliases or UPSTREAM nodes
+          schema.filter(i => i.required && !(i.key in finalConfig)).forEach(i => {
+            const upstreams = [...builtNodes].reverse();
+            
+            // A) UPSTREAM CHECK: Look for closest node providing this key or a generic result
+            for (const up of upstreams) {
+              // Priority 1: AI Agents always provide 'result'
+              if (up.data?.executionKey === 'synthesis' || up.id.includes('agent')) {
+                finalConfig[i.key] = `{{ nodes.${up.id}.result }}`;
+                return;
+              }
+              // Priority 2: Key Match in Upstream Schema (Fuzzy/Exact)
+              const upDef = NODE_REGISTRY.find(n => n.id === up.data.toolId || n.label === up.label);
+              if (upDef?.outputSchema?.some(o => o.key === i.key || o.key.includes(i.key))) {
+                finalConfig[i.key] = `{{ nodes.${up.id}.${i.key} }}`;
+                return;
+              }
+              // Priority 3: Fallback to generic '.output' for platforms
+              if (!up.data?.isTrigger) {
+                finalConfig[i.key] = `{{ nodes.${up.id}.output }}`;
+                return;
+              }
+            }
+
+            // B) TRIGGER FALLBACK: If no upstream node found, use the workflow trigger
+            const triggerSpec = nodes.find((n: any) => n.type === 'trigger' || n.category === 'Triggers' || (n.label || '').toLowerCase().includes('trigger'));
+            const triggerType = triggerSpec?.operation || triggerSpec?.trigger || (triggerSpec?.label?.toLowerCase().includes('chat') ? 'chat' : 'manual');
+            
+            if (triggerType === 'chat') {
+              const textKeys = ['message', 'text', 'body', 'name', 'title', 'query', 'prompt', 'videoId', 'id'];
+              finalConfig[i.key] = textKeys.includes(i.key) ? '{{ input.message }}' : `{{ input.${i.key} }}`;
+            } else if (triggerType === 'webhook') {
+              finalConfig[i.key] = `{{ input.body.${i.key} }}`;
+            } else {
+              finalConfig[i.key] = `{{ input.${i.key} }}`;
+            }
+          });
+
+          const op = finalConfig.operation || '';
+          const cleanOp = typeof op === 'string' ? op.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()) : '';
+          const finalLabel = cleanOp ? `${pDef.label} - ${cleanOp}` : pDef.label;
+
+          builtNodes.push({
+            id: id,
+            label: finalLabel,
+            data: { label: finalLabel, toolId: pDef.id, config: finalConfig },
+            position
+          });
+          continue;
+        }
+
+        // 3. Model Actions (Gemini, OpenAI, Claude, OpenRouter)
+        if (type === 'llm' || type === 'ai_agent' || spec.category === 'Models' || spec.category === 'AI' || spec.executionKey === 'synthesis' || spec.executionKey === 'llm_run') {
+          // Resolve provider
+          const provider = (spec.label || spec.name || '').toLowerCase();
+          const toolId = provider.includes('openai') ? 'llm.openai' : 
+                         provider.includes('claude') ? 'llm.claude' : 
+                         'llm.gemini';
+          
+          const modelId = typeof userConfig.model === 'object' ? (userConfig.model.value || userConfig.model.id) : String(userConfig.model || '');
+
+          builtNodes.push({
+            id: id || `llm-${builtNodes.length}`,
+            label: (spec as any).label || (toolId === 'llm.openai' ? 'OpenAI' : 'Gemini'), 
+            data: { 
+              label: (spec as any).label || (toolId === 'llm.openai' ? 'OpenAI' : 'Gemini'), 
+              toolId: toolId,
+              executionKey: 'llm_run', 
+              config: { 
+                model: modelId || (toolId === 'llm.openai' ? 'openai/gpt-4o' : 'google/gemini-2.0-flash-001'),
+                prompt: userConfig.prompt || userConfig.userMessage || '{{ input.message }}',
+                ...userConfig 
+              } 
+            },
+            position
+          });
+          continue;
+        }
+
+        // 5. Logic / CoreFallback
+        const label = spec.label || spec.platform || 'Node';
+        const coreDef = NODE_REGISTRY.find(n => n.label.toLowerCase() === label.toLowerCase()) || 
+                       NODE_REGISTRY.find(n => n.category === 'Logic' && n.label.toLowerCase().includes((type || '').toLowerCase()));
+        
+        builtNodes.push({
+          id: id || `node-${builtNodes.length}`,
+          label: label,
+          data: { 
+            label: label, 
+            toolId: coreDef?.id || 'unknown',
+            executionKey: coreDef?.executionKey || 'unknown',
+            config: userConfig 
+          },
+          position
         });
       }
 
-      const nodeSpecs = Array.isArray(spec) ? spec : (spec.nodes || [spec]);
-      const builtNodes = [];
-
-      for (const nodeSpec of nodeSpecs) {
-        const { type, trigger, platform, operation, config = {}, id, position = { x: 0, y: 0 }, ...rest } = nodeSpec;
-
-        // Merge flat parameters into config (if any)
-        const finalConfig = { ...rest, ...config };
-
-        // VALIDATION: Check for empty/missing critical fields
-        if (type === 'platform' && (!platform || !operation)) {
-          return JSON.stringify({
-            error: `Platform node missing critical fields`,
-            received: { type, platform: `"${platform || ''}"`, operation: `"${operation || ''}"` },
-            help: 'Every platform node MUST have: type: "platform", platform: "PlatformName", operation: "operationName"',
-            example: { type: 'platform', platform: 'YouTube', operation: 'getChannelStats', config: {}, id: 'youtube-1', position: { x: 0, y: 0 } }
-          });
-        }
-
-        // Handle trigger nodes
-        if (type === 'trigger' || trigger) {
-          const triggerType = trigger || 'manual';
-          let triggerNode: any;
-          let triggerLabel = '';
-
-          if (triggerType === 'chat') {
-            triggerNode = NODE_REGISTRY.find((n) => n.id === 'trigger.chat');
-            triggerLabel = 'When chat message received';
-          } else if (triggerType === 'webhook') {
-            triggerNode = NODE_REGISTRY.find((n) => n.id === 'trigger.webhook');
-            triggerLabel = 'Webhook';
-          } else {
-            triggerNode = NODE_REGISTRY.find((n) => n.id === 'trigger.manual');
-            triggerLabel = "When clicking 'Execute workflow'";
-          }
-
-          if (!triggerNode) {
-            return JSON.stringify({
-              error: `Trigger "${triggerType}" not found in registry`,
-            });
-          }
-
-          const triggerConfig = { ...finalConfig };
-          if (triggerType === 'chat' && !triggerConfig.responseMode) {
-            triggerConfig.responseMode = 'When execution is finished';
-          }
-
-          // IMPORTANT: Nest config in data.config for normalizeArchitectNodes
-          const node = {
-            id: id || `trigger-${triggerType}`,
-            label: triggerLabel,
-            data: {
-              label: triggerLabel,
-              config: triggerConfig,
-            },
-            position,
-          };
-
-          builtNodes.push(node);
-          continue;
-        }
-
-        // Handle platform/connector nodes
-        if (!platform) {
-          return JSON.stringify({
-            error: `Node spec missing 'type', 'trigger', or 'platform'`,
-            received: spec,
-          });
-        }
-
-        if (!operation) {
-          return JSON.stringify({
-            error: `Platform node missing 'operation' field`,
-            platform,
-            received: spec,
-          });
-        }
-
-        // Find the node definition to validate
-        const nodeDef = NODE_REGISTRY.find(
-          (n) => n.label.toLowerCase() === platform.toLowerCase()
-        );
-
-        if (!nodeDef) {
-          return JSON.stringify({
-            error: `Platform "${platform}" not found in registry`,
-            availablePlatforms: NODE_REGISTRY.filter((n) => !n.isTrigger).map((n) => n.label),
-          });
-        }
-
-        const schema = nodeDef.operationInputs?.[operation];
-
-        if (!schema) {
-          return JSON.stringify({
-            error: `Operation "${operation}" not found for platform "${platform}"`,
-            availableOperations: Object.keys(nodeDef.operationInputs || {}),
-          });
-        }
-
-        // AUTO-INFER RESOURCE IF MISSING
-        let finalResource = (nodeSpec as any).resource || (finalConfig as any).resource || "";
-        if (!finalResource) {
-          const resourceField = nodeDef.configFields.find((f: any) => f.key === 'resource');
-          const resources = Array.isArray(resourceField?.options) 
-            ? (resourceField!.options as any[]).map(o => typeof o === 'string' ? o : o.value)
-            : [];
-          
-          if (resources.length > 0) {
-              finalResource = resources.find((r: string) => 
-                operation.toLowerCase().includes(r.toLowerCase()) || 
-                r.toLowerCase().includes(operation.toLowerCase())
-              ) || resources[0] || "";
-          }
-        }
-
-        // Validate that all required inputs are present
-        const missingRequired = [];
-        for (const inputDef of schema.filter((i: any) => i.required)) {
-          if (!(inputDef.key in finalConfig)) {
-            missingRequired.push(`${inputDef.key} (required)`);
-          }
-        }
-
-        if (missingRequired.length > 0) {
-          return JSON.stringify({
-            error: `Missing required inputs for ${operation}: ${missingRequired.join(', ')}`,
-            required: schema.filter((i: any) => i.required).map((i: any) => i.key),
-            optional: schema.filter((i: any) => !i.required).map((i: any) => i.key),
-            provided: Object.keys(config),
-          });
-        }
-
-        // Build the node
-        // IMPORTANT: Nest config in data.config so normalizeArchitectNodes can find it
-        const node = {
-          id: id || `${platform.toLowerCase()}-${operation}`,
-          label: platform,
-          data: {
-            label: platform,
-            config: {
-              ...(finalResource ? { resource: finalResource } : {}),
-              operation,
-              ...finalConfig,
-            },
-          },
-          position,
+      // LINEAR WIRING: Auto-connect in strict sequential order (0 -> 1 -> 2)
+      const builtEdges = builtNodes.slice(0, -1).map((node, i) => {
+        const nextNode = builtNodes[i + 1];
+        return {
+          id: `e-linear-${i}-${Date.now()}`,
+          source: node.id,
+          target: nextNode.id,
+          sourceHandle: 'output',
+          targetHandle: 'input'
         };
+      });
 
-        builtNodes.push(node);
-      }
-
-      return JSON.stringify({
-        nodes: builtNodes,
-        count: builtNodes.length,
-        status: 'All nodes built successfully',
+      return JSON.stringify({ 
+        name, 
+        description, 
+        nodes: builtNodes, 
+        edges: builtEdges, 
+        status: 'Linear workflow built successfully' 
       });
     } catch (err: any) {
-      console.error('[buildNodesTool] Error:', err.message);
-      return JSON.stringify({ error: `${err.message}` });
+      return JSON.stringify({ error: `Failed to build workflow: ${err.message}` });
     }
-  },
+  }
 });
 
 /**
- * Tool 6: Build Workflow
- */
-export const buildWorkflowTool = new DynamicTool({
-  name: 'build_workflow',
-  description: 'Build final workflow JSON. Input: JSON with {name, description, nodes, edges}',
-  func: async (input: string) => {
-    try {
-      let data;
-      // Try to parse as JSON first
-      if (input.startsWith('{')) {
-        try {
-          data = JSON.parse(input);
-        } catch (e) {
-          // If parsing fails, try parsing as a stringified string
-          const unescaped = input.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-          data = JSON.parse(unescaped);
-        }
-      } else {
-        data = JSON.parse(input);
-      }
-
-      return JSON.stringify({
-        name: data.name,
-        description: data.description,
-        nodes: data.nodes || [],
-        edges: data.edges || [],
-        explanation: `Workflow: ${data.name}`,
-      });
-    } catch (err: any) {
-      console.error('[buildWorkflowTool] Error:', err.message, 'Input:', input.substring(0, 200));
-      return JSON.stringify({ error: String(err) });
-    }
-  },
-});
-
-/**
- * Tool: Get Operation Outputs (NEW)
- * Returns what data an operation produces
+ * Tool 3: Get Operation Outputs
+ * Shared with LLM to help with dynamic reference mapping {{ nodes.Label.field }}.
  */
 export const getOperationOutputsTool = new DynamicTool({
   name: 'get_operation_outputs',
-  description: 'Get output schema for a specific operation. Pass JSON: {platform, operation}. Returns what data this operation produces.',
-  func: async (input: any) => {
+  description: 'Returns what result fields a node produces. Use to build {{ nodes.Label.field }} references. Input JSON: {platform, operation}.',
+  func: async (input: string) => {
     try {
-      let platform, operation;
-
-      // Handle both string and object inputs
-      let data = input;
-      if (typeof input === 'string') {
-        if (input.startsWith('{')) {
-          data = JSON.parse(input);
-        } else {
-          const parts = input.split(',').map((s) => s.trim());
-          data = { platform: parts[0], operation: parts[1] };
-        }
-      }
-
-      platform = data.platform;
-      operation = data.operation;
-
-      if (!platform || !operation) {
-        return JSON.stringify({ error: 'Use JSON: {platform, operation}' });
-      }
-
-      const node = NODE_REGISTRY.find(
-        (n) => n.label.toLowerCase() === platform.toLowerCase()
-      );
-
-      if (!node) {
-        return JSON.stringify({ error: `Platform "${platform}" not found` });
-      }
-
-      // For triggers, use "default" key
-      const opKey = node.isTrigger ? 'default' : operation;
-      const outputs = node.operationOutputs?.[opKey];
-
-      if (!outputs) {
-        return JSON.stringify({
-          error: `No output schema for ${operation}`,
-          hint: 'operationOutputs not defined for this operation',
-        });
-      }
-
-      return JSON.stringify({
-        platform,
-        operation,
-        outputs: outputs.map((o: any) => ({
-          key: o.key,
-          type: o.type,
-          description: o.description,
-        })),
-      });
+      const { platform, operation } = JSON.parse(input);
+      const node = NODE_REGISTRY.find(n => n.label.toLowerCase() === platform.toLowerCase());
+      const outputs = node?.operationOutputs?.[node.isTrigger ? 'default' : operation] || [];
+      return JSON.stringify({ platform, operation, outputs });
     } catch (err) {
-      return JSON.stringify({ error: String(err) });
+      return JSON.stringify({ error: 'Provide valid JSON: {platform, operation}' });
     }
-  },
+  }
 });
 
-/**
- * Tool: Validate Data Flow (NEW)
- * Checks if output from one node can connect to input of another
- */
-export const validateDataFlowTool = new DynamicTool({
-  name: 'validate_data_flow',
-  description: 'Check if node output is compatible with input. Pass JSON: {sourcePlatform, sourceOperation, targetPlatform, targetOperation, targetInput}',
-  func: async (input: any) => {
-    try {
-      // Handle both string and object inputs
-      let data = input;
-      if (typeof input === 'string') {
-        data = JSON.parse(input);
-      }
-
-      const {
-        sourcePlatform,
-        sourceOperation,
-        targetPlatform,
-        targetOperation,
-        targetInput,
-      } = data;
-
-      if (
-        !sourcePlatform ||
-        !sourceOperation ||
-        !targetPlatform ||
-        !targetOperation ||
-        !targetInput
-      ) {
-        return JSON.stringify({ error: 'Missing required fields' });
-      }
-
-      // Get source outputs
-      const sourceNode = NODE_REGISTRY.find(
-        (n) => n.label.toLowerCase() === sourcePlatform.toLowerCase()
-      );
-      const sourceOpKey = sourceNode?.isTrigger ? 'default' : sourceOperation;
-      const sourceOutputs = sourceNode?.operationOutputs?.[sourceOpKey] || [];
-
-      // Get target inputs
-      const targetNode = NODE_REGISTRY.find(
-        (n) => n.label.toLowerCase() === targetPlatform.toLowerCase()
-      );
-      const targetInputs = targetNode?.operationInputs?.[targetOperation] || [];
-
-      // Find the target input
-      const targetInputDef = targetInputs.find(
-        (i: any) => i.key.toLowerCase() === targetInput.toLowerCase()
-      );
-
-      if (!targetInputDef) {
-        return JSON.stringify({
-          error: `Input "${targetInput}" not found`,
-          availableInputs: targetInputs.map((i: any) => i.key),
-        });
-      }
-
-      // Find compatible outputs
-      const compatibleOutputs = sourceOutputs.filter((o: any) => {
-        const srcType = o.type || 'string';
-        const tgtType = targetInputDef.type || 'string';
-
-        // Simple type compatibility
-        if (srcType === tgtType) return true;
-        if (srcType === 'number' && tgtType === 'string') return true;
-        if (srcType === 'array' && tgtType === 'string') return true;
-        return false;
-      });
-
-      return JSON.stringify({
-        valid: compatibleOutputs.length > 0,
-        compatibleOutputs: compatibleOutputs.map((o: any) => o.key),
-        bestMatch: compatibleOutputs[0]?.key || null,
-        targetInput,
-        recommendation: compatibleOutputs.length > 0
-          ? `Use {{ nodes.<id>.${compatibleOutputs[0]?.key} }}`
-          : 'No compatible outputs. Use {{ input.X }}',
-      });
-    } catch (err) {
-      return JSON.stringify({ error: String(err) });
-    }
-  },
-});
-
-/**
- * Tool: Resolve Dynamic References (NEW)
- * Intelligently maps node outputs to input fields
- */
-export const resolveDynamicReferencesTool = new DynamicTool({
-  name: 'resolve_dynamic_references',
-  description: 'Map node outputs to input fields intelligently. Pass: {targetPlatform, targetOperation, availableNodes}',
-  func: async (input: any) => {
-    try {
-      // Handle both string and object inputs
-      let data = input;
-      if (typeof input === 'string') {
-        data = JSON.parse(input);
-      }
-
-      const { targetPlatform, targetOperation, availableNodes = [] } = data;
-
-      if (!targetPlatform || !targetOperation) {
-        return JSON.stringify({ error: 'Missing targetPlatform or targetOperation' });
-      }
-
-      const targetNode = NODE_REGISTRY.find(
-        (n) => n.label.toLowerCase() === targetPlatform.toLowerCase()
-      );
-
-      if (!targetNode) {
-        return JSON.stringify({ error: `Platform "${targetPlatform}" not found` });
-      }
-
-      const targetInputs = targetNode.operationInputs?.[targetOperation] || [];
-      const resolvedFields: any = {};
-      const unresolvedInputs: string[] = [];
-
-      // For each required input
-      for (const inputDef of targetInputs.filter((i: any) => i.required)) {
-        const inputKey = inputDef.key;
-        let found = false;
-
-        // Try to find matching output from available nodes
-        for (const availNode of availableNodes) {
-          const sourceNode = NODE_REGISTRY.find(
-            (n) => n.label.toLowerCase() === availNode.platform.toLowerCase()
-          );
-          const opKey = sourceNode?.isTrigger ? 'default' : availNode.operation;
-          const outputs = sourceNode?.operationOutputs?.[opKey] || [];
-
-          // Exact key match
-          const match = outputs.find(
-            (o: any) => o.key.toLowerCase() === inputKey.toLowerCase()
-          );
-
-          if (match) {
-            resolvedFields[inputKey] = `{{ nodes.${availNode.id}.${match.key} }}`;
-            found = true;
-            break;
-          }
-        }
-
-        // If not found, fallback to user input
-        if (!found) {
-          resolvedFields[inputKey] = `{{ input.${inputKey} }}`;
-          unresolvedInputs.push(inputKey);
-        }
-      }
-
-      return JSON.stringify({
-        resolvedFields,
-        unresolvedInputs,
-        status: unresolvedInputs.length === 0 ? 'All inputs resolved from node outputs' : `${unresolvedInputs.length} inputs require user input`,
-      });
-    } catch (err) {
-      return JSON.stringify({ error: String(err) });
-    }
-  },
-});
-
-/**
- * All tools (in order of use)
- */
+// Final Export List (Highly Simplified)
 export const allArchitectTools = [
-  chooseTriggerTool,
-  extractIntentTool,
-  listOperationsTool,
-  getOperationSchemaTool,
-  getOperationOutputsTool,
-  validateDataFlowTool,
-  resolveDynamicReferencesTool,
+  getArchitectContextTool,
+  getPlatformOperationsTool,
   assembleNodeConfigTool,
-  buildNodesTool,
-  buildWorkflowTool,
+  generateFinalWorkflowTool,
+  getOperationOutputsTool,
 ];

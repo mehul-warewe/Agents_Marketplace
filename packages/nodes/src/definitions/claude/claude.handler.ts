@@ -1,2 +1,2 @@
-import { configModelHandler } from '../config-model/config-model.handler.js';
-export const claudeHandler = configModelHandler;
+import { llmActionHandler } from '../llm-action/llm-action.handler.js';
+export const claudeHandler = llmActionHandler;

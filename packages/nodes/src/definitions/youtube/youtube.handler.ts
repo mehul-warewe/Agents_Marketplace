@@ -160,7 +160,19 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           headers,
         });
         const channel = res.data.items?.[0];
-        return { success: true, channelId, stats: channel?.statistics || {} };
+        const stats = channel?.statistics || {};
+        // Flatten stats to top level so {{input.viewCount}}, {{input.subscriberCount}}, etc. work
+        return {
+          success: true,
+          channelId,
+          title: channel?.snippet?.title || '',
+          description: channel?.snippet?.description || '',
+          viewCount: stats.viewCount ?? '0',
+          subscriberCount: stats.subscriberCount ?? '0',
+          hiddenSubscriberCount: stats.hiddenSubscriberCount ?? false,
+          videoCount: stats.videoCount ?? '0',
+          stats, // also keep nested for legacy access
+        };
       }
 
       case 'getSubscribers': {
@@ -169,8 +181,16 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           params: { part: 'statistics', id: channelId },
           headers,
         });
-        const subscribers = res.data.items?.[0]?.statistics?.subscriberCount;
-        return { success: true, channelId, subscriberCount: subscribers };
+        const stats = res.data.items?.[0]?.statistics || {};
+        // Flatten all stats to top level so downstream {{input.X}} references resolve
+        return {
+          success: true,
+          channelId,
+          subscriberCount: stats.subscriberCount ?? '0',
+          viewCount: stats.viewCount ?? '0',
+          hiddenSubscriberCount: stats.hiddenSubscriberCount ?? false,
+          videoCount: stats.videoCount ?? '0',
+        };
       }
 
       case 'createComment': {
@@ -224,7 +244,19 @@ export const youtubeHandler: ToolHandler = async (ctx: ToolContext) => {
           params: { part: 'statistics,snippet,contentDetails', mine: true },
           headers,
         });
-        return { success: true, stats: res.data.items?.[0]?.statistics || {} };
+        const ch = res.data.items?.[0];
+        const statistics = ch?.statistics || {};
+        // Flatten stats to top level so {{input.viewCount}}, {{input.subscriberCount}}, {{input.videoCount}} work
+        return {
+          success: true,
+          viewCount: statistics.viewCount ?? '0',
+          subscriberCount: statistics.subscriberCount ?? '0',
+          hiddenSubscriberCount: statistics.hiddenSubscriberCount ?? false,
+          videoCount: statistics.videoCount ?? '0',
+          title: ch?.snippet?.title || '',
+          description: ch?.snippet?.description || '',
+          stats: statistics, // keep nested copy for legacy access
+        };
       }
 
       case 'list_my_videos': {

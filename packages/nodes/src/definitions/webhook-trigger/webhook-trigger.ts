@@ -14,7 +14,7 @@ export const webhookTrigger: NodeDefinition = {
   isTrigger: true,
   executionKey: 'trigger_webhook',
   inputs: [],
-  outputs: [{ name: 'output', type: 'data', position: 'top' }],
+  outputs: [{ name: 'output', type: 'data', position: 'right' }],
   configFields: [
     { key: 'path', label: 'Webhook Path', type: 'text', placeholder: 'my-endpoint' },
     {

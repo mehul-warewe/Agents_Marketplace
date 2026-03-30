@@ -21,7 +21,7 @@ export default function ArchitectBar({ onGenerate, isGenerating }: ArchitectBarP
     {
       id: 'welcome',
       role: 'assistant',
-      content: 'Hi! I\'m the Workflow Architect. Tell me what you want to automate and I\'ll build it for you. Try: "Build a YouTube analytics agent that emails me weekly stats"',
+      content: 'Hi! I\'m the Workflow Architect. Tell me what logic you want to automate and I\'ll build a linear pipeline for you. Try: "Email me daily YouTube analytics summaries"',
       type: 'explanation',
     }
   ]);
@@ -117,17 +117,33 @@ export default function ArchitectBar({ onGenerate, isGenerating }: ArchitectBarP
               </div>
             ))}
 
-            {/* Generating indicator */}
+            {/* Neural HUD — Visualizing the 5-step Creation Process */}
             {isGenerating && (
-              <div className="flex gap-2.5">
-                <div className="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center">
-                  <Bot size={11} className="text-accent" />
+              <div className="flex flex-col gap-4 p-4 bg-foreground/[0.03] border border-border/30 rounded-2xl animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <div className="flex items-center justify-between border-b border-border/20 pb-2 mb-2">
+                   <div className="flex items-center gap-2">
+                     <Sparkles size={14} className="text-accent animate-pulse" />
+                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground">Neural_Mesh_Architecting</span>
+                   </div>
+                   <Loader2 size={12} className="animate-spin text-muted/40" />
                 </div>
-                <div className="px-3 py-2 bg-foreground/[0.05] border border-border/30 rounded-xl rounded-tl-none">
-                  <div className="flex items-center gap-1.5 text-[10px] text-muted font-bold">
-                    <Loader2 size={10} className="animate-spin text-accent" />
-                    Architecting workflow...
-                  </div>
+                
+                <div className="space-y-3">
+                   {[
+                     { id: 1, label: 'Goal Analysis & Objective Mapping', sub: 'Analyzing user prompt for intent...' },
+                     { id: 2, label: 'Node Discovery & Platform Selection', sub: 'Identifying required tools from registry...' },
+                     { id: 3, label: 'Functional Schema Alignment', sub: 'Connecting input/output contracts...' },
+                     { id: 4, label: 'Sequential Logic Wiring', sub: 'Building execution paths and edges...' },
+                     { id: 5, label: 'Data Flow & Variable Finalization', sub: 'Propagating {{ parameters }} across nodes...' },
+                   ].map((step, i) => (
+                     <div key={step.id} className="flex gap-3">
+                        <div className={`w-1 h-8 rounded-full transition-all duration-700 ${i === 0 ? 'bg-accent shadow-[0_0_8px_rgba(59,130,246,0.5)] animate-pulse' : 'bg-border/20'}`} />
+                        <div className="flex flex-col">
+                           <p className={`text-[10px] font-bold uppercase tracking-widest ${i === 0 ? 'text-foreground' : 'text-muted/40'}`}>{step.label}</p>
+                           <p className={`text-[9px] ${i === 0 ? 'text-muted opacity-80' : 'text-muted/20'}`}>{step.sub}</p>
+                        </div>
+                     </div>
+                   ))}
                 </div>
               </div>
             )}

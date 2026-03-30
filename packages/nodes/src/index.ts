@@ -4,8 +4,6 @@ import { manualTrigger } from './definitions/manual-trigger/manual-trigger.js';
 import { chatTrigger } from './definitions/chat-trigger/chat-trigger.js';
 import { webhookTrigger } from './definitions/webhook-trigger/webhook-trigger.js';
 
-import { aiAgentNode } from './definitions/ai-agent/ai-agent.js';
-
 import { openaiNode } from './definitions/openai/openai.js';
 import { geminiNode } from './definitions/gemini/gemini.js';
 import { claudeNode } from './definitions/claude/claude.js';
@@ -36,7 +34,6 @@ import type { NodeDefinition } from './types.js';
 
 /**
  * The single source of truth for all node definitions.
- * Both the frontend (toolRegistry) and the worker (nodes/index) reference this.
  */
 export const NODE_REGISTRY: NodeDefinition[] = [
   // Triggers
@@ -44,12 +41,9 @@ export const NODE_REGISTRY: NodeDefinition[] = [
   chatTrigger,
   webhookTrigger,
 
-  // AI
-  aiAgentNode,
-
-  // Models
-  openaiNode,
+  // Model Actions (LLM Runners)
   geminiNode,
+  openaiNode,
   claudeNode,
   openrouterNode,
 

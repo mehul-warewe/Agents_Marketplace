@@ -5,18 +5,20 @@ export const ifNode: NodeDefinition = {
   label: 'If',
   name: 'If',
   category: 'Logic',
-  variant: 'connector',
-  description: 'A binary router that splits the workflow into True and False paths based on data values.',
+  variant: 'connector', 
+  description: 'A binary router that directs the workflow to either the True or False path.',
   icon: 'Signpost',
   color: '#408000',
   bg: 'bg-[#408000]/5',
   border: 'border-[#408000]/30',
   isTrigger: false,
   executionKey: 'logic_if',
-  inputs: [{ name: 'input', type: 'data', position: 'left' }],
+  inputs: [
+    { name: 'input', type: 'data', position: 'left', label: 'Input' }
+  ],
   outputs: [
-    { name: 'true', type: 'data', position: 'right', label: 'true' },
-    { name: 'false', type: 'data', position: 'right', label: 'false' },
+    { name: 'true', type: 'data', position: 'right', label: 'True' },
+    { name: 'false', type: 'data', position: 'right', label: 'False' },
   ],
   configFields: [
     {
@@ -25,7 +27,7 @@ export const ifNode: NodeDefinition = {
       type: 'filter',
       default: {
         combine: 'and',
-        conditions: [{ leftValue: '', operator: 'equal', rightValue: '{input.success}' }],
+        conditions: [{ leftValue: '{{ input.status }}', operator: 'equal', rightValue: 'success' }],
       },
     },
   ],

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { Plus } from 'lucide-react';
 import ReactFlow, {
   addEdge,
   Background,
@@ -32,22 +33,7 @@ import BuilderTopbar from './builder/BuilderTopbar';
 import ArchitectBar from './builder/ArchitectBar';
 import { makeNode, getToolById, getToolByExecutionKey, INITIAL_NODES, INITIAL_EDGES, MODEL_TYPES, TOOL_REGISTRY } from './builder/toolRegistry';
 
-// ─── Edge defaults ─────────────────────────────────────────────────────────────
-const EDGE_DEFAULTS = {
-  type: 'deletableEdge',
-  animated: false,
-  markerEnd: { 
-    type: MarkerType.ArrowClosed, 
-    width: 12, 
-    height: 12,
-    color: '#777',
-  },
-  style: { 
-    strokeWidth: 1.5, 
-    stroke: '#777', 
-    opacity: 0.9 
-  },
-};
+import { EDGE_DEFAULTS } from './builder/toolRegistry';
 
 // ─── Deletable edge with ✕ button ──────────────────────────────────────────────
 function DeletableEdge({
@@ -179,7 +165,11 @@ function normaliseArchitectNodes(rawNodes: any[], rawEdges: any[]) {
     };
   });
 
-  const edges = rawEdges.map((e: any) => ({ ...e, ...EDGE_DEFAULTS }));
+  const edges = (rawEdges || []).map((e: any, idx: number) => ({ 
+    ...e, 
+    id: e.id || `e-${e.source}-${e.target}-${idx}-${Date.now()}`,
+    ...EDGE_DEFAULTS 
+  }));
   return { nodes, edges };
 }
 
@@ -199,7 +189,7 @@ function AgentBuilderInner() {
   const [activeRunId, setActiveRunId]   = useState<string | null>(null);
   const [isRunning,   setIsRunning]     = useState(false);
   const [pickerState, setPickerState]   = useState<any>(null);
-  const [sidebarOpen, setSidebarOpen]   = useState(true);
+  const [sidebarOpen, setSidebarOpen]   = useState(false);
   const [pickerSearch, setPickerSearch] = useState('');
 
   const { user, isLoading: authLoading } = useAuthStore();
@@ -274,13 +264,17 @@ function AgentBuilderInner() {
       return;
     }
 
-    // 2. Resolve which node is starting code
-    let targetId = nodeId;
+    // 2. Resolve which node is starting (and its run mode)
+    const requestId = typeof nodeId === 'string' ? nodeId : undefined;
+    const isSingleMode = false; // Force full execution so data always transfers to downstream nodes
+
+    let targetId = requestId;
     if (!targetId) {
-      // Priority: Manual Trigger > Any other trigger > First node
+      // Global Run: Resolve starting trigger node
       const manualNode = nodes.find(n => n.data?.toolId === 'trigger.manual' || n.data?.executionKey === 'trigger_manual');
       const anyTrigger = nodes.find(n => n.data?.isTrigger || n.data?.toolId?.startsWith('trigger.'));
-      targetId = manualNode?.id || anyTrigger?.id || nodes[0]?.id;
+      
+      targetId = manualNode?.id || anyTrigger?.id || (selectedNode ? selectedNode.id : nodes[0]?.id);
     }
 
     // 3. Extract specific input data
@@ -294,7 +288,12 @@ function AgentBuilderInner() {
     }
 
     console.log("[Builder] Triggering run for Agent:", currentAgentId, "Start Node:", targetId, "Input:", inputData);
-    runAgent({ agentId: currentAgentId as string, triggerNodeId: targetId, inputData }, {
+    runAgent({ 
+      agentId: currentAgentId as string, 
+      triggerNodeId: targetId, 
+      inputData,
+      runMode: isSingleMode ? 'single' : 'full' 
+    }, {
       onSuccess: (res: any) => {
         setActiveRunId(res.runId);
         setIsRunning(true);
@@ -353,18 +352,23 @@ function AgentBuilderInner() {
         // Logic: Animate if source has data (completed) and target has at least started
         const isFlowing = srcLog?.status === 'completed' && (targetLog?.status === 'executing' || targetLog?.status === 'completed');
         
-        if (isFlowing && !edge.animated) {
-          return { ...edge, animated: true };
-        } else if (!isFlowing && edge.animated) {
-          return { ...edge, animated: false };
-        }
-        return edge;
+        return { 
+          ...edge, 
+          animated: isFlowing,
+          style: { 
+            ...edge.style, 
+            stroke: isFlowing ? '#10b981' : 'rgba(255,255,255,0.1)',
+            strokeWidth: isFlowing ? 3 : 1.5,
+            transition: 'stroke 0.8s, stroke-width 0.8s'
+          }
+        };
       }));
     }
   }, [runData, setNodes, setEdges]);
 
   const handleAddConnect = useCallback((params: any) => {
     setPickerState(params);
+    setSidebarOpen(true); // Open sidebar instead of floating picker
   }, []);
 
   const handlePickerSelect = useCallback((toolId: string) => {
@@ -421,20 +425,6 @@ function AgentBuilderInner() {
     setPickerState(null);
   }, [pickerState, nodes, setNodes, setEdges]);
 
-  // Inject handlers into every node's data
-  const nodesWithHandlers = useMemo(
-    () => nodes.map(n => ({ 
-      ...n, 
-      zIndex: n.data?.executionKey === 'sticky_note' ? -50 : (n.zIndex ?? 0),
-      className: n.data?.executionKey === 'sticky_note' ? 'sticky-note-wrapper' : '',
-      data: { 
-        ...n.data, 
-        onTrigger: handleTrigger,
-        onAddConnect: handleAddConnect
-      } 
-    })),
-    [nodes, handleTrigger, handleAddConnect],
-  );
 
   const nodeTypes = useMemo(() => ({ wareweNode: FlowNode }), []);
   const edgeTypes = useMemo(() => ({ deletableEdge: DeletableEdge }), []);
@@ -447,7 +437,11 @@ function AgentBuilderInner() {
     const wf = existingAgent.workflow;
     if (wf?.nodes?.length) {
       setNodes(wf.nodes.map((n: any) => ({ ...n, type: 'wareweNode' })));
-      setEdges((wf.edges ?? []).map((e: any) => ({ ...e, ...EDGE_DEFAULTS })));
+      setEdges((wf.edges ?? []).map((e: any, idx: number) => ({ 
+        ...e, 
+        id: e.id || `e-${e.source}-${e.target}-${idx}`,
+        ...EDGE_DEFAULTS 
+      })));
     }
     if (wf?.model) setModel(wf.model);
   }, [existingAgent, setNodes, setEdges]);
@@ -456,62 +450,35 @@ function AgentBuilderInner() {
 
   // ── ReactFlow callbacks ─────────────────────────────────────────────────────
   const isValidConnection = useCallback((connection: Connection) => {
-    // 1. Get Source & Target Nodes
-    const sourceNode = nodes.find(n => n.id === connection.source);
-    const targetNode = nodes.find(n => n.id === connection.target);
-    if (!sourceNode || !targetNode || sourceNode.id === targetNode.id) return false;
+    // 1. Basic validation
+    if (!connection.source || !connection.target || connection.source === connection.target) return false;
 
-    // 2. Check for existing connections to the target handle (Restrict to ONE)
-    // EXCEPTION: The 'Tools' port on the Agent, which accepts multiple tool connections.
-    const isMultiInputHandle = connection.targetHandle?.toLowerCase() === 'tools';
-    const existingEdges = edges.filter(e => e.target === connection.target && e.targetHandle === connection.targetHandle);
-    
-    if (!isMultiInputHandle && existingEdges.length > 0) {
-      // Allow if we're technically just "re-connecting" the same edge (though ReactFlow handles this, we be explicit)
-      const sameEdgeExists = existingEdges.some(e => e.source === connection.source && e.sourceHandle === connection.sourceHandle);
-      if (!sameEdgeExists) return false;
+    // 2. LINEAR ENFORCEMENT: Each handle (Source or Target) can have only ONE connection.
+    const sourceHasEdge = edges.some(e => e.source === connection.source && e.sourceHandle === connection.sourceHandle);
+    const targetHasEdge = edges.some(e => e.target === connection.target && e.targetHandle === connection.targetHandle);
+
+    if (sourceHasEdge || targetHasEdge) {
+      return false; // Already connected in the linear chain
     }
 
     // 3. Resolve Tool Definitions
-    const sourceTool = getToolById(sourceNode.data.toolId);
-    const targetTool = getToolById(targetNode.data.toolId);
+    const sourceNode = nodes.find(n => n.id === connection.source);
+    const targetNode = nodes.find(n => n.id === connection.target);
+    const sourceTool = sourceNode ? getToolById(sourceNode.data.toolId) : null;
+    const targetTool = targetNode ? getToolById(targetNode.data.toolId) : null;
     if (!sourceTool || !targetTool) return false;
 
-    // 3. Find specific Sockets
+    // 4. Type Compatibility
     const sourceSocket = sourceTool.outputs.find(o => o.name === connection.sourceHandle) || sourceTool.outputs[0];
     const targetSocket = targetTool.inputs.find(i => i.name === connection.targetHandle) || targetTool.inputs[0];
     if (!sourceSocket || !targetSocket) return false;
 
-    // 4. Type Compatibility Logic
     const sourceType = sourceSocket.type;
     const targetType = targetSocket.type;
 
-    // Models must connect to Model ports, Memory must connect to Memory ports, Parsers to Parser ports.
-    const strictTypes = ['model', 'memory', 'parser'];
-    if (strictTypes.includes(targetType) || strictTypes.includes(sourceType)) {
-      return sourceType === targetType;
-    }
-
-    // --- RULE 2: Tool Attachment ---
-    // Many technical 'data' nodes are logically 'tools' for the Agent (Gmail, YouTube, etc.)
-    if (targetType === 'tool' || targetType === 'memory') {
-      const isActionNode = !['Triggers', 'Models', 'AI'].includes(sourceTool.category);
-      const isDatabase = sourceTool.category === 'Databases';
-
-      if (targetType === 'memory') {
-        return sourceType === 'memory' || isDatabase;
-      }
-      return sourceType === 'tool' || (sourceType === 'data' && isActionNode);
-    }
-
-    // --- RULE 3: Flexible Data Flow ---
-    // data, json, string, any are interchangeable for standard processing
-    const dataTypes = ['data', 'json', 'string', 'any'];
-    if (dataTypes.includes(targetType) && dataTypes.includes(sourceType)) {
-      return true;
-    }
-
-    return sourceType === targetType;
+    // Standard data flow logic
+    const dataTypes = ['data', 'json', 'string', 'any', 'tool', 'model'];
+    return dataTypes.includes(targetType) && dataTypes.includes(sourceType);
   }, [nodes, edges]);
 
   const onConnect = useCallback(
@@ -530,6 +497,11 @@ function AgentBuilderInner() {
 
   // ── Tool actions ─────────────────────────────────────────────────────────────
   const addToolNode = (toolId: string) => {
+    if (pickerState) {
+      handlePickerSelect(toolId);
+      setSidebarOpen(false);
+      return;
+    }
     const last = nodes[nodes.length - 1];
     const pos = last
       ? { x: last.position.x + 280, y: last.position.y }
@@ -537,6 +509,7 @@ function AgentBuilderInner() {
     const newNode = makeNode(toolId, pos) as any;
     setNodes(ns => ns.concat(newNode));
     setSelectedNode(newNode);
+    setSidebarOpen(false); // Auto-close sidebar after adding
   };
 
   const updateSelectedNode = useCallback((newData: any) => {
@@ -545,12 +518,29 @@ function AgentBuilderInner() {
     setSelectedNode((p: any) => p ? { ...p, data: { ...p.data, ...newData } } : null);
   }, [selectedNode, setNodes]);
 
-  const deleteSelectedNode = useCallback(() => {
-    if (!selectedNode) return;
-    setNodes(ns => ns.filter(n => n.id !== selectedNode.id));
-    setEdges(es => es.filter(e => e.source !== selectedNode.id && e.target !== selectedNode.id));
-    setSelectedNode(null);
+  const deleteSelectedNode = useCallback((nodeId?: string) => {
+    const idToDelete = nodeId || selectedNode?.id;
+    if (!idToDelete) return;
+    setNodes(ns => ns.filter(n => n.id !== idToDelete));
+    setEdges(es => es.filter(e => e.source !== idToDelete && e.target !== idToDelete));
+    if (selectedNode?.id === idToDelete) setSelectedNode(null);
   }, [selectedNode, setNodes, setEdges]);
+
+  // Inject handlers into every node's data
+  const nodesWithHandlers = useMemo(
+    () => nodes.map(n => ({ 
+      ...n, 
+      zIndex: n.data?.executionKey === 'sticky_note' ? -50 : (n.zIndex ?? 0),
+      className: n.data?.executionKey === 'sticky_note' ? 'sticky-note-wrapper' : '',
+      data: { 
+        ...n.data, 
+        onTrigger: handleTrigger,
+        onAddConnect: handleAddConnect,
+        onDelete: deleteSelectedNode
+      } 
+    })),
+    [nodes, handleTrigger, handleAddConnect, deleteSelectedNode],
+  );
 
 
   // ── AI Architect ──────────────────────────────────────────────────────────
@@ -619,10 +609,29 @@ function AgentBuilderInner() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* Left: Node palette */}
-        <ToolSidebar onAddTool={addToolNode} isOpen={sidebarOpen} onToggle={() => setSidebarOpen(s => !s)} />
+        <ToolSidebar 
+          onAddTool={addToolNode} 
+          isOpen={sidebarOpen} 
+          onToggle={() => { setSidebarOpen(s => !s); if (sidebarOpen) setPickerState(null); }} 
+          socketType={pickerState?.socketType}
+        />
 
-        {/* Centre: Canvas */}
-        <div className="flex-1 relative overflow-hidden bg-background">
+        {/* Centre: Canvas — Deep Aether Interface */}
+        <div className="flex-1 relative overflow-hidden bg-[#050505]">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className={`
+              absolute top-8 left-8 z-50 w-12 h-12 bg-foreground text-background rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-500 hover:scale-110 active:scale-95 group
+              ${sidebarOpen ? 'opacity-0 pointer-events-none scale-0' : 'opacity-100 scale-100'}
+            `}
+          >
+            <div className="absolute inset-0 bg-foreground/20 rounded-2xl animate-ping group-hover:block hidden" />
+            <Plus size={24} className="group-hover:rotate-90 transition-transform duration-500" />
+            <span className="absolute left-full ml-4 px-3 py-1.5 bg-black/80 border border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+               Add New Node
+            </span>
+          </button>
+
           <ReactFlow
             nodes={nodesWithHandlers}
             edges={edges}
@@ -638,15 +647,18 @@ function AgentBuilderInner() {
             edgeTypes={edgeTypes}
             fitView
             fitViewOptions={{ padding: 1.2 }}
-            defaultEdgeOptions={EDGE_DEFAULTS}
+            defaultEdgeOptions={{
+              ...EDGE_DEFAULTS,
+              style: { strokeWidth: 1.5, stroke: 'rgba(255,255,255,0.1)', transition: 'stroke 0.5s' }
+            }}
             deleteKeyCode={['Backspace', 'Delete']}
-            className={theme === 'dark' ? 'dark' : ''}
           >
-            <Background
-              variant={BackgroundVariant.Dots}
-              color={theme === 'dark' ? '#222' : '#ddd'}
-              gap={24}
-              size={1}
+            <Background 
+              variant={BackgroundVariant.Dots} 
+              gap={24} 
+              size={1.2} 
+              color="rgba(255,255,255,0.06)" 
+              className="bg-[radial-gradient(circle_at_center,_rgba(59,130,246,0.03)_0%,_transparent_70%)]"
             />
 
             {/* Zoom Controls — bottom-right (n8n style) */}
@@ -711,77 +723,7 @@ function AgentBuilderInner() {
           </div>
         </div>
 
-        {/* Floating Tool Picker */}
-        {pickerState && (
-          <div
-            className="fixed inset-0 z-[100]"
-            onClick={() => { setPickerState(null); setPickerSearch(''); }}
-          >
-            <div
-              style={{ left: pickerState.clientX, top: pickerState.clientY }}
-              className="absolute bg-card border border-border/60 rounded-2xl shadow-2xl p-2 w-80 animate-in zoom-in-95 duration-200"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="px-3 py-2 border-b border-border/40 mb-2">
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-2">Choose next node</p>
-                <div className="relative">
-                  <input
-                    autoFocus
-                    value={pickerSearch}
-                    onChange={e => setPickerSearch(e.target.value)}
-                    placeholder="Search tools..."
-                    className="w-full px-3 py-2 bg-foreground/[0.03] border border-border/40 rounded-lg text-[11px] outline-none focus:border-foreground/40 transition-all"
-                  />
-                </div>
-              </div>
-              <div className="max-h-[340px] overflow-y-auto custom-scrollbar">
-                {/* Filtered compatible tools */}
-                {Object.entries(
-                  ['AI', 'Models', 'Tools', 'Logic', 'Data', 'Databases', 'Output'].reduce((acc: any, cat) => {
-                    const tools = TOOL_REGISTRY.filter((t: any) => {
-                      if (t.category !== cat) return false;
-                      // Apply search filter
-                      if (pickerSearch.trim()) {
-                        const q = pickerSearch.toLowerCase();
-                        if (!t.label.toLowerCase().includes(q) && !t.category.toLowerCase().includes(q) && !t.description.toLowerCase().includes(q)) return false;
-                      }
-                      // Check if tool has a compatible input
-                      return t.inputs.some((inp: any) =>
-                        inp.type === pickerState.socketType ||
-                        inp.type === 'any' ||
-                        (pickerState.socketType === 'data' && (inp.type === 'json' || inp.type === 'string')) ||
-                        (pickerState.socketType === 'json' && inp.type === 'data') ||
-                        (pickerState.socketType === 'string' && inp.type === 'data')
-                      );
-                    });
-                    if (tools.length) acc[cat] = tools;
-                    return acc;
-                  }, {})
-                ).map(([cat, tools]: [string, any]) => (
-                  <div key={cat} className="mb-4 last:mb-0">
-                    <p className="px-3 text-[8px] font-black text-muted uppercase tracking-tighter mb-1">{cat}</p>
-                    {tools.map((t: any) => (
-                      <button
-                        key={t.id}
-                        onClick={() => { handlePickerSelect(t.id); setPickerSearch(''); }}
-                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-foreground/5 flex items-center gap-3 transition-colors group"
-                      >
-                        <div className={`p-1.5 rounded-md ${t.bg} border border-border/40 shrink-0`}>
-                          {typeof t.icon === 'string' ? (
-                            <img src={t.icon} alt={t.label} className="w-3.5 h-3.5 object-contain" />
-                          ) : (
-                            <t.icon size={14} className={t.color} />
-                          )}
-                        </div>
-                        <span className="text-[11px] font-bold truncate group-hover:text-foreground">{t.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Floating Tool Picker removed in favor of Sidebar integration */}
 
         {/* Right: Node inspector */}
         {selectedNode && (

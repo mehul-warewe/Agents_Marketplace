@@ -5,7 +5,7 @@ export const structuredOutputParserNode: NodeDefinition = {
   label: 'Structured Output Parser',
   name: 'Structured Output Parser',
   category: 'Output',
-  variant: 'connector',
+  variant: 'connector', 
   description: 'Forces the model to return data in a specific JSON format.',
   icon: 'FileJson',
   color: '#6366f1',
@@ -13,8 +13,12 @@ export const structuredOutputParserNode: NodeDefinition = {
   border: 'border-[#6366f1]/20',
   isTrigger: false,
   executionKey: 'config_output_parser',
-  inputs: [{ name: 'input', type: 'data', position: 'left' }],
-  outputs: [{ name: 'output', type: 'parser', position: 'top', label: 'Output Parser' }],
+  inputs: [
+    { name: 'input', type: 'data', position: 'left', label: 'Input' }
+  ],
+  outputs: [
+    { name: 'output', type: 'data', position: 'right', label: 'Structured Result' }
+  ],
   configFields: [
     {
       key: 'schemaType',

@@ -20,16 +20,16 @@ console.log('Worker service starting… Listening for Autonomous sequences.');
 function renderTemplate(str: string, ctx: Record<string, any>): string {
   if (!str || typeof str !== 'string') return str ?? '';
   
-  // Support both {{ var }} and { var }
-  return str.replace(/\{\{\s*([\s\S]+?)\s*\}\}|\{\s*([\s\S]+?)\s*\}/g, (_, doubleMatch, singleMatch) => {
+  // Only support {{ var }} double-brace syntax.
+  // Single-brace { var } is NOT supported — it would silently corrupt
+  // JSON strings stored in config (e.g. {"operation":"channel_stats"}).
+  return str.replace(/\{\{\s*([\s\S]+?)\s*\}\}/g, (_, fieldPath) => {
     try {
-      const fieldPath = (doubleMatch || singleMatch).trim();
+      let normalizedPath = fieldPath.trim();
       
-      // 1. Pre-process handles
-      let normalizedPath = fieldPath;
-      
-      // Support {{ $json.field }} -> {{ incoming.field }}
-      // Support { input.field } -> { incoming.field }
+      // Normalise n8n-style path aliases
+      // {{ $json.field }}        → incoming.field
+      // {{ input.field }}        → incoming.field
       if (normalizedPath.startsWith('$json.')) {
         normalizedPath = normalizedPath.replace('$json.', 'incoming.');
       }
@@ -37,13 +37,13 @@ function renderTemplate(str: string, ctx: Record<string, any>): string {
         normalizedPath = normalizedPath.replace('input.', 'incoming.');
       }
       
-      // Support {{ $node["Label"].json.field }} -> {{ nodes["Label"].field }}
+      // {{ $node["Label"].json.field }}  → nodes["Label"].field
       normalizedPath = normalizedPath.replace(/^\$node\["(.+?)"\]\.json\./, 'nodes["$1"].');
       
-      // Support {{ $node.Label.json.field }} -> {{ nodes.Label.field }}
+      // {{ $node.Label.json.field }}     → nodes.Label.field
       normalizedPath = normalizedPath.replace(/^\$node\.(.+?)\.json\./, 'nodes.$1.');
 
-      // 2. Resolve path
+      // Resolve dot / bracket notation path
       const parts = normalizedPath.split(/\.|\['|'\]|\["|"\]/).filter(Boolean);
       let val: any = ctx;
       
@@ -56,7 +56,7 @@ function renderTemplate(str: string, ctx: Record<string, any>): string {
       if (typeof val === 'object') return JSON.stringify(val);
       return String(val);
     } catch (e) {
-      console.warn(`[Template] Error rendering path:`, e);
+      console.warn(`[Template] Error rendering path "${fieldPath}":`, e);
       return '';
     }
   });
@@ -93,9 +93,7 @@ function resolveExecutionOrder(nodes: any[], edges: any[]): any[] {
       .forEach((e: any) => queue.push(e.target));
   }
 
-  // Append any orphaned nodes
-  nodes.forEach(n => { if (!visited.has(n.id)) order.push(n); });
-
+  // Strict flow: only return nodes reached via the graph traversal.
   return order;
 }
 
@@ -156,19 +154,25 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
     const totalInDegree = new Map<string, number>();
     edges.forEach((e: any) => totalInDegree.set(e.target, (totalInDegree.get(e.target) || 0) + 1));
     
-    const startNodes = nodes.filter((n: any) => {
+    let startNodes = nodes.filter((n: any) => {
+      // If we have a specific trigger ID, that's our ONLY start node
+      if (job.data.triggerNodeId) return n.id === job.data.triggerNodeId;
+
       const inDeg = totalInDegree.get(n.id) || 0;
       if (inDeg !== 0) return false;
       
       // If it's a trigger, only include if it's the intended trigger
-      if (n.data?.isTrigger) {
-        if (job.data.triggerNodeId) return n.id === job.data.triggerNodeId;
-        return true; // Default to all triggers if no specific one requested
-      }
+      if (n.data?.isTrigger) return true;
       
       // Non-trigger with 0 in-degree: start only if it has outgoing edges (to provide data)
       return edges.some((e: any) => e.source === n.id);
     });
+
+    // Fallback: If triggerNodeId requested but not found in nodes list
+    if (job.data.triggerNodeId && startNodes.length === 0) {
+       const directNode = nodes.find((n: any) => n.id === job.data.triggerNodeId);
+       if (directNode) startNodes = [directNode];
+    }
 
     // 2. Identify Reachable Subgraph & Calculate Active inDegree
     // This solves the problem where a node waits for an 'inactive' trigger connection.
@@ -237,23 +241,30 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
       await db.update(agentRuns).set({ logs }).where(eq(agentRuns.id, runId));
 
       try {
-        // Prepare local context for templates:
-        // Preference: 1. incomingData (input from previous node) - PRIMARY
-        //            2. Global ctx access (n8n style) - SECONDARY
-        //            3. Spread incomingData fields - FALLBACK for legacy templates
+        // Prepare local context for templates.
+        // IMPORTANT: Named keys MUST come AFTER the spread so they always win.
+        // If incomingData contains a key called "input", "nodes", "ids" etc. the
+        // spread would otherwise overwrite the correct references silently.
+        //
+        // Resolution priority (highest→lowest):
+        //   1. nodes / ids / workflow / objective  — global workflow context
+        //   2. input / incoming                    — direct alias for incomingData
+        //   3. ...incomingData spread              — bare {{ field }} shorthand
         const localCtx = {
-          // PRIMARY: Explicit access to incoming data
+          // LOWEST: Spread incoming fields for {{ field }} bare-style templates
+          ...incomingData,
+
+          // HIGHER: Direct aliases so {{ input.X }} and {{ incoming.X }} always
+          // resolve against the actual incomingData object, not a stale key
+          // that a previous node may have passed along.
           incoming: incomingData,
           input: incomingData,
 
-          // FALLBACK: Spread incoming fields for {{ field }} style templates
-          ...incomingData,
-
-          // SECONDARY: Global context for workflow metadata only
+          // HIGHEST: Global workflow context — never overwritten by node data
           workflow: ctx.workflow,
           objective: ctx.objective,
-          nodes: ctx.nodes,      // n8n-style: {{ nodes.NodeName.field }}
-          ids: ctx.ids,          // Legacy: {{ ids.node_123.field }}
+          nodes: ctx.nodes,   // {{ nodes.NodeLabel.field }}
+          ids: ctx.ids,       // {{ ids.nodeId.field }}
         };
 
         // Define safer template renderer for this node
@@ -428,6 +439,15 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
         const legacySlug = nodeLabel.toLowerCase().replace(/\s+/g, '_');
         ctx.nodes[legacySlug] = enrichedResult;
 
+        // Update job status
+        await logNodeStatus(nodeId, 'completed', enrichedResult);
+
+        // SINGLE MODE: Break after one node if requested
+        if (job.data.runMode === 'single') {
+           console.log(`[Flow] Single-node mode reached. Breaking after "${nodeLabel}"`);
+           break;
+        }
+
         // Update Log
         const currentLog = logs[logs.length - 1];
 
@@ -477,12 +497,14 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
           }
 
           pendingInputs.set(targetId, {
-            ...existingInput,
-            // Only spread enrichedResult if it's not a tool definition or it's regular data
+            ...incomingData, // PRESERVE CUMULATIVE MEMORY: Pass forward everything this node received
+            ...existingInput, // Merge with any data already sent to the target from other parents
+            
+            // NEW DATA: Overlay this node's output
             ...(enrichedResult?.__toolDefinition ? {} : enrichedResult),
             [nodeLabel]: enrichedResult,     // Label-based: {{ nodes.Agent.field }}
             [edge.source]: enrichedResult,   // ID-based: {{ ids.node_1.field }}
-            [handleKey]: handleData,         // Port-based for multi-input handles (critical for Tools)
+            [handleKey]: handleData,         // Port-based for multi-input handles
           });
 
           console.log(`[Flow] Edge: "${nodeLabel}" → (${targetHandle}) | Tool definition: ${enrichedResult?.__toolDefinition ? 'YES' : 'NO'}`);

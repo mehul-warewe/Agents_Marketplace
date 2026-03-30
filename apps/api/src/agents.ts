@@ -261,7 +261,7 @@ router.delete('/:id', async (req: any, res) => {
 
 router.post('/:id/run', runLimiter, async (req: any, res) => {
   try {
-    const { inputData, triggerNodeId } = req.body;
+    const { inputData, triggerNodeId, runMode } = req.body;
     const agentRows = await db.select().from(agents).where(eq(agents.id, req.params.id));
     const agent = agentRows[0];
     if (!agent) return res.status(404).json({ error: 'Agent not found' });
@@ -274,7 +274,7 @@ router.post('/:id/run', runLimiter, async (req: any, res) => {
       agentId: agent.id, userId: req.user.id, status: 'pending',
     }).returning();
     const run = runRows[0]!;
-    await executionQueue.add('execute-workflow', { runId: run.id, agentId: agent.id, workflow: agent.workflow, userId: req.user.id, inputData, triggerNodeId });
+    await executionQueue.add('execute-workflow', { runId: run.id, agentId: agent.id, workflow: agent.workflow, userId: req.user.id, inputData, triggerNodeId, runMode });
     res.json({ runId: run.id, status: 'queued' });
   } catch (err) {
     res.status(500).json({ error: 'Run failed' });

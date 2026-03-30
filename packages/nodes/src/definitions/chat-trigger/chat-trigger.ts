@@ -17,14 +17,7 @@ export const chatTrigger: NodeDefinition = {
   outputs: [{ name: 'output', type: 'data', position: 'right' }],
   configFields: [
     { key: 'test_input', label: 'Test Chat Message', type: 'chat_test' },
-    {
-      key: 'responseMode',
-      label: 'Response Mode',
-      type: 'select',
-      options: ['When execution is finished', 'Immediately'],
-      placeholder: 'When execution is finished',
-    },
-    { key: 'allowFileUploads', label: 'Allow File Uploads', type: 'boolean' },
+    { key: 'allowFileUploads', label: 'Attach Reference Files', type: 'boolean' },
   ],
   outputSchema: [
     {

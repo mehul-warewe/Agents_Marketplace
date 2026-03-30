@@ -24,6 +24,7 @@ export const WORKER_NODES: Record<string, ToolHandler> = {
 
   // AI & Models
   'synthesis':            synthesisHandler,
+  'llm_run':              synthesisHandler, // Unified runner for direct LLM calls
   'config_model':         configModelHandler,
   'config_output_parser': configOutputParserHandler,
 

@@ -109,8 +109,8 @@ export function useDeleteAgent() {
 export function useRunAgent() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ agentId, inputData, triggerNodeId }: { agentId: string, inputData?: any, triggerNodeId?: string }) => {
-      const { data } = await api.post(`/agents/${agentId}/run`, { inputData, triggerNodeId });
+    mutationFn: async ({ agentId, inputData, triggerNodeId, runMode }: { agentId: string, inputData?: any, triggerNodeId?: string, runMode?: 'single' | 'full' }) => {
+      const { data } = await api.post(`/agents/${agentId}/run`, { inputData, triggerNodeId, runMode });
       return data;
     },
     onSuccess: () => {

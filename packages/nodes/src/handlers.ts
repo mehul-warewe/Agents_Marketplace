@@ -3,18 +3,16 @@ export * from './definitions/manual-trigger/manual-trigger.handler.js';
 export * from './definitions/chat-trigger/chat-trigger.handler.js';
 export * from './definitions/webhook-trigger/webhook-trigger.handler.js';
 
-// AI & Models
-export * from './definitions/synthesis/synthesis.handler.js';
-export * from './definitions/ai-agent/ai-agent.handler.js';
-export * from './definitions/config-model/config-model.handler.js';
-export * from './definitions/config-output-parser/config-output-parser.handler.js';
-export * from './definitions/structured-output-parser/structured-output-parser.handler.js';
-
-// Specific Models
+// Logic
 export * from './definitions/openai/openai.handler.js';
 export * from './definitions/claude/claude.handler.js';
 export * from './definitions/gemini/gemini.handler.js';
 export * from './definitions/openrouter/openrouter.handler.js';
+
+// Worker Compatibility Handlers
+export { llmActionHandler as synthesisHandler } from './definitions/llm-action/llm-action.handler.js';
+export { llmActionHandler as configModelHandler } from './definitions/llm-action/llm-action.handler.js';
+export const configOutputParserHandler: any = async () => ({ status: 'completed' });
 
 // Logic
 export * from './definitions/if/if.handler.js';

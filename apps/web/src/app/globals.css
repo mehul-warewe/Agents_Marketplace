@@ -135,20 +135,16 @@ body {
 .react-flow__background { background: transparent !important; }
 
 .react-flow .react-flow__node {
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--card);
-  color: var(--foreground);
-  font-family: inherit;
-  font-weight: 600;
-  font-size: 11px;
-  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.15); /* Nice floating shadow */
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
   outline: none !important;
 }
 
 .react-flow__node.selected {
-  border: 1px solid var(--primary) !important;
-  box-shadow: 0 0 0 4px rgba(212, 255, 63, 0.2) !important; /* Subtle lime glow */
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .react-flow .react-flow__controls button {
