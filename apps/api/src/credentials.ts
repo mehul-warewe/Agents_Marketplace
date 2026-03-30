@@ -55,6 +55,8 @@ router.get('/proxy/models', passport.authenticate('jwt', { session: false }), as
         .map((m: any) => ({
           id: cred.type === 'openai_api_key' ? `openai/${m.id}` : m.id,
           label: m.id,
+          context_length: m.context_length,
+          max_output_tokens: m.architecture?.tokenizer_config?.max_new_tokens || m.max_output_tokens || m.architecture?.max_output_tokens,
         }));
       return res.json(models);
     } 
@@ -66,6 +68,8 @@ router.get('/proxy/models', passport.authenticate('jwt', { session: false }), as
         .map((m: any) => ({
           id: `google/${m.name.replace('models/', '')}`,
           label: m.displayName || m.name,
+          context_length: m.inputTokenLimit,
+          max_output_tokens: m.outputTokenLimit,
         }));
       return res.json(models);
     }
@@ -75,9 +79,9 @@ router.get('/proxy/models', passport.authenticate('jwt', { session: false }), as
       // for now, or just indicate it's not supported. 
       // Actually, we'll return a preset list to keep the UI consistent.
       return res.json([
-        { id: 'claude-3-5-sonnet-20240620', label: 'Claude 3.5 Sonnet' },
-        { id: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
-        { id: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' }
+        { id: 'claude-3-5-sonnet-20240620', label: 'Claude 3.5 Sonnet', context_length: 200000, max_output_tokens: 8192 },
+        { id: 'claude-3-opus-20240229', label: 'Claude 3 Opus', context_length: 200000, max_output_tokens: 4096 },
+        { id: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku', context_length: 200000, max_output_tokens: 4096 }
       ]);
     }
 

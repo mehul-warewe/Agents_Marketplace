@@ -154,7 +154,7 @@ export const MODEL_TYPES = NODE_REGISTRY
 
 export const INITIAL_NODES = [
   {
-    id: 'node_trigger_1',
+    id: 'trigger_1',
     type: 'wareweNode',
     position: { x: 100, y: 300 },
     data: {
@@ -167,7 +167,7 @@ export const INITIAL_NODES = [
     },
   },
   {
-    id: 'node_1',
+    id: 'llm_1',
     type: 'wareweNode',
     position: { x: 450, y: 300 },
     data: {
@@ -178,7 +178,7 @@ export const INITIAL_NODES = [
       status: 'idle',
       config: {
         model: 'google/gemini-2.0-flash-001',
-        prompt: 'Task for Gemini: {{ input.message }}'
+        prompt: 'Task for Gemini: {{ message }}'
       },
     },
   },
@@ -195,7 +195,7 @@ export const INITIAL_EDGES = [
   },
 ];
 
-export const makeNode = (toolId: string, position: { x: number; y: number }) => {
+export const makeNode = (toolId: string, position: { x: number; y: number }, nodes: any[] = []) => {
   // Check if it's a sub-action ID like "github.mcp:createIssue"
   const isSub = toolId.includes(':');
   const baseId = isSub ? toolId.split(':')[0] : toolId;
@@ -204,7 +204,10 @@ export const makeNode = (toolId: string, position: { x: number; y: number }) => 
   const tool = TOOL_REGISTRY.find((t) => t.id === baseId);
   if (!tool) return null;
 
-  const id = `${tool.id.replace(/[:.]/g, '_')}_${Date.now()}`;
+  // Generate Human-Readable ID: e.g. llm_gemini_1, tool_github_2
+  const prefix = tool.id.replace('.', '_');
+  const existingCount = nodes.filter(n => n.id.startsWith(prefix)).length;
+  const id = `${prefix}_${existingCount + 1}`;
   
   // Resolve preConfig if it was a subAction
   let preConfig = {};

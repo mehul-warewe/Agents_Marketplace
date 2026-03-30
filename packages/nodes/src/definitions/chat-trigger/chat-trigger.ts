@@ -24,34 +24,12 @@ export const chatTrigger: NodeDefinition = {
       key: 'message',
       type: 'string',
       description: 'The chat message from the user',
-      example: 'Find repositories for user Mehul0161',
-    },
-    {
-      key: 'input',
-      type: 'string',
-      description: 'Copy of the message for template references',
-      example: 'Find repositories for user Mehul0161',
-    },
-    {
-      key: 'source',
-      type: 'string',
-      description: 'Message source identifier',
-      example: 'chat',
-    },
-    {
-      key: 'timestamp',
-      type: 'string',
-      description: 'ISO 8601 timestamp when message was received',
-      example: '2026-03-25T08:18:31.615Z',
+      example: 'Hello!',
     },
   ],
   operationOutputs: {
     default: [
       { key: 'message', type: 'string', description: 'The chat message from the user' },
-      { key: 'input', type: 'string', description: 'Alias for message field' },
-      { key: 'userId', type: 'string', description: 'ID of user who sent message' },
-      { key: 'timestamp', type: 'string', description: 'ISO 8601 timestamp when message was received' },
-      { key: 'source', type: 'string', description: 'Message source (usually "chat")' },
     ],
   },
 };

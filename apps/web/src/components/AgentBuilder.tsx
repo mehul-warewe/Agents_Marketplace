@@ -383,7 +383,7 @@ function AgentBuilderInner() {
       x: isTarget ? baseNode.position.x - 300 : baseNode.position.x + 300, 
       y: baseNode.position.y 
     };
-    const newNode = makeNode(toolId, newPos) as any;
+    const newNode = makeNode(toolId, newPos, nodes) as any;
     
     setNodes(ns => ns.concat(newNode));
 
@@ -506,7 +506,7 @@ function AgentBuilderInner() {
     const pos = last
       ? { x: last.position.x + 280, y: last.position.y }
       : { x: 200, y: 200 };
-    const newNode = makeNode(toolId, pos) as any;
+    const newNode = makeNode(toolId, pos, nodes) as any;
     setNodes(ns => ns.concat(newNode));
     setSelectedNode(newNode);
     setSidebarOpen(false); // Auto-close sidebar after adding

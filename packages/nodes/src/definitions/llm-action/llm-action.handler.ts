@@ -38,10 +38,7 @@ export const llmActionHandler: ToolHandler = async (context: ToolContext) => {
         { role: 'user', content: userMessage }
       ]);
       return { 
-        text: response.content, 
-        content: response.content, 
         result: response.content,
-        status: 'completed' 
       };
     }
 
@@ -61,10 +58,7 @@ export const llmActionHandler: ToolHandler = async (context: ToolContext) => {
     const result = await executor.invoke({ input: userMessage });
 
     return { 
-      text: result.output, 
-      content: result.output, 
       result: result.output,
-      status: 'completed'
     };
   } catch (err: any) {
     console.error("[LLM Action] Execution failed:", err);

@@ -28,12 +28,26 @@ export const openaiNode: NodeDefinition = {
       default: '',
     },
     {
-      key: 'prompt',
-      label: 'Prompt Template',
+      key: 'systemPrompt',
+      label: 'System Instructions',
       type: 'textarea',
-      placeholder: 'Task: {{ input.message }}',
+      placeholder: 'You are a professional AI assistant...',
+    },
+    {
+      key: 'prompt',
+      label: 'User Prompt',
+      type: 'textarea',
+      placeholder: 'Task for GPT: {{ message }}',
     },
     { key: 'temperature', label: 'Temperature (0-1)', type: 'text', placeholder: '0.7' },
+    { key: 'maxTokens', label: 'Max Tokens', type: 'text', placeholder: '4096' },
+  ],
+  outputSchema: [
+    {
+      key: 'result',
+      type: 'string',
+      description: 'The response text from OpenAI.',
+    },
   ],
   credentialTypes: ['openai_api_key'],
 };

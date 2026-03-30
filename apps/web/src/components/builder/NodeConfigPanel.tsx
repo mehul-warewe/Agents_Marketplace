@@ -1,7 +1,8 @@
 'use client';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { X, Trash2, CheckSquare, Info, Link2, ChevronDown, Settings2, Database, Terminal, ShieldCheck, Activity, SlidersHorizontal, Copy, Check, Search, Globe, Loader2, Play, Zap, LogIn, ChevronLeft } from 'lucide-react';
 import { getToolByExecutionKey, TOOL_REGISTRY, getToolById } from './toolRegistry';
+import VariablePicker from './VariablePicker';
 import { useCredentials, useCreateCredential, useCredentialSchemas } from '@/hooks/useApi';
 import { useAuthStore } from '@/store/authStore';
 
@@ -107,6 +108,84 @@ const CustomSelect = ({ value, onChange, options, placeholder = 'Select...', dis
   );
 };
 
+const RichTextarea = ({ value, onChange, placeholder, rows = 4, className }: any) => {
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleScroll = () => {
+    if (backdropRef.current && textareaRef.current) {
+       backdropRef.current.scrollTop = textareaRef.current.scrollTop;
+       backdropRef.current.scrollLeft = textareaRef.current.scrollLeft;
+    }
+  };
+
+  const highlighted = useMemo(() => {
+    if (!value) return '';
+    return value.replace(/\{\{\s*([\s\S]+?)\s*\}\}/g, (match: string) => {
+      return `<span style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0px 0px; border-radius: 4px; box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.1); color: transparent; display: inline-block;">${match}</span>`;
+    }).replace(/\n/g, '<br/>');
+  }, [value]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Backspace') {
+      const pos = e.currentTarget.selectionStart;
+      const endPos = e.currentTarget.selectionEnd;
+      if (pos === endPos && pos > 2) {
+         const textBefore = value.substring(0, pos);
+         if (textBefore.endsWith('}}')) {
+            const startIdx = textBefore.lastIndexOf('{{');
+            if (startIdx !== -1 && startIdx < pos) {
+               e.preventDefault();
+               const newVal = value.substring(0, startIdx) + value.substring(pos);
+               onChange({ target: { value: newVal } } as any);
+               setTimeout(() => {
+                 if (textareaRef.current) {
+                   textareaRef.current.selectionStart = startIdx;
+                   textareaRef.current.selectionEnd = startIdx;
+                 }
+               }, 0);
+            }
+         }
+      }
+    }
+  };
+
+  return (
+    <div className="relative w-full group">
+      <div 
+        ref={backdropRef}
+        aria-hidden="true"
+        className={`absolute inset-0 px-4 py-3 text-[12px] font-medium pointer-events-none whitespace-pre-wrap break-words overflow-auto no-scrollbar scroll-smooth antialiased ${className}`}
+        style={{ 
+          color: 'transparent', 
+          whiteSpace: 'pre-wrap', 
+          lineHeight: '1.5',
+          fontFamily: 'inherit',
+          letterSpacing: 'normal'
+        }}
+        dangerouslySetInnerHTML={{ __html: highlighted + '<br/>' }}
+      />
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={onChange}
+        onKeyDown={handleKeyDown}
+        onScroll={handleScroll}
+        rows={rows}
+        placeholder={placeholder}
+        className={`relative w-full px-4 py-3 bg-foreground/[0.01] border border-border/40 rounded-xl text-[12px] outline-none focus:border-foreground/20 transition-all font-medium custom-scrollbar antialiased ${className}`}
+        style={{ 
+          background: 'transparent',
+          lineHeight: '1.5',
+          fontFamily: 'inherit',
+          resize: 'none',
+          caretColor: 'white'
+        }}
+      />
+    </div>
+  );
+};
+
 export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose, onDelete, onTrigger }: NodeConfigPanelProps) {
   const tool = node.data.toolId 
     ? getToolById(node.data.toolId)
@@ -129,6 +208,76 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
   // Dynamic Models State
   const [dynamicModels, setDynamicModels] = useState<{id: string, label: string}[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
+
+  // Variable Picker State
+  const [pickerState, setPickerState] = useState<{
+    show: boolean;
+    x: number;
+    y: number;
+    targetKey: string;
+    isOpField?: boolean;
+    opIdx?: number;
+    cursorPos: number;
+  }>({
+    show: false,
+    x: 0,
+    y: 0,
+    targetKey: '',
+    cursorPos: 0
+  });
+
+  const handleTextChange = (e: React.ChangeEvent<any>, key: string, isOp: boolean = false, opIdx?: number) => {
+    const val = e.target.value;
+    const pos = e.target.selectionStart;
+    
+    // Update value
+    if (isOp && typeof opIdx === 'number') {
+      setOperations(ops => ops.map((o, i) => i === opIdx ? { ...o, [key]: val } : o));
+    } else {
+      set(key, val);
+    }
+
+    // Check for trigger {{
+    if (val.charAt(pos - 1) === '{' && val.charAt(pos - 2) === '{') {
+      const rect = e.target.getBoundingClientRect();
+      setPickerState({
+        show: true,
+        x: Math.max(20, rect.left - 330), // Show to the left of the panel
+        y: Math.min(rect.top, window.innerHeight - 420),
+        targetKey: key,
+        isOpField: isOp,
+        opIdx,
+        cursorPos: pos
+      });
+    } else {
+      if (pickerState.show) setPickerState(prev => ({ ...prev, show: false }));
+    }
+  };
+
+  const handleVariableSelect = (variable: string) => {
+    const { targetKey, isOpField, opIdx, cursorPos } = pickerState;
+    const currentVal = isOpField && typeof opIdx === 'number' && operations[opIdx]
+      ? (operations[opIdx][targetKey] || '')
+      : (values[targetKey] || '');
+    
+    // We already have typed '{{'
+    // We want to replace the '{{' plus whatever followed it (if we were typing)
+    // Actually simplicity: typing '{{' makes pos be index after second '{'.
+    // We replace the character before (the second '{') and first '{'.
+    
+    const prefix = currentVal.substring(0, cursorPos - 2);
+    const suffix = currentVal.substring(cursorPos);
+    
+    // Use the variable as-is (e.g. {{ Gemini_1.result }})
+    const newVal = prefix + variable + suffix;
+    
+    if (isOpField && typeof opIdx === 'number') {
+      setOperations(ops => ops.map((o, i) => i === opIdx ? { ...o, [targetKey]: newVal } : o));
+    } else {
+      set(targetKey, newVal);
+    }
+    setPickerState(prev => ({ ...prev, show: false }));
+  };
 
   const [values, setValues] = useState<Record<string, any>>(() => {
     const cfg = (node.data.config as Record<string, any>) ?? {};
@@ -414,9 +563,18 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
                              )}
                            </label>
                            {field.type === 'textarea' ? (
-                             <textarea value={opState[field.key] ?? ''} onChange={e => setOperations(ops => ops.map((o,i) => i === idx ? {...o, [field.key]: e.target.value} : o))} rows={4} className="w-full px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-xl text-[12px] outline-none" placeholder={field.placeholder || `Enter ${field.label}...`} />
+                             <RichTextarea 
+                               value={opState[field.key] ?? ''} 
+                               onChange={(e: any) => handleTextChange(e, field.key, true, idx)} 
+                               placeholder={field.placeholder || `Enter ${field.label}...`} 
+                             />
                            ) : (
-                             <input value={opState[field.key] ?? ''} onChange={e => setOperations(ops => ops.map((o,i) => i === idx ? {...o, [field.key]: e.target.value} : o))} className="w-full px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-xl text-[12px] outline-none" placeholder={field.placeholder || `Enter ${field.label}...`} />
+                             <input 
+                               value={opState[field.key] ?? ''} 
+                               onChange={e => handleTextChange(e, field.key, true, idx)} 
+                               className="w-full px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-xl text-[12px] outline-none focus:border-foreground/20 transition-all font-medium" 
+                               placeholder={field.placeholder || `Enter ${field.label}...`} 
+                             />
                            )}
                          </div>
                       ))}
@@ -438,6 +596,19 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
                            options = dynamicModels;
                         }
 
+                        // Resolve dynamic placeholder for maxTokens
+                        let dynamicPlaceholder = field.placeholder || `Enter ${field.label}...`;
+                        if (field.key === 'maxTokens' && values.model) {
+                          const selectedModel = dynamicModels.find((m: any) => (m.id || m.value) === values.model);
+                          if (selectedModel && (selectedModel as any).max_output_tokens) {
+                             dynamicPlaceholder = `Max: ${(selectedModel as any).max_output_tokens}`;
+                          } else if (selectedModel && (selectedModel as any).context_length) {
+                             dynamicPlaceholder = `Context: ${(selectedModel as any).context_length}`;
+                          } else if (selectedModel && (selectedModel as any).max_tokens) {
+                             dynamicPlaceholder = `Max: ${(selectedModel as any).max_tokens}`;
+                          }
+                        }
+
                         return (
                           <div key={field.key} className="space-y-2">
                             <label className="text-[10px] font-bold text-muted/60 uppercase ml-1 flex items-center gap-1">
@@ -449,15 +620,13 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
                               )}
                               {field.key === 'model' && isLoadingModels && <Loader2 size={10} className="animate-spin ml-2 text-blue-500" />}
                             </label>
-                            {field.type === 'textarea' || field.type === 'chat_test' ? (
-                              <textarea 
-                                value={values[field.key] ?? ''} 
-                                onChange={e => set(field.key, e.target.value)} 
-                                rows={4} 
-                                className="w-full px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-xl text-[12px] outline-none focus:border-foreground/20 transition-all font-medium custom-scrollbar" 
-                                placeholder={field.placeholder || `Enter ${field.label}...`} 
-                              />
-                            ) : field.type === 'boolean' ? (
+                            {field.type === 'textarea' || field.type === 'chat_test' || field.type === 'string' ? (
+                               <RichTextarea 
+                                 value={values[field.key] ?? ''} 
+                                 onChange={(e: any) => handleTextChange(e, field.key)} 
+                                 placeholder={dynamicPlaceholder} 
+                               />
+                             ) : field.type === 'boolean' ? (
                               <button
                                 onClick={() => set(field.key, !values[field.key])}
                                 className={`
@@ -496,7 +665,12 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
                                   />
                                 )
                             ) : (
-                              <input value={values[field.key] ?? ''} onChange={e => set(field.key, e.target.value)} className="w-full px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-xl text-[12px] outline-none" placeholder={field.placeholder || `Enter ${field.label}...`} />
+                               <input 
+                                 value={values[field.key] ?? ''} 
+                                 onChange={e => handleTextChange(e, field.key)} 
+                                 className="w-full px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-xl text-[12px] outline-none focus:border-foreground/20 transition-all font-medium" 
+                                 placeholder={dynamicPlaceholder} 
+                               />
                             )}
                           </div>
                         );
@@ -647,6 +821,21 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
           )}
         </div>
       </div>
+      {/* Variable Picker Popover */}
+      {pickerState.show && (
+        <div 
+          className="fixed z-[100]"
+          style={{ left: pickerState.x, top: pickerState.y }}
+        >
+          <VariablePicker
+            nodes={nodes}
+            edges={edges}
+            currentNodeId={node.id}
+            onSelect={handleVariableSelect}
+            onClose={() => setPickerState(prev => ({ ...prev, show: false }))}
+          />
+        </div>
+      )}
     </aside>
   );
 }

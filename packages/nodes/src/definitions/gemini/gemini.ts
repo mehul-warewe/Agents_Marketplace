@@ -28,13 +28,19 @@ export const geminiNode: NodeDefinition = {
       default: '',
     },
     {
-      key: 'prompt',
-      label: 'Prompt Template',
+      key: 'systemPrompt',
+      label: 'System Instructions',
       type: 'textarea',
-      placeholder: 'Process this: {{ input.message }}',
+      placeholder: 'You are a helpful assistant talking to the user...',
+    },
+    {
+      key: 'prompt',
+      label: 'User Prompt',
+      type: 'textarea',
+      placeholder: 'Task for Gemini: {{ message }}',
     },
     { key: 'temperature', label: 'Temperature (0-1)', type: 'text', placeholder: '0.7' },
-    { key: 'maxTokens', label: 'Max Tokens', type: 'text', placeholder: '4096' },
+    { key: 'maxTokens', label: 'Max Tokens', type: 'text', placeholder: '8192' },
   ],
   requiredInputs: [
     {
@@ -47,7 +53,7 @@ export const geminiNode: NodeDefinition = {
   ],
   outputSchema: [
     {
-      key: 'text',
+      key: 'result',
       type: 'string',
       description: 'The response text from Gemini.',
       example: 'The summary is...',
