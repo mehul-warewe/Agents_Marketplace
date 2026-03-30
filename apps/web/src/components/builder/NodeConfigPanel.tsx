@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { X, Trash2, CheckSquare, Info, Link2, ChevronDown, Settings2, Database, Terminal, ShieldCheck, Activity, SlidersHorizontal, Copy, Check, Search, Globe, Loader2, Play, Zap, LogIn, ChevronLeft } from 'lucide-react';
+import { X, Trash2, CheckSquare, Info, Link2, ChevronDown, Settings2, Database, Terminal, ShieldCheck, Activity, SlidersHorizontal, Copy, Check, Search, Globe, Loader2, Play, Zap, LogIn, ChevronLeft, ExternalLink } from 'lucide-react';
 import { getToolByExecutionKey, TOOL_REGISTRY, getToolById } from './toolRegistry';
 import VariablePicker from './VariablePicker';
 import { useCredentials, useCreateCredential, useCredentialSchemas } from '@/hooks/useApi';
@@ -136,6 +136,7 @@ const RichTextarea = ({ value, onChange, placeholder, rows = 4, className }: any
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const pos = e.currentTarget.selectionStart;
     const endPos = e.currentTarget.selectionEnd;
+    const target = e.currentTarget;
 
     // 1. Backspace: remove whole variable if cursor is at the end or inside
     if (e.key === 'Backspace' && pos === endPos) {
@@ -148,7 +149,7 @@ const RichTextarea = ({ value, onChange, placeholder, rows = 4, className }: any
           if (startIdx !== -1) {
              e.preventDefault();
              const newVal = value.substring(0, startIdx) + textAfter;
-             onChange({ target: { value: newVal } } as any);
+             onChange({ target: { value: newVal, selectionStart: startIdx, getBoundingClientRect: () => target.getBoundingClientRect() } } as any);
              return;
           }
        }
@@ -162,7 +163,7 @@ const RichTextarea = ({ value, onChange, placeholder, rows = 4, className }: any
           // We are inside!
           e.preventDefault();
           const newVal = value.substring(0, lastStart) + value.substring(pos + nextEnd + 2);
-          onChange({ target: { value: newVal } } as any);
+          onChange({ target: { value: newVal, selectionStart: lastStart, getBoundingClientRect: () => target.getBoundingClientRect() } } as any);
           return;
        }
     }
@@ -172,12 +173,12 @@ const RichTextarea = ({ value, onChange, placeholder, rows = 4, className }: any
        const { value: val } = e.currentTarget;
        if (val.charAt(pos - 1) === '{') {
           e.preventDefault();
-          const newVal = val.substring(0, pos) + '}}' + val.substring(pos);
-          onChange({ target: { value: newVal } } as any);
+          const newVal = val.substring(0, pos) + '{}}' + val.substring(pos);
+          onChange({ target: { value: newVal, selectionStart: pos + 1, getBoundingClientRect: () => target.getBoundingClientRect() } } as any);
           setTimeout(() => {
              if (textareaRef.current) {
-                textareaRef.current.selectionStart = pos;
-                textareaRef.current.selectionEnd = pos;
+                textareaRef.current.selectionStart = pos + 1;
+                textareaRef.current.selectionEnd = pos + 1;
              }
           }, 0);
        }
@@ -274,8 +275,11 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
     }
 
     // Check for trigger {{
-    if (val.charAt(pos - 1) === '{' && val.charAt(pos - 2) === '{') {
-      const rect = e.target.getBoundingClientRect();
+    if (val && pos >= 2 && val.charAt(pos - 1) === '{' && val.charAt(pos - 2) === '{') {
+      const rect = typeof e.target.getBoundingClientRect === 'function' 
+        ? e.target.getBoundingClientRect() 
+        : { left: window.innerWidth / 2, top: window.innerHeight / 2 };
+        
       setPickerState({
         show: true,
         x: Math.max(20, rect.left - 330), // Show to the left of the panel
@@ -790,6 +794,16 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
                             </button>
                           ) : (
                             <div className="space-y-4 pt-2">
+                              {firstType && credentialSchemas?.[firstType]?.helpUrl && (
+                                <a 
+                                  href={credentialSchemas[firstType].helpUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-2 text-[9px] font-black text-emerald-500 hover:text-emerald-400 uppercase tracking-widest px-2 mb-2 transition-colors border border-emerald-500/20 bg-emerald-500/5 py-1 rounded-full w-max"
+                                >
+                                  <ExternalLink size={10} strokeWidth={3} /> Get Token / Doc
+                                </a>
+                              )}
                               {/* Name it */}
                               <div className="space-y-1.5">
                                 <label className="text-[9px] font-bold text-muted/60 uppercase ml-1">Key Label (Internal)</label>

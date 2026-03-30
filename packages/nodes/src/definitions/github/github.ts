@@ -16,7 +16,7 @@ export const githubNode: NodeDefinition = {
   isTrigger: false,
   bg: 'bg-[#24292e]/10',
   border: 'border-[#24292e]/20',
-  credentialTypes: ['github_pat'],
+  credentialTypes: ['github_pat', 'github_oauth'],
   configFields: [
     { key: 'auth_notice', label: 'Note: Ensure your PAT has "repo" and "workflow" scopes.', type: 'notice' },
     { key: 'resource', label: 'Resource Type', type: 'select',

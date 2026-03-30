@@ -17,17 +17,8 @@ export const manualTrigger: NodeDefinition = {
   outputs: [{ name: 'output', type: 'data', position: 'right' }],
   configFields: [],
   requiredInputs: [],
-  outputSchema: [
-    {
-      key: 'trigger_output',
-      type: 'string',
-      description: 'Initializes workflow execution signal',
-      example: 'Sequence Initialized.',
-    },
-  ],
   operationOutputs: {
     default: [
-      { key: 'trigger_output', type: 'string', description: 'Initialization signal' },
       { key: 'timestamp', type: 'string', description: 'When workflow was triggered (ISO 8601)' },
     ],
   },

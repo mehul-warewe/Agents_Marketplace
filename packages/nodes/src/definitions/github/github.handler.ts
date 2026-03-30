@@ -5,10 +5,10 @@ export const githubHandler: ToolHandler = async (ctx: ToolContext) => {
   const { config, render, credentials } = ctx;
 
   const operation = render(config.operation || 'listUserRepos');
-  const token = credentials?.accessToken;
+  const token = credentials?.accessToken || credentials?.apiKey;
 
   if (!token) {
-    throw new Error('GitHub node requires a Personal Access Token.');
+    throw new Error('GitHub node requires a valid Personal Access Token or OAuth credential.');
   }
 
   const headers = {

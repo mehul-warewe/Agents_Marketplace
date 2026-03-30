@@ -4,11 +4,12 @@ import type { ToolHandler, ToolContext } from '../../types.js';
 export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
   const { config, render, credentials } = ctx;
   const operation = config.operation;
-  const key = credentials?.serviceRoleKey;
+  const key = credentials?.serviceRoleKey || credentials?.accessToken || credentials?.apiKey;
 
   if (!key) throw new Error('Supabase node requires a valid service role key.');
 
-  const baseUrl = credentials?.supabaseUrl || 'https://your-project.supabase.co';
+  const baseUrl = credentials?.supabaseUrl || 
+                  (credentials?.projectRef ? `https://${credentials.projectRef}.supabase.co` : 'https://your-project.supabase.co');
 
   const headers = {
     'Authorization': `Bearer ${key}`,

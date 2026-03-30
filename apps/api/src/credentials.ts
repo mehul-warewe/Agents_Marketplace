@@ -96,11 +96,13 @@ router.get('/proxy/models', passport.authenticate('jwt', { session: false }), as
 export const CREDENTIAL_SCHEMAS: Record<string, {
   label: string;
   icon: string;
+  helpUrl?: string;
   fields: { key: string; label: string; type: string; placeholder?: string }[];
 }> = {
   openai_api_key: {
     label: 'OpenAI API Key',
     icon: 'openai',
+    helpUrl: 'https://platform.openai.com/api-keys',
     fields: [
       { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'sk-...' },
     ],
@@ -108,6 +110,7 @@ export const CREDENTIAL_SCHEMAS: Record<string, {
   google_api_key: {
     label: 'Google AI (Gemini) Key',
     icon: 'gemini',
+    helpUrl: 'https://aistudio.google.com/app/apikey',
     fields: [
       { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'AIza...' },
     ],
@@ -115,6 +118,7 @@ export const CREDENTIAL_SCHEMAS: Record<string, {
   anthropic_api_key: {
     label: 'Anthropic (Claude) Key',
     icon: 'claude',
+    helpUrl: 'https://console.anthropic.com/settings/keys',
     fields: [
       { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'sk-ant-...' },
     ],
@@ -122,6 +126,7 @@ export const CREDENTIAL_SCHEMAS: Record<string, {
   openrouter_api_key: {
     label: 'OpenRouter Key',
     icon: 'openrouter',
+    helpUrl: 'https://openrouter.ai/keys',
     fields: [
       { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'sk-or-...' },
     ],
@@ -129,6 +134,7 @@ export const CREDENTIAL_SCHEMAS: Record<string, {
   slack_webhook: {
     label: 'Slack (Webhook)',
     icon: 'slack',
+    helpUrl: 'https://api.slack.com/messaging/webhooks',
     fields: [
       { key: 'webhookUrl', label: 'Incoming Webhook URL', type: 'password', placeholder: 'https://hooks.slack.com/services/...' },
     ],
@@ -200,6 +206,7 @@ export const CREDENTIAL_SCHEMAS: Record<string, {
   github_pat: {
     label: 'GitHub (Personal Access Token)',
     icon: 'github',
+    helpUrl: 'https://github.com/settings/tokens/new',
     fields: [
       { key: 'accessToken', label: 'Personal Access Token', type: 'password', placeholder: 'ghp_...' },
     ],
@@ -207,6 +214,7 @@ export const CREDENTIAL_SCHEMAS: Record<string, {
   linear_api_key: {
     label: 'Linear (API Key)',
     icon: 'linear',
+    helpUrl: 'https://linear.app/settings/api',
     fields: [
       { key: 'apiKey', label: 'Personal API Key', type: 'password', placeholder: 'lin_api_...' },
     ],
@@ -214,6 +222,7 @@ export const CREDENTIAL_SCHEMAS: Record<string, {
   notion_integration_token: {
     label: 'Notion (Integration Token)',
     icon: 'notion',
+    helpUrl: 'https://www.notion.so/my-integrations',
     fields: [
       { key: 'accessToken', label: 'Integration Token', type: 'password', placeholder: 'secret_...' },
     ],
@@ -221,10 +230,16 @@ export const CREDENTIAL_SCHEMAS: Record<string, {
   supabase_service_role: {
     label: 'Supabase (Service Role Key)',
     icon: 'database',
+    helpUrl: 'https://supabase.com/dashboard/project/_/settings/api',
     fields: [
-      { key: 'accessToken', label: 'Service Role Key', type: 'password', placeholder: 'eyJh...' },
-      { key: 'projectRef', label: 'Project Ref', type: 'text', placeholder: 'abcdefgh...' },
+      { key: 'serviceRoleKey', label: 'Service Role Key', type: 'password', placeholder: 'eyJh...' },
+      { key: 'supabaseUrl', label: 'Supabase URL', type: 'text', placeholder: 'https://your-project.supabase.co' },
     ],
+  },
+  github_oauth: {
+    label: 'GitHub (OAuth)',
+    icon: 'github',
+    fields: [], // Handled by OAuth flow
   },
 };
 
@@ -574,21 +589,23 @@ router.get('/oauth/google', (req: any, res, next) => {
 
   // Define scope mapping per tool
   const SCOPE_MAPPING: Record<string, string[]> = {
-    'google.gmail':    ['https://www.googleapis.com/auth/gmail.modify'],
+    'google.gmail':    ['https://mail.google.com/', 'https://www.googleapis.com/auth/gmail.modify', 'https://www.googleapis.com/auth/gmail.settings.basic'],
     'google.drive':    ['https://www.googleapis.com/auth/drive'],
     'google.calendar': ['https://www.googleapis.com/auth/calendar.events'],
     'google.sheets':   ['https://www.googleapis.com/auth/spreadsheets'],
-    'google.youtube':  ['https://www.googleapis.com/auth/youtube.readonly', 'https://www.googleapis.com/auth/yt-analytics.readonly'],
+    'google.youtube':  ['https://www.googleapis.com/auth/youtube.force-ssl', 'https://www.googleapis.com/auth/yt-analytics.readonly'],
   };
 
   const requestedScopes = [
     'https://www.googleapis.com/auth/userinfo.email',
     ...(toolId && SCOPE_MAPPING[toolId] ? SCOPE_MAPPING[toolId] : [
+      'https://mail.google.com/',
       'https://www.googleapis.com/auth/gmail.modify',
+      'https://www.googleapis.com/auth/gmail.settings.basic',
       'https://www.googleapis.com/auth/drive',
       'https://www.googleapis.com/auth/calendar.events',
       'https://www.googleapis.com/auth/spreadsheets',
-      'https://www.googleapis.com/auth/youtube.readonly',
+      'https://www.googleapis.com/auth/youtube.force-ssl',
       'https://www.googleapis.com/auth/yt-analytics.readonly'
     ])
   ];
@@ -735,6 +752,75 @@ router.get('/oauth/slack/callback', async (req, res) => {
     res.send('<script>window.close();</script><p>Slack connected! You can close this window.</p>');
   } catch (err: any) {
     console.error('[oauth/slack] Error:', err.message);
+    res.status(500).send('OAuth failed: ' + err.message);
+  }
+});
+
+// ─── OAuth: GitHub ─────────────────────────────────────────────────────────────
+router.get('/oauth/github', async (req: any, res) => {
+  let user = req.user;
+  
+  if (!user && req.query.token) {
+    try {
+      const secret = process.env.JWT_SECRET || 'super_secret_change_me';
+      const decoded = jwt.verify(req.query.token as string, secret) as any;
+      user = { id: decoded.sub };
+    } catch (err: any) {
+      return res.status(401).send('OAuth Error: Invalid token - ' + err.message);
+    }
+  }
+
+  if (!user) return res.status(401).send('OAuth Error: Authentication required');
+  const userId = user.id;
+  const clientId = process.env.GITHUB_CLIENT_ID!;
+  const redirectUri = `${process.env.API_URL || 'http://localhost:3001'}/credentials/oauth/github/callback`;
+  const state = Buffer.from(JSON.stringify({ userId })).toString('base64');
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    scope: 'repo,user,workflow',
+    state,
+  });
+
+  res.redirect(`https://github.com/login/oauth/authorize?${params}`);
+});
+
+router.get('/oauth/github/callback', async (req, res) => {
+  try {
+    const { code, state } = req.query as { code: string; state: string };
+    const { userId } = JSON.parse(Buffer.from(state, 'base64').toString('utf8'));
+
+    const redirectUri = `${process.env.API_URL || 'http://localhost:3001'}/credentials/oauth/github/callback`;
+
+    const tokenRes = await axios.post('https://github.com/login/oauth/access_token', {
+      client_id: process.env.GITHUB_CLIENT_ID,
+      client_secret: process.env.GITHUB_CLIENT_SECRET,
+      code,
+      redirect_uri: redirectUri,
+    }, { headers: { Accept: 'application/json' } });
+
+    const { access_token } = tokenRes.data;
+    if (!access_token) throw new Error(tokenRes.data.error || 'No access token received');
+
+    // Get user info
+    const userRes = await axios.get('https://api.github.com/user', {
+      headers: { Authorization: `Bearer ${access_token}` }
+    });
+
+    const encrypted = encryptCredential({ accessToken: access_token });
+
+    await db.insert(credentials).values({
+      userId,
+      name: `GitHub – ${userRes.data.login}`,
+      type: 'github_oauth',
+      data: encrypted,
+      isValid: true,
+    }).onConflictDoNothing();
+
+    res.send('<script>window.close();</script><p>GitHub connected! You can close this window.</p>');
+  } catch (err: any) {
+    console.error('[oauth/github] Error:', err.message);
     res.status(500).send('OAuth failed: ' + err.message);
   }
 });

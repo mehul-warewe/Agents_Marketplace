@@ -262,6 +262,16 @@ export default function ConnectionsPage() {
                     </div>
 
                     <div className="space-y-8">
+                       {schemas?.[selectedType]?.helpUrl && (
+                          <a 
+                            href={schemas[selectedType].helpUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-2 text-xs font-black text-emerald-500 hover:text-emerald-400 uppercase tracking-widest px-2 mb-2 transition-colors border border-emerald-500/20 bg-emerald-500/5 py-1.5 rounded-full"
+                          >
+                            <ExternalLink size={12} strokeWidth={3} /> Get Token / Documentation
+                          </a>
+                       )}
                        {schemas?.[selectedType]?.fields.map((f: any) => (
                         <div key={f.key} className="space-y-4">
                           <label className="text-[10px] font-black text-muted uppercase tracking-[0.3em] px-2 opacity-50">{f.label.toUpperCase().replace(/\s+/g, '_')}</label>

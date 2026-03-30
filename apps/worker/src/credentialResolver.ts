@@ -8,6 +8,7 @@ dotenv.config({ path: '../../.env' });
 const db = createClient(process.env.POSTGRES_URL!);
 
 export interface ResolvedCredential {
+  id: string;
   type: string;
   data: Record<string, any>;
 }
@@ -39,7 +40,7 @@ export async function resolveCredential(
   if (data.service_role_key) normalized.serviceRoleKey = data.service_role_key;
   if (data.supabase_url) normalized.supabaseUrl = data.supabase_url;
   
-  return { type: cred.type, data: normalized };
+  return { id: cred.id, type: cred.type, data: normalized };
 }
 
 /**
@@ -69,7 +70,7 @@ export async function resolveDefaultCredential(
   if (data.service_role_key) normalized.serviceRoleKey = data.service_role_key;
   if (data.supabase_url) normalized.supabaseUrl = data.supabase_url;
 
-  return { type: cred.type, data: normalized };
+  return { id: cred.id, type: cred.type, data: normalized };
 }
 
 /**

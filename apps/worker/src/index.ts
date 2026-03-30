@@ -194,8 +194,6 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
 
     const queue: string[] = startNodes.map((n: any) => {
       pendingInputs.set(n.id, { 
-        objective: workflow.description,
-        trigger_output: 'Sequence Initialized.',
         ...(job.data.inputData || {})
       });
       return n.id;
@@ -376,8 +374,8 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
                   const res = await resolveDefaultCredential(nodeDef.credentialTypes, job.data.userId);
                   if (res) {
                     console.log(`[Flow] Using default saved credential for "${nodeLabel}" (${res.type})`);
-                    if (isGoogleNode && (node.data.config as any)?.credentialId) {
-                       const token = await resolveGoogleToken((node.data.config as any).credentialId, job.data.userId);
+                    if (isGoogleNode) {
+                       const token = await resolveGoogleToken(res.id, job.data.userId);
                        nodeCredentials = { ...res.data, accessToken: token };
                     } else {
                        nodeCredentials = res.data;
@@ -386,8 +384,11 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
                 }
               }
 
+              const nodeConfig = { ...config };
+              if (nodeConfig.credentialId === '') delete nodeConfig.credentialId;
+
               const toolContext: ToolContext = {
-                config,
+                config: nodeConfig,
                 incomingData,
                 ctx,
                 job,
