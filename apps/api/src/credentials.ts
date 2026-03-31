@@ -378,6 +378,16 @@ export const CREDENTIAL_SCHEMAS: Record<string, {
     icon: 'youtube',
     fields: [], // Handled by OAuth flow
   },
+  linkedin_oauth: {
+    label: 'LinkedIn (OAuth)',
+    icon: 'linkedin',
+    fields: [], // Handled by OAuth flow
+  },
+  reddit_oauth: {
+    label: 'Reddit (OAuth)',
+    icon: 'reddit',
+    fields: [], // Handled by OAuth flow
+  },
 };
 
 // ─── GET /credentials/schemas — return available types & their field schemas ──

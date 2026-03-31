@@ -27,6 +27,8 @@ import { linearNode } from './definitions/linear/linear.js';
 import { notionNode } from './definitions/notion/notion.js';
 import { supabaseNode } from './definitions/supabase/supabase.js';
 import { stickyNoteNode } from './definitions/sticky-note/sticky-note.js';
+import { linkedinNode } from './definitions/linkedin/linkedin.js';
+import { redditNode } from './definitions/reddit/reddit.js';
 
 import { structuredOutputParserNode } from './definitions/structured-output-parser/structured-output-parser.js';
 
@@ -69,6 +71,8 @@ export const NODE_REGISTRY: NodeDefinition[] = [
   notionNode,
   supabaseNode,
   stickyNoteNode,
+  linkedinNode,
+  redditNode,
 
   // Output
   structuredOutputParserNode,
