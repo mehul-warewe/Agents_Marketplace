@@ -37,6 +37,8 @@ const iconMap: Record<string, any> = {
   notion: <img src="/iconSvg/notion.svg" className="w-5 h-5 object-contain invert" />,
   linear: <img src="/iconSvg/linear.svg" className="w-5 h-5 object-contain invert" />,
   supabase: <img src="/iconSvg/supabase.svg" className="w-5 h-5 object-contain" />,
+  linkedin: <img src="/iconSvg/linkedin.svg" className="w-5 h-5 object-contain" />,
+  reddit: <img src="/iconSvg/reddit.svg" className="w-5 h-5 object-contain" />,
 };
 
 export default function ConnectionsPage() {
@@ -82,6 +84,8 @@ export default function ConnectionsPage() {
 
     if (type.includes('slack')) provider = 'slack';
     if (type.includes('github')) provider = 'github';
+    if (type.includes('linkedin')) provider = 'linkedin';
+    if (type.includes('reddit')) provider = 'reddit';
     
     // Pattern: google_gmail_oauth -> toolId: google.gmail
     if (type.startsWith('google_') && type.includes('_oauth')) {

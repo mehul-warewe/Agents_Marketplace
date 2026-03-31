@@ -666,8 +666,92 @@ async function testConnectivity(type: string, data: any): Promise<{ ok: boolean;
       return { ok: r.status < 500, message: `HTTP status ${r.status}` };
     }
 
+    if (type === 'linkedin_oauth' && data.accessToken) {
+      const r = await axios.get('https://api.linkedin.com/v2/userinfo', {
+        headers: { Authorization: `Bearer ${data.accessToken}` },
+        timeout: 5000
+      });
+      return { ok: r.status === 200, message: 'LinkedIn connection is valid' };
+    }
+
+    if (type === 'reddit_oauth' && data.accessToken) {
+      const r = await axios.get('https://oauth.reddit.com/api/v1/me', {
+        headers: { Authorization: `Bearer ${data.accessToken}`, 'User-Agent': 'Aether/1.0.0' },
+        timeout: 5000
+      });
+      return { ok: r.status === 200, message: 'Reddit connection is valid' };
+    }
+
+    if ((type === 'github_pat' || type === 'github_oauth') && data.accessToken) {
+      const r = await axios.get('https://api.github.com/user', {
+        headers: { Authorization: `token ${data.accessToken}` },
+        timeout: 5000
+      });
+      return { ok: r.status === 200, message: `GitHub connection valid for ${r.data.login}` };
+    }
+
+    if (type === 'notion_integration_token' && data.accessToken) {
+      const r = await axios.get('https://api.notion.com/v1/users/me', {
+        headers: { 
+          Authorization: `Bearer ${data.accessToken}`,
+          'Notion-Version': '2022-06-28'
+        },
+        timeout: 5000
+      });
+      return { ok: r.status === 200, message: `Notion connected to ${r.data.name}` };
+    }
+
+    if (type === 'slack_oauth' && (data.botToken || data.accessToken)) {
+      const token = data.botToken || data.accessToken;
+      const r = await axios.post('https://slack.com/api/auth.test', null, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 5000
+      });
+      return { ok: r.data.ok, message: r.data.ok ? `Slack connected to workspace ${r.data.team}` : `Slack error: ${r.data.error}` };
+    }
+
+    if (type === 'linear_api_key' && data.apiKey) {
+      const r = await axios.post('https://api.linear.app/graphql', {
+        query: '{ viewer { id name } }'
+      }, {
+        headers: { Authorization: data.apiKey },
+        timeout: 5000
+      });
+      const viewer = r.data?.data?.viewer;
+      return { ok: !!viewer, message: viewer ? `Linear connected as ${viewer.name}` : 'Linear connection failed' };
+    }
+
+    if (type.startsWith('google_') && type.includes('_oauth') && data.access_token) {
+      const r = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: { Authorization: `Bearer ${data.access_token}` },
+        timeout: 5000
+      });
+      return { ok: r.status === 200, message: `Google connected as ${r.data.email}` };
+    }
+
+    if ((type === 'supabase' || type === 'supabase_service_role') && data.serviceRoleKey && data.supabaseUrl) {
+      // Test by hitting the REST endpoint, which returns 200/401/etc.
+      const r = await axios.get(`${data.supabaseUrl}/rest/v1/`, {
+        headers: { apikey: data.serviceRoleKey, Authorization: `Bearer ${data.serviceRoleKey}` },
+        timeout: 5000,
+        validateStatus: () => true
+      });
+      // Supabase REST root usually returns 200 or 401
+      return { ok: r.status === 200, message: 'Supabase connection successful' };
+    }
+
+    // AI Keys quick validation (just to check if they are not obviously wrong)
+    if (type === 'openai_api_key' && data.apiKey) {
+      const r = await axios.get('https://api.openai.com/v1/models', {
+        headers: { Authorization: `Bearer ${data.apiKey}` },
+        timeout: 5000,
+        validateStatus: () => true
+      });
+      return { ok: r.status === 200, message: r.status === 200 ? 'OpenAI key is valid' : 'OpenAI key invalid' };
+    }
+
     // Default for API keys - assume valid if saved
-    return { ok: true, message: 'Credential saved (connectivity check not applicable)' };
+    return { ok: true, message: 'Credential saved (connectivity check minimal)' };
   } catch (err: any) {
     console.error(`[connectivity-test] ${type} failed:`, err.message);
     return { ok: false, message: err.message };
@@ -969,6 +1053,127 @@ router.get('/oauth/github/callback', async (req, res) => {
   } catch (err: any) {
     console.error('[oauth/github] Error:', err.message);
     res.status(500).send('OAuth failed: ' + err.message);
+  }
+});
+
+// ─── OAuth: LinkedIn ───────────────────────────────────────────────────────────
+router.get('/oauth/linkedin', async (req: any, res) => {
+  let user = req.user;
+  if (!user && req.query.token) {
+    try {
+      const secret = process.env.JWT_SECRET || 'super_secret_change_me';
+      const decoded = jwt.verify(req.query.token as string, secret) as any;
+      user = { id: decoded.sub };
+    } catch (err: any) { return res.status(401).send('OAuth Error: Invalid token'); }
+  }
+  if (!user) return res.status(401).send('OAuth Error: Authentication required');
+  
+  const userId = user.id;
+  const clientId = process.env.LINKEDIN_CLIENT_ID!;
+  const redirectUri = `${process.env.API_URL || 'http://localhost:3001'}/credentials/oauth/linkedin/callback`;
+  const state = Buffer.from(JSON.stringify({ userId })).toString('base64');
+
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    state,
+    scope: 'openid profile email w_member_social',
+  });
+  res.redirect(`https://www.linkedin.com/oauth/v2/authorization?${params}`);
+});
+
+router.get('/oauth/linkedin/callback', async (req, res) => {
+  try {
+    const { code, state } = req.query as { code: string; state: string };
+    const { userId } = JSON.parse(Buffer.from(state, 'base64').toString('utf8'));
+    const redirectUri = `${process.env.API_URL || 'http://localhost:3001'}/credentials/oauth/linkedin/callback`;
+
+    const tokenRes = await axios.post('https://www.linkedin.com/oauth/v2/accessToken', new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: redirectUri,
+      client_id: process.env.LINKEDIN_CLIENT_ID!,
+      client_secret: process.env.LINKEDIN_CLIENT_SECRET!,
+    }), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+
+    const { access_token } = tokenRes.data;
+
+    const userRes = await axios.get('https://api.linkedin.com/v2/userinfo', {
+      headers: { Authorization: `Bearer ${access_token}` }
+    });
+
+    const encrypted = encryptCredential({ accessToken: access_token });
+    await db.insert(credentials).values({
+      userId,
+      name: `LinkedIn – ${userRes.data.name}`,
+      type: 'linkedin_oauth',
+      data: encrypted,
+      isValid: true,
+    });
+    res.send('<script>window.close();</script><p>LinkedIn connected!</p>');
+  } catch (err: any) {
+    res.status(500).send('LinkedIn OAuth failed: ' + err.message);
+  }
+});
+
+// ─── OAuth: Reddit ─────────────────────────────────────────────────────────────
+router.get('/oauth/reddit', async (req: any, res) => {
+  let user = req.user;
+  if (!user && req.query.token) {
+    try {
+      const secret = process.env.JWT_SECRET || 'super_secret_change_me';
+      const decoded = jwt.verify(req.query.token as string, secret) as any;
+      user = { id: decoded.sub };
+    } catch (err: any) { return res.status(401).send('OAuth Error: Invalid token'); }
+  }
+  if (!user) return res.status(401).send('OAuth Error: Authentication required');
+  
+  const userId = user.id;
+  const clientId = process.env.REDDIT_CLIENT_ID!;
+  const redirectUri = `${process.env.API_URL || 'http://localhost:3001'}/credentials/oauth/reddit/callback`;
+  const state = Buffer.from(JSON.stringify({ userId })).toString('base64');
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: 'code',
+    state,
+    redirect_uri: redirectUri,
+    duration: 'permanent',
+    scope: 'identity submit read',
+  });
+  res.redirect(`https://www.reddit.com/api/v1/authorize?${params}`);
+});
+
+router.get('/oauth/reddit/callback', async (req, res) => {
+  try {
+    const { code, state } = req.query as { code: string; state: string };
+    const { userId } = JSON.parse(Buffer.from(state, 'base64').toString('utf8'));
+    const redirectUri = `${process.env.API_URL || 'http://localhost:3001'}/credentials/oauth/reddit/callback`;
+
+    const auth = Buffer.from(`${process.env.REDDIT_CLIENT_ID}:${process.env.REDDIT_CLIENT_SECRET}`).toString('base64');
+    const tokenRes = await axios.post('https://www.reddit.com/api/v1/access_token', new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: redirectUri,
+    }), { headers: { Authorization: `Basic ${auth}`, 'User-Agent': 'Aether/1.0.0' } });
+
+    const { access_token } = tokenRes.data;
+    const userRes = await axios.get('https://oauth.reddit.com/api/v1/me', {
+      headers: { Authorization: `Bearer ${access_token}`, 'User-Agent': 'Aether/1.0.0' }
+    });
+
+    const encrypted = encryptCredential({ accessToken: access_token });
+    await db.insert(credentials).values({
+      userId,
+      name: `Reddit – ${userRes.data.name}`,
+      type: 'reddit_oauth',
+      data: encrypted,
+      isValid: true,
+    });
+    res.send('<script>window.close();</script><p>Reddit connected!</p>');
+  } catch (err: any) {
+    res.status(500).send('Reddit OAuth failed: ' + err.message);
   }
 });
 

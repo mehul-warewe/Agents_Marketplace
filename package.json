@@ -6,7 +6,8 @@
     "dev": "pnpm -r run dev",
     "lint": "pnpm -r run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "pnpm -r run check-types"
+    "check-types": "pnpm -r run check-types",
+    "smoke-test": "tsx scripts/smoke-test-nodes.ts"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
