@@ -24,13 +24,31 @@ export const calendarNode: NodeDefinition = {
       type: 'notice',
     },
     { key: 'resource', label: 'Resource Type', type: 'select', options: ['event', 'calendar', 'attendee', 'reminder', 'search'] },
-    {
-      key: 'operation',
-      label: 'Operation',
-      type: 'select',
-      options: ['listEvents', 'getEvent', 'createEvent', 'updateEvent', 'deleteEvent', 'moveEvent', 'addAttendee', 'removeAttendee', 'getAttendee', 'respondToInvite', 'listCalendars', 'getCalendar', 'createCalendar', 'updateCalendar', 'deleteCalendar', 'shareCalendar', 'addReminder', 'removeReminder', 'updateReminder', 'searchEvents', 'findFreeTime', 'listBusyTimes'],
-    },
+    { key: 'operation', label: 'Operation', type: 'select', options: ['listEvents', 'getEvent', 'createEvent', 'updateEvent', 'deleteEvent', 'moveEvent', 'addAttendee', 'removeAttendee', 'getAttendee', 'respondToInvite', 'listCalendars', 'getCalendar', 'createCalendar', 'updateCalendar', 'deleteCalendar', 'shareCalendar', 'addReminder', 'removeReminder', 'updateReminder', 'searchEvents', 'findFreeTime', 'listBusyTimes'], default: 'listEvents' },
   ],
+  operationInputs: {
+    listEvents: [
+      { key: 'calendarId', label: 'Calendar', type: 'string', required: true, default: 'primary', description: 'Calendar to fetch events from', dynamicProvider: 'google', dynamicResource: 'calendar' },
+    ],
+    getEvent: [
+      { key: 'calendarId', label: 'Calendar', type: 'string', required: true, default: 'primary', description: 'Calendar containing the event', dynamicProvider: 'google', dynamicResource: 'calendar' },
+      { key: 'eventId', label: 'Event ID', type: 'string', required: true, description: 'ID of the event to fetch' },
+    ],
+    createEvent: [
+      { key: 'calendarId', label: 'Calendar', type: 'string', required: true, default: 'primary', description: 'Calendar to create event in', dynamicProvider: 'google', dynamicResource: 'calendar' },
+      { key: 'summary', label: 'Summary', type: 'string', required: true, description: 'Event title' },
+      { key: 'start', label: 'Start Time', type: 'string', required: true, description: 'Event start (ISO string)' },
+      { key: 'end', label: 'End Time', type: 'string', required: true, description: 'Event end (ISO string)' },
+    ],
+    deleteEvent: [
+      { key: 'calendarId', label: 'Calendar', type: 'string', required: true, default: 'primary', description: 'Calendar containing the event', dynamicProvider: 'google', dynamicResource: 'calendar' },
+      { key: 'eventId', label: 'Event ID', type: 'string', required: true, description: 'ID of the event to delete' },
+    ],
+    searchEvents: [
+      { key: 'calendarId', label: 'Calendar', type: 'string', required: true, default: 'primary', description: 'Calendar to search in', dynamicProvider: 'google', dynamicResource: 'calendar' },
+      { key: 'query', label: 'Query', type: 'string', required: true, description: 'Search query' },
+    ],
+  },
   operationOutputs: {
     listEvents: [
       { key: 'status', type: 'string' },

@@ -37,21 +37,21 @@ export const slackNode: NodeDefinition = {
       { key: 'text', label: 'Message Text', type: 'string', required: true, description: 'Message content', example: 'Hello!' },
     ],
     sendChannel: [
-      { key: 'channelId', label: 'Channel ID', type: 'string', required: true, description: 'Channel to send message to', example: 'C12345678' },
+      { key: 'channelId', label: 'Channel', type: 'string', required: true, description: 'Channel to send message to', example: 'C12345678', dynamicProvider: 'slack', dynamicResource: 'channel' },
       { key: 'text', label: 'Message Text', type: 'string', required: true, description: 'Message content', example: 'Hello channel!' },
     ],
     sendThread: [
-      { key: 'channelId', label: 'Channel ID', type: 'string', required: true, description: 'Channel containing thread', example: 'C12345678' },
+      { key: 'channelId', label: 'Channel', type: 'string', required: true, description: 'Channel containing thread', example: 'C12345678', dynamicProvider: 'slack', dynamicResource: 'channel' },
       { key: 'threadTs', label: 'Thread Timestamp', type: 'string', required: true, description: 'Message timestamp to reply to', example: '1234567890.123456' },
       { key: 'text', label: 'Reply Text', type: 'string', required: true, description: 'Reply content', example: 'Great point!' },
     ],
     update: [
-      { key: 'channelId', label: 'Channel ID', type: 'string', required: true, description: 'Channel containing message', example: 'C12345678' },
+      { key: 'channelId', label: 'Channel', type: 'string', required: true, description: 'Channel containing message', example: 'C12345678', dynamicProvider: 'slack', dynamicResource: 'channel' },
       { key: 'ts', label: 'Message Timestamp', type: 'string', required: true, description: 'Message timestamp', example: '1234567890.123456' },
       { key: 'text', label: 'New Text', type: 'string', required: true, description: 'Updated message text', example: 'Updated message' },
     ],
     delete: [
-      { key: 'channelId', label: 'Channel ID', type: 'string', required: true, description: 'Channel containing message', example: 'C12345678' },
+      { key: 'channelId', label: 'Channel', type: 'string', required: true, description: 'Channel containing message', example: 'C12345678', dynamicProvider: 'slack', dynamicResource: 'channel' },
       { key: 'ts', label: 'Message Timestamp', type: 'string', required: true, description: 'Message timestamp', example: '1234567890.123456' },
     ],
     get: [
@@ -100,17 +100,17 @@ export const slackNode: NodeDefinition = {
       { key: 'description', label: 'Description', type: 'string', required: true, description: 'Channel description', example: 'Channel for announcements' },
     ],
     add: [
-      { key: 'channelId', label: 'Channel ID', type: 'string', required: true, description: 'Channel containing message', example: 'C12345678' },
+      { key: 'channelId', label: 'Channel', type: 'string', required: true, description: 'Channel containing message', example: 'C12345678', dynamicProvider: 'slack', dynamicResource: 'channel' },
       { key: 'ts', label: 'Message Timestamp', type: 'string', required: true, description: 'Message timestamp', example: '1234567890.123456' },
       { key: 'emoji', label: 'Emoji Name', type: 'string', required: true, description: 'Emoji reaction to add', example: 'thumbsup' },
     ],
     removeReaction: [
-      { key: 'channelId', label: 'Channel ID', type: 'string', required: true, description: 'Channel containing message', example: 'C12345678' },
+      { key: 'channelId', label: 'Channel', type: 'string', required: true, description: 'Channel containing message', example: 'C12345678', dynamicProvider: 'slack', dynamicResource: 'channel' },
       { key: 'ts', label: 'Message Timestamp', type: 'string', required: true, description: 'Message timestamp', example: '1234567890.123456' },
       { key: 'emoji', label: 'Emoji Name', type: 'string', required: true, description: 'Emoji to remove', example: 'thumbsup' },
     ],
     getReactions: [
-      { key: 'channelId', label: 'Channel ID', type: 'string', required: true, description: 'Channel containing message', example: 'C12345678' },
+      { key: 'channelId', label: 'Channel', type: 'string', required: true, description: 'Channel containing message', example: 'C12345678', dynamicProvider: 'slack', dynamicResource: 'channel' },
       { key: 'ts', label: 'Message Timestamp', type: 'string', required: true, description: 'Message timestamp', example: '1234567890.123456' },
     ],
     getUserInfo: [
@@ -144,7 +144,7 @@ export const slackNode: NodeDefinition = {
       { key: 'channelId', label: 'Channel ID', type: 'string', required: true, description: 'Channel to list threads from', example: 'C12345678' },
     ],
     getThread: [
-      { key: 'channelId', label: 'Channel ID', type: 'string', required: true, description: 'Channel containing thread', example: 'C12345678' },
+      { key: 'channelId', label: 'Channel', type: 'string', required: true, description: 'Channel containing thread', example: 'C12345678', dynamicProvider: 'slack', dynamicResource: 'channel' },
       { key: 'ts', label: 'Thread Timestamp', type: 'string', required: true, description: 'Thread message timestamp', example: '1234567890.123456' },
     ],
     markRead: [

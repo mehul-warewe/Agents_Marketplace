@@ -92,6 +92,110 @@ router.get('/proxy/models', passport.authenticate('jwt', { session: false }), as
   }
 });
 
+// ─── Proxy for listing dynamic options (repos, channels, etc) ───────────────
+router.get('/proxy/options', passport.authenticate('jwt', { session: false }), async (req: any, res) => {
+  try {
+    const { credentialId, provider, resource } = req.query;
+    if (!credentialId || !provider || !resource) {
+      return res.status(400).json({ error: 'credentialId, provider, and resource are required' });
+    }
+
+    const rows = await db.select()
+      .from(credentials)
+      .where(and(eq(credentials.id, credentialId as string), eq(credentials.userId, req.user.id)));
+
+    const cred = rows[0];
+    if (!cred) return res.status(404).json({ error: 'Credential not found' });
+
+    const data = decryptCredential(cred.data);
+    const token = data.accessToken || data.botToken || data.access_token;
+
+    if (!token) return res.status(400).json({ error: 'No valid token found in credential' });
+
+    if (provider === 'github' && resource === 'repo') {
+      const r = await axios.get('https://api.github.com/user/repos?per_page=100&sort=updated', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const options = r.data.map((repo: any) => ({
+        id: repo.full_name,
+        label: repo.full_name,
+      }));
+      return res.json(options);
+    }
+
+    if (provider === 'slack' && resource === 'channel') {
+      const r = await axios.get('https://slack.com/api/conversations.list?types=public_channel,private_channel', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!r.data.ok) throw new Error(r.data.error);
+      const options = r.data.channels.map((ch: any) => ({
+        id: ch.id,
+        label: `#${ch.name}`,
+      }));
+      return res.json(options);
+    }
+
+    if (provider === 'notion' && resource === 'database') {
+      const r = await axios.post('https://api.notion.com/v1/search', {
+        filter: { property: 'object', value: 'database' }
+      }, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Notion-Version': '2022-06-28'
+        }
+      });
+      const options = r.data.results.map((db: any) => ({
+        id: db.id,
+        label: db.title?.[0]?.plain_text || 'Untitled Database',
+      }));
+      return res.json(options);
+    }
+
+    if (provider === 'notion' && resource === 'page') {
+      const r = await axios.post('https://api.notion.com/v1/search', {
+        filter: { property: 'object', value: 'page' }
+      }, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Notion-Version': '2022-06-28'
+        }
+      });
+      const options = r.data.results.map((p: any) => ({
+        id: p.id,
+        label: p.properties?.title?.title?.[0]?.plain_text || p.properties?.Name?.title?.[0]?.plain_text || 'Untitled Page',
+      }));
+      return res.json(options);
+    }
+
+    if (provider === 'google' && resource === 'spreadsheet') {
+      const r = await axios.get('https://www.googleapis.com/drive/v3/files?q=mimeType%3D%27application/vnd.google-apps.spreadsheet%27&pageSize=100&fields=files(id,name)', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const options = r.data.files.map((f: any) => ({
+        id: f.id,
+        label: f.name,
+      }));
+      return res.json(options);
+    }
+
+    if (provider === 'google' && resource === 'calendar') {
+      const r = await axios.get('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const options = r.data.items.map((c: any) => ({
+        id: c.id,
+        label: c.summary,
+      }));
+      return res.json(options);
+    }
+
+    res.status(400).json({ error: 'Option fetching not supported for this provider/resource' });
+  } catch (err: any) {
+    console.error('[credentials] Options proxy failed:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to fetch options from provider' });
+  }
+});
+
 // ─── Credential type schemas (defines what fields to collect & display) ────────
 export const CREDENTIAL_SCHEMAS: Record<string, {
   label: string;
@@ -161,7 +265,27 @@ export const CREDENTIAL_SCHEMAS: Record<string, {
   google_oauth: {
     label: 'Google (OAuth)',
     icon: 'google',
-    fields: [], // OAuth-only — no manual fields, handled via callback
+    fields: [],
+  },
+  google_gmail_oauth: {
+    label: 'Gmail (OAuth)',
+    icon: 'google_gmail',
+    fields: [],
+  },
+  google_calendar_oauth: {
+    label: 'Google Calendar (OAuth)',
+    icon: 'google_calendar',
+    fields: [],
+  },
+  google_drive_oauth: {
+    label: 'Google Drive (OAuth)',
+    icon: 'google_drive',
+    fields: [],
+  },
+  google_sheets_oauth: {
+    label: 'Google Sheets (OAuth)',
+    icon: 'google_sheets',
+    fields: [],
   },
   http_bearer: {
     label: 'HTTP (Bearer Token)',
@@ -190,7 +314,7 @@ export const CREDENTIAL_SCHEMAS: Record<string, {
   },
   mongodb_atlas: {
     label: 'MongoDB Atlas',
-    icon: 'database',
+    icon: 'mongodb_atlas',
     fields: [
       { key: 'connectionString', label: 'Connection String', type: 'password', placeholder: 'mongodb+srv://user:pass@cluster.mongodb.net/dbname' },
       { key: 'database', label: 'Database Name', type: 'text', placeholder: 'myDatabase' },
@@ -198,7 +322,7 @@ export const CREDENTIAL_SCHEMAS: Record<string, {
   },
   redis: {
     label: 'Redis',
-    icon: 'database',
+    icon: 'redis',
     fields: [
       { key: 'url', label: 'Redis URL', type: 'password', placeholder: 'redis://default:password@host:port' },
     ],
@@ -229,8 +353,16 @@ export const CREDENTIAL_SCHEMAS: Record<string, {
   },
   supabase_service_role: {
     label: 'Supabase (Service Role Key)',
-    icon: 'database',
+    icon: 'supabase',
     helpUrl: 'https://supabase.com/dashboard/project/_/settings/api',
+    fields: [
+      { key: 'serviceRoleKey', label: 'Service Role Key', type: 'password', placeholder: 'eyJh...' },
+      { key: 'supabaseUrl', label: 'Supabase URL', type: 'text', placeholder: 'https://your-project.supabase.co' },
+    ],
+  },
+  supabase: {
+    label: 'Supabase',
+    icon: 'supabase',
     fields: [
       { key: 'serviceRoleKey', label: 'Service Role Key', type: 'password', placeholder: 'eyJh...' },
       { key: 'supabaseUrl', label: 'Supabase URL', type: 'text', placeholder: 'https://your-project.supabase.co' },
@@ -239,6 +371,11 @@ export const CREDENTIAL_SCHEMAS: Record<string, {
   github_oauth: {
     label: 'GitHub (OAuth)',
     icon: 'github',
+    fields: [], // Handled by OAuth flow
+  },
+  google_youtube_oauth: {
+    label: 'YouTube (OAuth)',
+    icon: 'youtube',
     fields: [], // Handled by OAuth flow
   },
 };

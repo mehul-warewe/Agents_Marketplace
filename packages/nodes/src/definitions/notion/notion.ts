@@ -20,7 +20,7 @@ export const notionNode: NodeDefinition = {
   configFields: [
     { key: 'auth_notice', label: 'Note: You MUST "Add Connection" to each page/database in Notion menu.', type: 'notice' },
     { key: 'platform', label: 'Platform', type: 'hidden', default: 'notion' },
-    { key: 'mcpUrl', label: 'MCP Server URL', type: 'text', placeholder: 'http://localhost:3004/sse', default: 'http://localhost:3004/sse' },
+    { key: 'mcpUrl', label: 'MCP Server URL', type: 'hidden', default: 'http://localhost:3004/sse' },
     { key: 'resource', label: 'Resource Type', type: 'select', options: ['page', 'database', 'block', 'record', 'search'], default: 'page' },
     { key: 'operation', label: 'Operation', type: 'select', options: ['listDatabases', 'getDatabase', 'createDatabase', 'updateDatabase', 'listPages', 'getPage', 'createPage', 'updatePage', 'deletePage', 'archivePage', 'listBlocks', 'getBlock', 'createBlock', 'updateBlock', 'deleteBlock', 'appendBlock', 'listRecords', 'getRecord', 'createRecord', 'updateRecord', 'deleteRecord', 'search', 'filterDatabase', 'sortDatabase'], default: 'search' },
   ],
@@ -28,7 +28,7 @@ export const notionNode: NodeDefinition = {
     listDatabases: [
     ],
     getDatabase: [
-      { key: 'databaseId', label: 'Database ID', type: 'string', required: true, description: 'Database to fetch', example: 'db_123' },
+      { key: 'databaseId', label: 'Database', type: 'string', required: true, description: 'Database to select', example: 'db_123', dynamicProvider: 'notion', dynamicResource: 'database' },
     ],
     createDatabase: [
       { key: 'title', label: 'Title', type: 'string', required: true, description: 'Database name', example: 'Products' },
@@ -42,7 +42,7 @@ export const notionNode: NodeDefinition = {
       { key: 'parentId', label: 'Parent ID', type: 'string', required: false, description: 'Parent page', example: 'page_123' },
     ],
     getPage: [
-      { key: 'pageId', label: 'Page ID', type: 'string', required: true, description: 'Page to fetch', example: 'page_123' },
+      { key: 'pageId', label: 'Page', type: 'string', required: true, description: 'Page to select', example: 'page_123', dynamicProvider: 'notion', dynamicResource: 'page' },
     ],
     createPage: [
       { key: 'parentId', label: 'Parent ID', type: 'string', required: true, description: 'Parent page/database', example: 'page_123' },

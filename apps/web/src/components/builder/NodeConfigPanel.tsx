@@ -429,6 +429,47 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
     if (tool.category === 'Models' || tool.id.includes('llm')) fetchModels();
   }, [values.credentialId, tool.id, tool.category]);
 
+  const [dynamicOptions, setDynamicOptions] = useState<Record<string, { id: string; label: string }[]>>({});
+  const [loadingDynamic, setLoadingDynamic] = useState<Record<string, boolean>>({});
+
+  const activeDynamicFields = useMemo(() => {
+    let fields: any[] = [];
+    if ((tool as any).operationFields) {
+      operations.forEach(op => {
+        if (op.op) fields = [...fields, ...(((tool as any).operationFields as any)[op.op] || [])];
+      });
+    } else {
+      const configFields = tool.configFields || [];
+      const selectedOp = values.operation;
+      const opInputs = (tool as any).operationInputs?.[selectedOp] || [];
+      fields = [...configFields, ...opInputs];
+    }
+    return fields.filter(f => f.dynamicProvider && f.dynamicResource);
+  }, [tool, operations, values.operation]);
+
+  useEffect(() => {
+    const fetchAll = async () => {
+      if (!values.credentialId || activeDynamicFields.length === 0) return;
+      const fetchOne = async (field: any) => {
+        const cacheKey = `${field.key}:${values.credentialId}`;
+        if (dynamicOptions[cacheKey] || loadingDynamic[cacheKey]) return;
+        setLoadingDynamic(prev => ({ ...prev, [cacheKey]: true }));
+        try {
+          const apiModule = await import('@/lib/api');
+          const api = apiModule.default || (apiModule as any).api;
+          const { data } = await api.get(`/credentials/proxy/options?credentialId=${values.credentialId}&provider=${field.dynamicProvider}&resource=${field.dynamicResource}`);
+          setDynamicOptions(prev => ({ ...prev, [cacheKey]: data }));
+        } catch (err) {
+          setDynamicOptions(prev => ({ ...prev, [cacheKey]: [] }));
+        } finally {
+          setLoadingDynamic(prev => ({ ...prev, [cacheKey]: false }));
+        }
+      };
+      await Promise.all(activeDynamicFields.map(fetchOne));
+    };
+    fetchAll();
+  }, [values.credentialId, activeDynamicFields]);
+
   const set = (key: string, val: any) =>
     setValues(prev => ({ ...prev, [key]: val }));
 
@@ -631,7 +672,10 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
                       });
                     }
                     return fields
-                      .filter((f: any) => !['notice', 'hidden', 'operation', 'resource', 'width', 'height'].includes(f.key))
+                      .filter((f: any) => 
+                        !['notice', 'hidden'].includes(f.type) && 
+                        !['operation', 'resource', 'width', 'height', 'mcpUrl', 'platform'].includes(f.key)
+                      )
                       .map(field => {
                         // SPECIAL: For Model nodes, use dynamic options if available
                         let options = field.options || [];
@@ -686,25 +730,30 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
                                   {values[field.key] ? 'Enabled' : 'Disabled'}
                                 </span>
                               </button>
-                            ) : (field.type === 'select' || (field.key === 'model')) ? (
-                                !values.credentialId && field.key === 'model' ? (
+                            ) : (field.type === 'select' || field.key === 'model' || field.dynamicProvider) ? (
+                                !values.credentialId && (field.key === 'model' || field.dynamicProvider) ? (
                                   <button 
                                     onClick={() => setActiveTab('settings')}
                                     className="w-full px-4 py-3 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/20 rounded-xl text-[11px] font-black uppercase text-blue-500 flex items-center justify-center gap-2 transition-all group"
                                   >
                                     <ShieldCheck size={14} className="group-hover:scale-110 transition-transform" />
-                                    Link API Key to Load Models
+                                    Link {field.dynamicProvider ? field.dynamicProvider : 'API Key'} to Load options
                                   </button>
                                 ) : (
                                   <CustomSelect 
                                     value={values[field.key] ?? ''} 
                                     onChange={val => set(field.key, val)} 
-                                    placeholder={isLoadingModels && field.key === 'model' ? "Loading models..." : (field.placeholder || `Select ${field.label.toLowerCase()}...`)}
-                                    options={(options || []).map((o: any) => {
+                                    placeholder={
+                                      (isLoadingModels && field.key === 'model') || loadingDynamic[`${field.key}:${values.credentialId}`]
+                                        ? "Loading options..." 
+                                        : (field.placeholder || `Select ${field.label.toLowerCase()}...`)
+                                    }
+                                    isLoading={(isLoadingModels && field.key === 'model') || loadingDynamic[`${field.key}:${values.credentialId}`]}
+                                    options={(field.dynamicProvider ? (dynamicOptions[`${field.key}:${values.credentialId}`] || []) : options || []).map((o: any) => {
                                       const id = typeof o === 'string' ? o : (o.value || o.id);
                                       const lab = typeof o === 'string' ? o : (o.label || o.name || id);
                                       return { id, label: lab };
-                                    })} 
+                                    })}
                                   />
                                 )
                             ) : (

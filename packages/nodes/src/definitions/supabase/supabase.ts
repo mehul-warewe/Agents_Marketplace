@@ -19,7 +19,7 @@ export const supabaseNode: NodeDefinition = {
   credentialTypes: ['supabase_service_role'],
   configFields: [
     { key: 'platform', label: 'Platform', type: 'hidden', default: 'supabase' },
-    { key: 'mcpUrl', label: 'MCP Server URL', type: 'text', placeholder: 'http://localhost:3005/sse', default: 'http://localhost:3005/sse' },
+    { key: 'mcpUrl', label: 'MCP Server URL', type: 'hidden', default: 'http://localhost:3005/sse' },
     { key: 'resource', label: 'Resource Type', type: 'select', options: ['database', 'auth', 'storage', 'function'], default: 'database' },
     { key: 'operation', label: 'Operation', type: 'select', options: ['listTables', 'getTable', 'createTable', 'updateTable', 'deleteTable', 'listRows', 'getRow', 'createRow', 'updateRow', 'deleteRow', 'bulkInsert', 'bulkUpdate', 'bulkDelete', 'searchRows', 'filterRows', 'sortRows', 'listUsers', 'getUser', 'updateUser', 'deleteUser', 'uploadFile', 'downloadFile', 'listFiles', 'deleteFile', 'select', 'insert', 'update', 'delete', 'rpc'], default: 'listRows' },
   ],

@@ -41,6 +41,8 @@ export interface ConfigField {
   placeholder?: string;
   default?: unknown;
   displayOptions?: unknown;
+  dynamicProvider?: string;
+  dynamicResource?: string;
 }
 
 export type NodeCategory =
@@ -63,6 +65,10 @@ export interface NodeInput {
   required: boolean;
   description: string;
   example?: any;
+  default?: any;
+  placeholder?: string;
+  dynamicProvider?: string;
+  dynamicResource?: string;
 }
 
 export interface NodeOutput {

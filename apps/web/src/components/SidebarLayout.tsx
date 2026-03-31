@@ -85,36 +85,8 @@ export default function SidebarLayout({ children, title }: SidebarLayoutProps) {
 
         {/* Navigation */}
         <nav className="flex-1 flex flex-col gap-1 px-4 py-8 overflow-y-auto no-scrollbar">
-          <p className="px-6 text-[9px] font-black text-muted uppercase tracking-[0.4em] mb-4 opacity-30 italic">Subsystems_Ready</p>
-          
-          <div className="space-y-1 mb-12">
-            {navItems.slice(0, 6).map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={`flex items-center gap-4 px-6 py-3 rounded-xl transition-all duration-500 group relative overflow-hidden ${
-                    isActive
-                      ? 'bg-primary text-primary-foreground shadow-2xl shadow-primary/20 translate-x-1'
-                      : 'text-muted hover:bg-foreground/5 hover:text-foreground'
-                  }`}
-                >
-                  <item.icon size={18} strokeWidth={3} className={isActive ? 'text-primary-foreground' : 'text-muted group-hover:text-foreground transition-colors'} />
-                  <span className="text-xs font-black uppercase tracking-widest">{item.name}</span>
-                  {isActive && (
-                    <div className="absolute right-4 w-1.5 h-1.5 bg-primary-foreground rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" />
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-
-          <p className="px-6 text-[9px] font-black text-muted uppercase tracking-[0.4em] mb-4 opacity-30 italic">Logic_Architect</p>
-          
           <div className="space-y-1">
-            {navItems.slice(6).map((item) => {
+            {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
