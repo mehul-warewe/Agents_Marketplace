@@ -104,6 +104,7 @@ export interface NodeDefinition {
   credentialTypes?: string[];
   runtime?: { timeout: number; retry: number };
   usableAsTool?: boolean;
+  isDecorative?: boolean;
 
   // NEW: Input data contract — what this node expects from upstream (generic)
   requiredInputs?: NodeInput[];

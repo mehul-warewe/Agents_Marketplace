@@ -49,14 +49,13 @@ export const WORKER_NODES: Record<string, ToolHandler> = {
   'linear_mcp':      linearHandler,
   'notion_mcp':      notionHandler,
   'supabase_mcp':    supabaseHandler,
-  'sticky_note':     stickyNoteHandler,
 
   // Legacy / Generic MCP support - Backwards Compatibility
   'platform_mcp_handler': mcpHandler,
 };
 
-// Log warning if any registry keys are missing handlers
-const registryKeys = Array.from(new Set(NODE_REGISTRY.map(n => n.executionKey)));
+// Log warning if any registry keys are missing handlers (skip decorative nodes)
+const registryKeys = Array.from(new Set(NODE_REGISTRY.filter(n => !n.isDecorative).map(n => n.executionKey)));
 const missing = registryKeys.filter(k => !(k in WORKER_NODES));
 if (missing.length > 0) {
   console.warn(`[Node Registry] Warning: Missing handlers for: ${missing.join(', ')}`);

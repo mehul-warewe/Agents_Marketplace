@@ -18,6 +18,7 @@ import ReactFlow, {
   useReactFlow,
   ReactFlowProvider,
   BaseEdge,
+  PanOnScrollMode,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -210,6 +211,15 @@ function AgentBuilderInner() {
   const [pickerState, setPickerState]   = useState<any>(null);
   const [sidebarOpen, setSidebarOpen]   = useState(false);
   const [pickerSearch, setPickerSearch] = useState('');
+  const [ctrlPressed, setCtrlPressed] = useState(false);
+
+  useEffect(() => {
+    const handleDown = (e: KeyboardEvent) => { if (e.key === 'Control' || e.metaKey) setCtrlPressed(true); };
+    const handleUp = (e: KeyboardEvent) => { if (e.key === 'Control' || e.metaKey) setCtrlPressed(false); };
+    window.addEventListener('keydown', handleDown);
+    window.addEventListener('keyup', handleUp);
+    return () => { window.removeEventListener('keydown', handleDown); window.removeEventListener('keyup', handleUp); };
+  }, []);
 
   const { user, isLoading: authLoading } = useAuthStore();
   const { mutateAsync: createAgent, isPending: isCreating } = useCreateAgent();
@@ -505,7 +515,14 @@ function AgentBuilderInner() {
     [setEdges],
   );
 
-  const onNodeClick = useCallback((_: any, node: any) => setSelectedNode(node), []);
+  const onNodeClick = useCallback((_: any, node: any) => {
+    // If it's a sticky note, we don't want to open the side panel
+    if (node.data?.executionKey === 'sticky_note') {
+       setSelectedNode(node);
+       return;
+    }
+    setSelectedNode(node);
+  }, []);
   const onPaneClick = useCallback(() => setSelectedNode(null), []);
 
   // ── Edge right-click delete ────────────────────────────────────────────────
@@ -555,7 +572,10 @@ function AgentBuilderInner() {
         ...n.data, 
         onTrigger: handleTrigger,
         onAddConnect: handleAddConnect,
-        onDelete: deleteSelectedNode
+        onDelete: deleteSelectedNode,
+        onUpdate: (nid: string, newData: any) => {
+          setNodes(ns => ns.map(n => n.id === nid ? { ...n, data: { ...n.data, ...newData } } : n));
+        }
       } 
     })),
     [nodes, handleTrigger, handleAddConnect, deleteSelectedNode],
@@ -664,6 +684,12 @@ function AgentBuilderInner() {
             onEdgeContextMenu={onEdgeContextMenu}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
+            zoomOnScroll={ctrlPressed}
+            panOnScroll={!ctrlPressed}
+            panOnScrollMode={PanOnScrollMode.Free}
+            zoomOnPinch={true}
+            minZoom={0.05}
+            maxZoom={4}
             fitView
             fitViewOptions={{ padding: 1.2 }}
             defaultEdgeOptions={{
@@ -745,7 +771,7 @@ function AgentBuilderInner() {
         {/* Floating Tool Picker removed in favor of Sidebar integration */}
 
         {/* Right: Node inspector */}
-        {selectedNode && (
+        {selectedNode && selectedNode.data?.executionKey !== 'sticky_note' && (
           <NodeConfigPanel
             node={selectedNode}
             onUpdate={updateSelectedNode}

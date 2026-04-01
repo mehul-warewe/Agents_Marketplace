@@ -30,12 +30,14 @@ const openai = new OpenAI({
 
 router.use(passport.authenticate('jwt', { session: false }));
 
-const nativeTools = NODE_REGISTRY.map(n => ({
-    name: n.label,
-    description: n.description,
-    toolId: n.id,
-    executionKey: n.executionKey
-}));
+const nativeTools = NODE_REGISTRY
+    .filter(n => !n.isDecorative)
+    .map(n => ({
+        name: n.label,
+        description: n.description,
+        toolId: n.id,
+        executionKey: n.executionKey
+    }));
 
 async function ensureToolsExist() {
     const existing = await db.select().from(tools);

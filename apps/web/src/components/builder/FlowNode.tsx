@@ -15,6 +15,7 @@ import { getToolByExecutionKey, getToolById } from './toolRegistry';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+import { Palette } from 'lucide-react';
 
 interface FlowNodeProps {
   id: string;
@@ -28,6 +29,7 @@ interface FlowNodeProps {
     onTrigger?: (nodeId: string) => void;
     onDelete?: (nodeId: string) => void;
     onAddConnect?: (params: any) => void;
+    onUpdate?: (id: string, newData: any) => void;
     config?: Record<string, any>;
   };
   selected?: boolean;
@@ -47,6 +49,9 @@ const MemoizedMarkdown = React.memo(({ content }: { content: string }) => {
 });
 
 export default function FlowNode({ id, data, selected }: FlowNodeProps) {
+  const [isEditing, setIsEditing] = React.useState(false);
+  const textAreaRef = React.useRef<HTMLTextAreaElement>(null);
+
   const tool = useMemo(() => {
     return data.toolId 
       ? getToolById(data.toolId) 
@@ -71,23 +76,67 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
 
   // ─── Sticky Note Variant ───────────────────────────────────────────────────
   if (isStickyNote) {
-    const content = data.config?.content || "Click to edit note...";
+    const content = data.config?.content || "";
     const noteColor = data.config?.noteColor || '#FFD233';
+
     return (
-      <div className="group relative">
-        <NodeResizer minWidth={150} minHeight={100} isVisible={selected} />
+      <div className="group relative w-full h-full">
+        <NodeResizer 
+          minWidth={100} 
+          minHeight={50} 
+          isVisible={true}
+          lineStyle={{ border: '16px solid transparent' }}
+          handleStyle={{ width: 32, height: 32, background: 'transparent', border: 'none', borderRadius: '50%' }}
+        />
+
+        {/* Note Toolbar (Mirroring standard node toolbar style) */}
+        <div className="absolute -top-12 left-1/2 -translate-x-1/2 hidden group-hover:flex items-center gap-3 px-3 py-1.5 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-[100] animate-in fade-in zoom-in-95 duration-200 before:content-[''] before:absolute before:top-full before:left-0 before:right-0 before:h-4 before:bg-transparent">
+          <div className="relative group/color p-1.5 cursor-pointer">
+            <Palette size={14} className="text-white/50 hover:text-white transition-colors" />
+            <input 
+              type="color" 
+              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              value={noteColor}
+              onChange={(e) => data.onUpdate?.(id, { config: { ...data.config, noteColor: e.target.value } })}
+            />
+          </div>
+          <button onClick={onDeleteClick} className="p-1.5 text-white/50 hover:text-red-400 transition-colors">
+            <Trash2 size={14} />
+          </button>
+        </div>
+
         <div 
           style={{ backgroundColor: noteColor }}
+          onDoubleClick={() => setIsEditing(true)}
           className={`
-            w-full h-full p-6 rounded-3xl shadow-xl transition-all duration-300
-            ${selected ? 'ring-4 ring-blue-500/30' : 'opacity-90 hover:opacity-100'}
-            text-zinc-900 overflow-hidden
+            w-full h-full p-6 rounded-xl shadow-2xl transition-all duration-300
+            ${selected ? 'opacity-100 ring-1 ring-black/5' : 'opacity-90 hover:opacity-100'}
+            text-zinc-900 flex flex-col cursor-text overflow-hidden
           `}
         >
-          <div className="text-[13px] font-medium leading-relaxed opacity-90 h-full overflow-hidden">
-            <MemoizedMarkdown content={content} />
+          <div className="flex-1 overflow-hidden">
+            {isEditing ? (
+              <textarea
+                ref={textAreaRef}
+                autoFocus
+                className="w-full h-full bg-transparent border-none outline-none resize-none text-[13px] font-medium leading-relaxed overflow-hidden"
+                value={content}
+                onChange={(e) => data.onUpdate?.(id, { config: { ...data.config, content: e.target.value } })}
+                onBlur={() => setIsEditing(false)}
+                placeholder="Type your notes here..."
+              />
+            ) : (
+              <div className="h-full overflow-hidden">
+                <MemoizedMarkdown content={content || "*Double click to add instructions*"} />
+              </div>
+            )}
           </div>
-          <button onClick={onDeleteClick} className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 shadow-lg text-[10px]">✕</button>
+          
+          {!isEditing && (
+             <div className="absolute top-4 right-6 opacity-20 pointer-events-none">
+                <StickyIcon size={16} />
+             </div>
+          )}
         </div>
       </div>
     );
