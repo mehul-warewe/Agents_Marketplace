@@ -4,12 +4,16 @@ import type { ToolHandler, ToolContext } from '../../types.js';
 export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
   const { config, render, credentials } = ctx;
   const operation = config.operation;
-  const key = credentials?.serviceRoleKey || credentials?.accessToken || credentials?.apiKey;
+  
+  const key = credentials?.serviceRoleKey;
+  const rawBaseUrl = credentials?.supabaseUrl;
 
-  if (!key) throw new Error('Supabase node requires a valid service role key.');
+  if (!key || !rawBaseUrl) {
+    throw new Error('Supabase node requires a valid Supabase URL and Service Role Key in credentials.');
+  }
 
-  const baseUrl = credentials?.supabaseUrl || 
-                  (credentials?.projectRef ? `https://${credentials.projectRef}.supabase.co` : 'https://your-project.supabase.co');
+  // Ensure baseUrl doesn't have trailing slash
+  const baseUrl = rawBaseUrl.replace(/\/$/, '');
 
   const headers = {
     'Authorization': `Bearer ${key}`,
@@ -20,119 +24,145 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
 
   try {
     let result: any;
+    
+    // Helper for JSON parsing
+    const safeParse = (val: any, defaultVal: any = {}) => {
+      if (!val) return defaultVal;
+      if (typeof val !== 'string') return val;
+      try {
+        return JSON.parse(val);
+      } catch {
+        return defaultVal;
+      }
+    };
+
     switch (operation) {
       case 'listTables': {
-        const res = await axios.get(`${baseUrl}/rest/v1/?apikey=${key}`, { headers });
-        result = { tables: res.data };
+        // PostgREST root returns OpenAPI spec which contains the schema
+        const res = await axios.get(`${baseUrl}/rest/v1/`, { headers });
+        const definitions = res.data.definitions || {};
+        const tables = Object.keys(definitions).map(name => ({
+          name,
+          schema: definitions[name]
+        }));
+        result = { tables, count: tables.length };
         break;
       }
 
       case 'getTable': {
-        const tableName = render(config.tableName);
-        const res = await axios.get(`${baseUrl}/rest/v1/${tableName}?limit=1&apikey=${key}`, { headers });
-        result = { table: { name: tableName, rowCount: res.data.length } };
+        const tableName = render(config.tableName || config.table);
+        const res = await axios.get(`${baseUrl}/rest/v1/`, { headers });
+        const definition = res.data.definitions?.[tableName];
+        if (!definition) throw new Error(`Table "${tableName}" not found in schema.`);
+        result = { table: tableName, schema: definition };
         break;
       }
 
-      case 'createTable': {
-        const tableName = render(config.tableName);
-        result = { tableName, created: true };
-        break;
-      }
-
-      case 'updateTable': {
-        const tableName = render(config.tableName);
-        result = { tableName, updated: true };
-        break;
-      }
-
+      case 'createTable':
+      case 'updateTable':
       case 'deleteTable': {
-        const tableName = render(config.tableName);
-        result = { tableName, deleted: true };
-        break;
+        throw new Error(`Operation "${operation}" is not supported via the REST API. Please use the Supabase SQL editor or Management API.`);
       }
 
       case 'listRows': {
         const table = render(config.table);
         const limit = parseInt(render(config.limit || '100'), 10) || 100;
         const offset = parseInt(render(config.offset || '0'), 10) || 0;
-        const res = await axios.get(`${baseUrl}/rest/v1/${table}?limit=${limit}&offset=${offset}&apikey=${key}`, { headers });
-        result = { rows: res.data, rowCount: res.data.length };
+        const res = await axios.get(`${baseUrl}/rest/v1/${table}`, { 
+          headers,
+          params: { limit, offset }
+        });
+        result = { rows: res.data, count: res.data.length };
         break;
       }
 
       case 'getRow': {
         const table = render(config.table);
         const id = render(config.id);
-        const res = await axios.get(`${baseUrl}/rest/v1/${table}?id=eq.${id}&apikey=${key}`, { headers });
-        result = { row: res.data[0] };
+        const res = await axios.get(`${baseUrl}/rest/v1/${table}`, { 
+          headers,
+          params: { id: `eq.${id}` }
+        });
+        result = { row: res.data[0] || null };
         break;
       }
 
       case 'createRow': {
         const table = render(config.table);
-        const valuesStr = render(config.values);
-        let values: any = {};
-        try {
-          values = JSON.parse(valuesStr);
-        } catch {
-          values = { data: valuesStr };
-        }
-        const res = await axios.post(`${baseUrl}/rest/v1/${table}?apikey=${key}`, values, { headers });
-        result = { row: res.data?.[0] };
+        const values = safeParse(render(config.values));
+        const res = await axios.post(`${baseUrl}/rest/v1/${table}`, values, { headers });
+        result = { row: res.data?.[0], data: res.data };
         break;
       }
 
       case 'updateRow': {
         const table = render(config.table);
         const id = render(config.id);
-        const valuesStr = render(config.values);
-        let values: any = {};
-        try {
-          values = JSON.parse(valuesStr);
-        } catch {
-          values = { data: valuesStr };
-        }
-        const res = await axios.patch(`${baseUrl}/rest/v1/${table}?id=eq.${id}&apikey=${key}`, values, { headers });
-        result = { row: res.data?.[0] };
+        const values = safeParse(render(config.values));
+        const res = await axios.patch(`${baseUrl}/rest/v1/${table}`, values, { 
+          headers,
+          params: { id: `eq.${id}` }
+        });
+        result = { row: res.data?.[0], data: res.data };
         break;
       }
 
       case 'deleteRow': {
         const table = render(config.table);
         const id = render(config.id);
-        await axios.delete(`${baseUrl}/rest/v1/${table}?id=eq.${id}&apikey=${key}`, { headers });
-        result = { deleted: true };
+        await axios.delete(`${baseUrl}/rest/v1/${table}`, { 
+          headers,
+          params: { id: `eq.${id}` }
+        });
+        result = { success: true, id };
         break;
       }
 
       case 'bulkInsert': {
         const table = render(config.table);
-        const rowsStr = render(config.rows);
-        let rows: any[] = [];
-        try {
-          rows = JSON.parse(rowsStr);
-        } catch {
-          rows = [{ data: rowsStr }];
-        }
-        const res = await axios.post(`${baseUrl}/rest/v1/${table}?apikey=${key}`, rows, { headers });
-        result = { inserted: rows.length, rows: res.data };
+        const rows = safeParse(render(config.rows || config.values), []);
+        const res = await axios.post(`${baseUrl}/rest/v1/${table}`, rows, { headers });
+        result = { count: res.data?.length || 0, rows: res.data };
         break;
       }
 
       case 'bulkUpdate': {
+        // Bulk update in PostgREST is: PATCH /table?id=in.(1,2,3) with one set of values
+        // If they want different values for different rows, we'd need a loop or some clever SQL.
+        // But the common "bulk update" in these tools is usually "update these rows with these same values" 
+        // OR an array of primary keys.
         const table = render(config.table);
-        result = { updated: true };
+        const updates = safeParse(render(config.updates));
+        // Expecting updates: { where: { id: [1,2,3] }, set: { ... } }
+        const filter = updates.where || {};
+        const values = updates.set || {};
+        
+        let params: any = {};
+        Object.entries(filter).forEach(([k, v]) => {
+          if (Array.isArray(v)) {
+            params[k] = `in.(${v.join(',')})`;
+          } else {
+            params[k] = `eq.${v}`;
+          }
+        });
+
+        const res = await axios.patch(`${baseUrl}/rest/v1/${table}`, values, { headers, params });
+        result = { count: res.data?.length || 0, data: res.data };
         break;
       }
 
       case 'bulkDelete': {
         const table = render(config.table);
-        const ids = Array.isArray(config.ids) ? config.ids : JSON.parse(render(config.ids || '[]'));
-        for (const id of ids) {
-          await axios.delete(`${baseUrl}/rest/v1/${table}?id=eq.${id}&apikey=${key}`, { headers });
+        const ids = safeParse(render(config.ids), []);
+        if (ids.length === 0) {
+          result = { count: 0, message: 'No IDs provided' };
+        } else {
+          await axios.delete(`${baseUrl}/rest/v1/${table}`, { 
+            headers,
+            params: { id: `in.(${ids.join(',')})` }
+          });
+          result = { count: ids.length, success: true };
         }
-        result = { deleted: ids.length };
         break;
       }
 
@@ -140,25 +170,23 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
         const table = render(config.table);
         const column = render(config.column);
         const query = render(config.query);
-        const res = await axios.get(`${baseUrl}/rest/v1/${table}?${column}=ilike.%${query}%&apikey=${key}`, { headers });
-        result = { rows: res.data, rowCount: res.data.length };
+        const res = await axios.get(`${baseUrl}/rest/v1/${table}`, { 
+          headers,
+          params: { [column]: `ilike.%${query}%` }
+        });
+        result = { rows: res.data, count: res.data.length };
         break;
       }
 
       case 'filterRows': {
         const table = render(config.table);
-        const filterStr = render(config.filter);
-        let filter: any = {};
-        try {
-          filter = JSON.parse(filterStr);
-        } catch {
-          filter = { status: 'active' };
-        }
-        const filterQuery = Object.entries(filter)
-          .map(([k, v]) => `${k}=eq.${v}`)
-          .join('&');
-        const res = await axios.get(`${baseUrl}/rest/v1/${table}?${filterQuery}&apikey=${key}`, { headers });
-        result = { rows: res.data };
+        const filter = safeParse(render(config.filter));
+        let params: any = {};
+        Object.entries(filter).forEach(([k, v]) => {
+          params[k] = `eq.${v}`;
+        });
+        const res = await axios.get(`${baseUrl}/rest/v1/${table}`, { headers, params });
+        result = { rows: res.data, count: res.data.length };
         break;
       }
 
@@ -166,20 +194,23 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
         const table = render(config.table);
         const column = render(config.column);
         const direction = render(config.direction || 'asc');
-        const res = await axios.get(`${baseUrl}/rest/v1/${table}?order=${column}.${direction}&apikey=${key}`, { headers });
-        result = { rows: res.data };
+        const res = await axios.get(`${baseUrl}/rest/v1/${table}`, { 
+          headers,
+          params: { order: `${column}.${direction}` }
+        });
+        result = { rows: res.data, count: res.data.length };
         break;
       }
 
       case 'listUsers': {
-        const res = await axios.get(`${baseUrl}/auth/v1/admin/users?apikey=${key}`, { headers });
-        result = { users: res.data.users };
+        const res = await axios.get(`${baseUrl}/auth/v1/admin/users`, { headers });
+        result = { users: res.data.users, count: res.data.users?.length || 0 };
         break;
       }
 
       case 'getUser': {
         const userId = render(config.userId);
-        const res = await axios.get(`${baseUrl}/auth/v1/admin/users/${userId}?apikey=${key}`, { headers });
+        const res = await axios.get(`${baseUrl}/auth/v1/admin/users/${userId}`, { headers });
         result = { user: res.data };
         break;
       }
@@ -189,137 +220,114 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
         const payload: any = {};
         if (config.email) payload.email = render(config.email);
         if (config.metadata) {
-          const metaStr = render(config.metadata);
-          try {
-            payload.user_metadata = JSON.parse(metaStr);
-          } catch {
-            payload.user_metadata = { data: metaStr };
-          }
+          payload.user_metadata = safeParse(render(config.metadata));
         }
-        const res = await axios.put(`${baseUrl}/auth/v1/admin/users/${userId}?apikey=${key}`, payload, { headers });
+        const res = await axios.put(`${baseUrl}/auth/v1/admin/users/${userId}`, payload, { headers });
         result = { user: res.data };
         break;
       }
 
       case 'deleteUser': {
         const userId = render(config.userId);
-        await axios.delete(`${baseUrl}/auth/v1/admin/users/${userId}?apikey=${key}`, { headers });
-        result = { deleted: true };
+        await axios.delete(`${baseUrl}/auth/v1/admin/users/${userId}`, { headers });
+        result = { success: true };
         break;
       }
 
       case 'uploadFile': {
         const bucket = render(config.bucket);
         const path = render(config.path);
-        const file = render(config.file);
-        const res = await axios.post(`${baseUrl}/storage/v1/object/${bucket}/${path}?apikey=${key}`, file, { headers });
-        result = { path, bucket };
+        const fileContent = render(config.file);
+        // Supabase storage expects the file in the body. 
+        // If it's a URL, we might need more logic, but for simple agents, it might be raw data.
+        const res = await axios.post(`${baseUrl}/storage/v1/object/${bucket}/${path}`, fileContent, { 
+          headers: {
+            ...headers,
+            'Content-Type': 'application/octet-stream' // generic binary
+          }
+        });
+        result = { path, bucket, data: res.data };
         break;
       }
 
       case 'downloadFile': {
         const bucket = render(config.bucket);
         const path = render(config.path);
-        const res = await axios.get(`${baseUrl}/storage/v1/object/${bucket}/${path}?apikey=${key}`, { headers });
-        result = { file: res.data };
+        const res = await axios.get(`${baseUrl}/storage/v1/object/${bucket}/${path}`, { 
+          headers,
+          responseType: 'arraybuffer'
+        });
+        result = { file: res.data.toString('base64'), size: res.data.length };
         break;
       }
 
       case 'listFiles': {
         const bucket = render(config.bucket);
         const prefix = render(config.prefix || '');
-        const res = await axios.get(`${baseUrl}/storage/v1/object/list/${bucket}${prefix ? `/${prefix}` : ''}?apikey=${key}`, { headers });
-        result = { files: res.data.name || [] };
+        const res = await axios.post(`${baseUrl}/storage/v1/object/list/${bucket}`, { prefix }, { headers });
+        result = { files: res.data, count: res.data.length };
         break;
       }
 
       case 'deleteFile': {
         const bucket = render(config.bucket);
         const path = render(config.path);
-        await axios.delete(`${baseUrl}/storage/v1/object/${bucket}/${path}?apikey=${key}`, { headers });
-        result = { deleted: true };
+        await axios.delete(`${baseUrl}/storage/v1/object/${bucket}/${path}`, { headers });
+        result = { success: true };
         break;
       }
 
       case 'select': {
         const table = render(config.table);
         const select = render(config.select || '*');
-        const filterStr = render(config.filter || '');
-        let query = `${baseUrl}/rest/v1/${table}?select=${select}`;
-        if (filterStr) {
-          const filters = JSON.parse(filterStr);
-          Object.entries(filters).forEach(([k, v]) => {
-            query += `&${k}=eq.${v}`;
-          });
-        }
-        const res = await axios.get(query + `&apikey=${key}`, { headers });
-        result = { data: res.data };
+        const filter = safeParse(render(config.filter || '{}'));
+        let params: any = { select };
+        Object.entries(filter).forEach(([k, v]) => {
+          params[k] = `eq.${v}`;
+        });
+        const res = await axios.get(`${baseUrl}/rest/v1/${table}`, { headers, params });
+        result = { data: res.data, count: res.data.length };
         break;
       }
 
       case 'insert': {
         const table = render(config.table);
-        const valuesStr = render(config.values);
-        let values: any = {};
-        try {
-          values = JSON.parse(valuesStr);
-        } catch {
-          values = { data: valuesStr };
-        }
-        const res = await axios.post(`${baseUrl}/rest/v1/${table}?apikey=${key}`, values, { headers });
-        result = { data: res.data };
+        const values = safeParse(render(config.values));
+        const res = await axios.post(`${baseUrl}/rest/v1/${table}`, values, { headers });
+        result = { data: res.data, count: res.data?.length || 0 };
         break;
       }
 
       case 'update': {
         const table = render(config.table);
-        const valuesStr = render(config.values);
-        const filterStr = render(config.filter);
-        let values: any = {};
-        let filter: any = {};
-        try {
-          values = JSON.parse(valuesStr);
-          filter = JSON.parse(filterStr);
-        } catch {
-          values = { data: valuesStr };
-          filter = { id: 1 };
-        }
-        const filterQuery = Object.entries(filter)
-          .map(([k, v]) => `${k}=eq.${v}`)
-          .join('&');
-        const res = await axios.patch(`${baseUrl}/rest/v1/${table}?${filterQuery}&apikey=${key}`, values, { headers });
-        result = { data: res.data };
+        const values = safeParse(render(config.values));
+        const filter = safeParse(render(config.filter));
+        let params: any = {};
+        Object.entries(filter).forEach(([k, v]) => {
+          params[k] = `eq.${v}`;
+        });
+        const res = await axios.patch(`${baseUrl}/rest/v1/${table}`, values, { headers, params });
+        result = { data: res.data, count: res.data?.length || 0 };
         break;
       }
 
       case 'delete': {
         const table = render(config.table);
-        const filterStr = render(config.filter);
-        let filter: any = {};
-        try {
-          filter = JSON.parse(filterStr);
-        } catch {
-          filter = { id: 1 };
-        }
-        const filterQuery = Object.entries(filter)
-          .map(([k, v]) => `${k}=eq.${v}`)
-          .join('&');
-        await axios.delete(`${baseUrl}/rest/v1/${table}?${filterQuery}&apikey=${key}`, { headers });
+        const filter = safeParse(render(config.filter));
+        let params: any = {};
+        Object.entries(filter).forEach(([k, v]) => {
+          params[k] = `eq.${v}`;
+        });
+        await axios.delete(`${baseUrl}/rest/v1/${table}`, { headers, params });
         result = { success: true };
         break;
       }
 
       case 'rpc': {
         const functionName = render(config.function);
-        const paramsStr = render(config.params || '{}');
-        let params: any = {};
-        try {
-          params = JSON.parse(paramsStr);
-        } catch {
-          params = {};
-        }
-        const res = await axios.post(`${baseUrl}/rest/v1/rpc/${functionName}?apikey=${key}`, params, { headers });
-        result = { result: res.data };
+        const params = safeParse(render(config.params || '{}'));
+        const res = await axios.post(`${baseUrl}/rest/v1/rpc/${functionName}`, params, { headers });
+        result = { data: res.data };
         break;
       }
       default:
@@ -328,7 +336,9 @@ export const supabaseHandler: ToolHandler = async (ctx: ToolContext) => {
 
     return { status: 'success', data: result };
   } catch (err: any) {
-    const msg = err.response?.data?.message || err.message;
-    throw new Error(`[Supabase Error] ${msg}`);
+    const errorData = err.response?.data;
+    const msg = errorData?.message || errorData?.error_description || err.message;
+    const details = errorData?.details || '';
+    throw new Error(`[Supabase Error] ${msg}${details ? `: ${details}` : ''}`);
   }
 };

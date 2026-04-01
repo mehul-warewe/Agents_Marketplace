@@ -27,18 +27,18 @@ export const supabaseNode: NodeDefinition = {
     listTables: [
     ],
     getTable: [
-      { key: 'tableName', label: 'Table Name', type: 'string', required: true, description: 'Table to get schema', example: 'users' },
+      { key: 'table', label: 'Table Name', type: 'string', required: true, description: 'Table to get schema', example: 'users' },
     ],
     createTable: [
-      { key: 'tableName', label: 'Table Name', type: 'string', required: true, description: 'New table name', example: 'products' },
+      { key: 'table', label: 'Table Name', type: 'string', required: true, description: 'New table name', example: 'products' },
       { key: 'schema', label: 'Schema (JSON)', type: 'string', required: true, description: 'Column definitions', example: '{"id":"uuid","name":"text"}' },
     ],
     updateTable: [
-      { key: 'tableName', label: 'Table Name', type: 'string', required: true, description: 'Table to update', example: 'users' },
+      { key: 'table', label: 'Table Name', type: 'string', required: true, description: 'Table to update', example: 'users' },
       { key: 'schema', label: 'Schema (JSON)', type: 'string', required: true, description: 'Updated schema', example: '{"newColumn":"text"}' },
     ],
     deleteTable: [
-      { key: 'tableName', label: 'Table Name', type: 'string', required: true, description: 'Table to delete', example: 'users' },
+      { key: 'table', label: 'Table Name', type: 'string', required: true, description: 'Table to delete', example: 'users' },
     ],
     listRows: [
       { key: 'table', label: 'Table', type: 'string', required: true, description: 'Table name', example: 'users' },
@@ -68,11 +68,11 @@ export const supabaseNode: NodeDefinition = {
     ],
     bulkUpdate: [
       { key: 'table', label: 'Table', type: 'string', required: true, description: 'Table name', example: 'users' },
-      { key: 'updates', label: 'Updates (JSON)', type: 'string', required: true, description: 'Update spec', example: '{"where":{"id":1},"set":{"name":"Updated"}}' },
+      { key: 'updates', label: 'Updates (JSON)', type: 'string', required: true, description: 'Update spec: {"where":{"id":[1,2]},"set":{"status":"active"}}', example: '{"where":{"id":[1,2]},"set":{"status":"active"}}' },
     ],
     bulkDelete: [
       { key: 'table', label: 'Table', type: 'string', required: true, description: 'Table name', example: 'users' },
-      { key: 'ids', label: 'IDs', type: 'array', required: true, description: 'IDs to delete', example: ['1', '2', '3'] },
+      { key: 'ids', label: 'IDs (JSON Array)', type: 'string', required: true, description: 'IDs to delete', example: '[1, 2, 3]' },
     ],
     searchRows: [
       { key: 'table', label: 'Table', type: 'string', required: true, description: 'Table name', example: 'users' },
@@ -104,7 +104,7 @@ export const supabaseNode: NodeDefinition = {
     uploadFile: [
       { key: 'bucket', label: 'Bucket', type: 'string', required: true, description: 'Storage bucket', example: 'avatars' },
       { key: 'path', label: 'File Path', type: 'string', required: true, description: 'File path in bucket', example: 'user_123/avatar.png' },
-      { key: 'file', label: 'File URL or Data', type: 'string', required: true, description: 'File content or URL', example: 'https://...' },
+      { key: 'file', label: 'File Content', type: 'string', required: true, description: 'Raw file content', example: '...' },
     ],
     downloadFile: [
       { key: 'bucket', label: 'Bucket', type: 'string', required: true, description: 'Storage bucket', example: 'avatars' },
@@ -121,95 +121,102 @@ export const supabaseNode: NodeDefinition = {
     select: [
       { key: 'table', label: 'Table', type: 'string', required: true, description: 'Table name', example: 'users' },
       { key: 'select', label: 'Columns', type: 'string', required: false, description: 'Column list', example: '*' },
-      { key: 'filter', label: 'Filter', type: 'string', required: false, description: 'Filter conditions', example: '{}' },
+      { key: 'filter', label: 'Filter (JSON)', type: 'string', required: false, description: 'Filter conditions', example: '{"id":1}' },
     ],
     insert: [
       { key: 'table', label: 'Table', type: 'string', required: true, description: 'Table name', example: 'users' },
-      { key: 'values', label: 'Values', type: 'string', required: true, description: 'Row data', example: '{"name":"John"}' },
+      { key: 'values', label: 'Values (JSON)', type: 'string', required: true, description: 'Row data', example: '{"name":"John"}' },
     ],
     update: [
       { key: 'table', label: 'Table', type: 'string', required: true, description: 'Table name', example: 'users' },
-      { key: 'values', label: 'Values', type: 'string', required: true, description: 'Updated data', example: '{"name":"Jane"}' },
-      { key: 'filter', label: 'Filter', type: 'string', required: true, description: 'Where condition', example: '{"id":1}' },
+      { key: 'values', label: 'Values (JSON)', type: 'string', required: true, description: 'Updated data', example: '{"name":"Jane"}' },
+      { key: 'filter', label: 'Filter (JSON)', type: 'string', required: true, description: 'Where condition', example: '{"id":1}' },
     ],
     delete: [
       { key: 'table', label: 'Table', type: 'string', required: true, description: 'Table name', example: 'users' },
-      { key: 'filter', label: 'Filter', type: 'string', required: true, description: 'Where condition', example: '{"id":1}' },
+      { key: 'filter', label: 'Filter (JSON)', type: 'string', required: true, description: 'Where condition', example: '{"id":1}' },
     ],
     rpc: [
       { key: 'function', label: 'Function', type: 'string', required: true, description: 'Function name', example: 'calculate' },
-      { key: 'params', label: 'Parameters', type: 'string', required: false, description: 'Function args', example: '{}' },
+      { key: 'params', label: 'Parameters (JSON)', type: 'string', required: false, description: 'Function args', example: '{}' },
     ],
   },
   operationOutputs: {
     listTables: [
       { key: 'status', type: 'string' },
-      { key: 'data[0].name', type: 'string' },
+      { key: 'data.tables[0].name', type: 'string' },
+      { key: 'data.count', type: 'number' },
     ],
     getTable: [
       { key: 'status', type: 'string' },
-      { key: 'data.name', type: 'string' },
-      { key: 'data.columns', type: 'array' },
+      { key: 'data.table', type: 'string' },
+      { key: 'data.schema', type: 'object' },
     ],
-    createTable: [
-      { key: 'status', type: 'string' },
-    ],
+    createTable: [ { key: 'status', type: 'string' } ],
+    updateTable: [ { key: 'status', type: 'string' } ],
+    deleteTable: [ { key: 'status', type: 'string' } ],
     listRows: [
       { key: 'status', type: 'string' },
-      { key: 'data[0]', type: 'object' },
-      { key: 'data[0].id', type: 'string' },
+      { key: 'data.rows[0]', type: 'object' },
+      { key: 'data.count', type: 'number' },
     ],
     getRow: [
       { key: 'status', type: 'string' },
-      { key: 'data', type: 'object' },
-      { key: 'data.id', type: 'string' },
+      { key: 'data.row', type: 'object' },
     ],
     createRow: [
       { key: 'status', type: 'string' },
-      { key: 'data[0].id', type: 'string' },
+      { key: 'data.row', type: 'object' },
     ],
     updateRow: [
       { key: 'status', type: 'string' },
-      { key: 'data[0].id', type: 'string' },
+      { key: 'data.row', type: 'object' },
     ],
     deleteRow: [
       { key: 'status', type: 'string' },
     ],
     bulkInsert: [
       { key: 'status', type: 'string' },
-      { key: 'data[0].id', type: 'string' },
+      { key: 'data.rows[0]', type: 'object' },
+      { key: 'data.count', type: 'number' },
     ],
     bulkUpdate: [
       { key: 'status', type: 'string' },
+      { key: 'data.count', type: 'number' },
     ],
     bulkDelete: [
       { key: 'status', type: 'string' },
+      { key: 'data.count', type: 'number' },
     ],
     searchRows: [
       { key: 'status', type: 'string' },
-      { key: 'data[0].id', type: 'string' },
+      { key: 'data.rows[0]', type: 'object' },
+      { key: 'data.count', type: 'number' },
     ],
     filterRows: [
       { key: 'status', type: 'string' },
-      { key: 'data[0].id', type: 'string' },
+      { key: 'data.rows[0]', type: 'object' },
+      { key: 'data.count', type: 'number' },
     ],
     sortRows: [
       { key: 'status', type: 'string' },
-      { key: 'data[0].id', type: 'string' },
+      { key: 'data.rows[0]', type: 'object' },
+      { key: 'data.count', type: 'number' },
     ],
     listUsers: [
       { key: 'status', type: 'string' },
       { key: 'data.users[0].id', type: 'string' },
       { key: 'data.users[0].email', type: 'string' },
+      { key: 'data.count', type: 'number' },
     ],
     getUser: [
       { key: 'status', type: 'string' },
-      { key: 'data.id', type: 'string' },
-      { key: 'data.email', type: 'string' },
+      { key: 'data.user.id', type: 'string' },
+      { key: 'data.user.email', type: 'string' },
     ],
     updateUser: [
       { key: 'status', type: 'string' },
-      { key: 'data.id', type: 'string' },
+      { key: 'data.user.id', type: 'string' },
     ],
     deleteUser: [
       { key: 'status', type: 'string' },
@@ -217,36 +224,41 @@ export const supabaseNode: NodeDefinition = {
     uploadFile: [
       { key: 'status', type: 'string' },
       { key: 'data.path', type: 'string' },
+      { key: 'data.bucket', type: 'string' },
     ],
     downloadFile: [
       { key: 'status', type: 'string' },
-      { key: 'data', type: 'any' },
+      { key: 'data.file', type: 'string' },
+      { key: 'data.size', type: 'number' },
     ],
     listFiles: [
       { key: 'status', type: 'string' },
-      { key: 'data[0].name', type: 'string' },
+      { key: 'data.files[0].name', type: 'string' },
+      { key: 'data.count', type: 'number' },
     ],
     deleteFile: [
       { key: 'status', type: 'string' },
     ],
     select: [
       { key: 'status', type: 'string' },
-      { key: 'data[0]', type: 'object' },
-      { key: 'data[0].id', type: 'string' },
+      { key: 'data.data[0]', type: 'object' },
+      { key: 'data.count', type: 'number' },
     ],
     insert: [
       { key: 'status', type: 'string' },
-      { key: 'data[0].id', type: 'string' },
+      { key: 'data.data[0]', type: 'object' },
+      { key: 'data.count', type: 'number' },
     ],
     update: [
       { key: 'status', type: 'string' },
+      { key: 'data.count', type: 'number' },
     ],
     delete: [
       { key: 'status', type: 'string' },
     ],
     rpc: [
       { key: 'status', type: 'string' },
-      { key: 'data', type: 'any' },
+      { key: 'data.data', type: 'any' },
     ],
   },
   requiredInputs: [

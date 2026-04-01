@@ -19,6 +19,18 @@ const resolve4Public   = promisify(publicResolver.resolve4.bind(publicResolver))
 const resolveSrvLocal = promisify(dns.resolveSrv);
 const resolveTxtLocal = promisify(dns.resolveTxt);
 
+/** Sanitize sensitive info from strings (passwords in URLs, etc) */
+function sanitize(input: any): any {
+  if (!input) return input;
+  if (typeof input !== 'string') {
+    try {
+      const str = typeof input === 'object' ? JSON.stringify(input) : String(input);
+      return str.replace(/:[^:@/]+@/g, ':****@');
+    } catch { return '[Circular or Non-Serializable Object]'; }
+  }
+  return input.replace(/:[^:@/]+@/g, ':****@');
+}
+
 dotenv.config({ path: '../../.env' });
 
 const router: Router = express.Router();
@@ -577,7 +589,7 @@ async function testConnectivity(type: string, data: any): Promise<{ ok: boolean;
                 }
               }
            } catch (fallbackErr: any) {
-              console.error('[testConnectivity] Fallback resolution failed:', fallbackErr.message);
+              console.error('[testConnectivity] Fallback resolution failed:', sanitize(fallbackErr.message));
            }
 
            return { 
@@ -753,8 +765,9 @@ async function testConnectivity(type: string, data: any): Promise<{ ok: boolean;
     // Default for API keys - assume valid if saved
     return { ok: true, message: 'Credential saved (connectivity check minimal)' };
   } catch (err: any) {
-    console.error(`[connectivity-test] ${type} failed:`, err.message);
-    return { ok: false, message: err.message };
+    const safeMsg = sanitize(err.message);
+    console.error(`[connectivity-test] ${type} failed:`, safeMsg);
+    return { ok: false, message: safeMsg };
   }
 }
 
@@ -777,7 +790,7 @@ router.post('/test/:id', passport.authenticate('jwt', { session: false }), async
 
     res.json({ ok, message });
   } catch (err: any) {
-    console.error('[credentials] Test endpoint failed:', err);
+    console.error('[credentials] Test endpoint failed:', sanitize(err));
     res.status(500).json({ error: 'Test failed' });
   }
 });

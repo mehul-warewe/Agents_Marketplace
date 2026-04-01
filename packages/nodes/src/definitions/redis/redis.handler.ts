@@ -15,13 +15,20 @@ export const redisHandler: ToolHandler = async (ctx: ToolContext) => {
   const finalKey = render(key || `history:{{userId}}`);
   const finalVal = value ? render(value) : '';
 
-  switch (operation) {
-    case 'get':  return await client.get(finalKey);
-    case 'set': 
-      if (ttl) return await client.set(finalKey, finalVal, 'EX', parseInt(render(ttl)));
-      return await client.set(finalKey, finalVal);
-    case 'del':  return await client.del(finalKey);
-    case 'hset': return await client.hset(finalKey, parseJson(value, render));
-    default: throw new Error(`Unknown Redis operation: ${operation}`);
+  try {
+    let result: any;
+    switch (operation) {
+      case 'get':  result = await client.get(finalKey); break;
+      case 'set': 
+        if (ttl) result = await client.set(finalKey, finalVal, 'EX', parseInt(render(ttl)));
+        else result = await client.set(finalKey, finalVal);
+        break;
+      case 'del':  result = await client.del(finalKey); break;
+      case 'hset': result = await client.hset(finalKey, parseJson(value, render)); break;
+      default: throw new Error(`Unknown Redis operation: ${operation}`);
+    }
+    return { status: 'success', data: result };
+  } catch (err: any) {
+    throw new Error(`[Redis Error] ${err.message}`);
   }
 };

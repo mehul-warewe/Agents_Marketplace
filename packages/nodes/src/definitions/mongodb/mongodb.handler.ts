@@ -14,13 +14,19 @@ export const mongodbAtlasHandler: ToolHandler = async (ctx: ToolContext) => {
   const client = await getConnectedMongoClient(connectionString);
   const db = client.db(database);
   const coll = db.collection(collection || 'default');
-
-  switch (operation) {
-    case 'insertOne': return await coll.insertOne(parseJson(document, render));
-    case 'findOne':   return await coll.findOne(parseJson(document, render));
-    case 'findMany':  return await coll.find(parseJson(query, render)).toArray();
-    case 'updateOne': return await coll.updateOne(parseJson(query, render), { $set: parseJson(document, render) });
-    case 'deleteOne': return await coll.deleteOne(parseJson(document, render));
-    default: throw new Error(`Unknown MongoDB operation: ${operation}`);
+  try {
+    let result: any;
+    switch (operation) {
+      case 'insertOne': result = await coll.insertOne(parseJson(document, render)); break;
+      case 'findOne':   result = await coll.findOne(parseJson(document, render)); break;
+      case 'findMany':  result = await coll.find(parseJson(query, render)).toArray(); break;
+      case 'updateOne': result = await coll.updateOne(parseJson(query, render), { $set: parseJson(document, render) }); break;
+      case 'deleteOne': result = await coll.deleteOne(parseJson(document, render)); break;
+      case 'count':     result = { count: await coll.countDocuments(parseJson(query, render)) }; break;
+      default: throw new Error(`Unknown MongoDB operation: ${operation}`);
+    }
+    return { status: 'success', data: result };
+  } catch (err: any) {
+    throw new Error(`[MongoDB Error] ${err.message}`);
   }
 };

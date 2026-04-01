@@ -67,6 +67,18 @@ function tryParseJson(str: string): any {
   try { return JSON.parse(str); } catch { return str; }
 }
 
+/** Sanitize sensitive info from strings (passwords in URLs, etc) */
+function sanitize(input: any): any {
+  if (!input) return input;
+  if (typeof input !== 'string') {
+    try {
+      const str = JSON.stringify(input);
+      return JSON.parse(str.replace(/:[^:@/]+@/g, ':****@'));
+    } catch { return '[Circular or Non-Serializable Object]'; }
+  }
+  return input.replace(/:[^:@/]+@/g, ':****@');
+}
+
 /** Resolve execution order following edges (topological BFS) */
 function resolveExecutionOrder(nodes: any[], edges: any[]): any[] {
   // Find starting node (trigger / first node with no incoming edges)
@@ -461,9 +473,10 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
         currentLog.endTime = new Date();
 
         if (isFailed && !nodeResult?.__toolDefinition) {
-           console.error(`[Flow] Node "${nodeLabel}" FAILED:`, nodeResult.error);
+           const safeError = sanitize(nodeResult.error || 'Node execution failed.');
+           console.error(`[Flow] Node "${nodeLabel}" FAILED:`, safeError);
            hasFailed = true;
-           failureReason = nodeResult.error || 'Node execution failed.';
+           failureReason = safeError;
            break; // Stop the flow
         }
 
@@ -521,7 +534,7 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
 
       } catch (err: any) {
         logs[logs.length - 1].status = 'failed';
-        logs[logs.length - 1].error  = err.message;
+        logs[logs.length - 1].error  = sanitize(err.message);
         throw err;
       }
 
@@ -536,7 +549,7 @@ const worker = new Worker(AGENT_EXECUTION_QUEUE, async (job) => {
         endTime: new Date(),
         logs,
         output:  hasFailed 
-          ? { error: failureReason, failed: true }
+          ? { error: sanitize(failureReason), failed: true }
           : { finalResult: ctx.report ?? ctx.text ?? ctx.result ?? ctx.objective },
       })
       .where(eq(agentRuns.id, runId));

@@ -233,7 +233,7 @@ export const githubHandler: ToolHandler = async (ctx: ToolContext) => {
       throw new Error(`Unsupported GitHub operation: ${operation}`);
     }
 
-    console.log(`[GitHub] ${operation} - ${method.toUpperCase()} ${url}`);
+    // console.log(`[Github] ${operation} - ${method.toUpperCase()} ${url}`);
 
     const res = await axios({ method, url, data, headers });
     return { status: 'success', data: res.data };

@@ -49,4 +49,22 @@ export const redisNode: NodeDefinition = {
       displayOptions: { showFor: { operation: ['set'] } },
     },
   ],
+  operationOutputs: {
+    get: [
+      { key: 'status', type: 'string' },
+      { key: 'data', type: 'string', description: 'String value from Redis' },
+    ],
+    set: [
+      { key: 'status', type: 'string' },
+      { key: 'data', type: 'string', description: 'OK or result' },
+    ],
+    del: [
+      { key: 'status', type: 'string' },
+      { key: 'data', type: 'number', description: 'Number of keys deleted' },
+    ],
+    hset: [
+      { key: 'status', type: 'string' },
+      { key: 'data', type: 'number', description: 'Number of fields set' },
+    ],
+  },
 };

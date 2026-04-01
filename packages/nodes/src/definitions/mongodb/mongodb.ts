@@ -50,4 +50,34 @@ export const mongodbNode: NodeDefinition = {
       displayOptions: { showFor: { operation: ['findMany', 'updateOne', 'upsert', 'count'] } },
     },
   ],
+  operationOutputs: {
+    insertOne: [
+      { key: 'status', type: 'string' },
+      { key: 'data.insertedId', type: 'string' },
+      { key: 'data.acknowledged', type: 'boolean' },
+    ],
+    findOne: [
+      { key: 'status', type: 'string' },
+      { key: 'data', type: 'object' },
+      { key: 'data._id', type: 'string' },
+    ],
+    findMany: [
+      { key: 'status', type: 'string' },
+      { key: 'data', type: 'array' },
+      { key: 'data[0]._id', type: 'string' },
+    ],
+    updateOne: [
+      { key: 'status', type: 'string' },
+      { key: 'data.matchedCount', type: 'number' },
+      { key: 'data.modifiedCount', type: 'number' },
+    ],
+    deleteOne: [
+      { key: 'status', type: 'string' },
+      { key: 'data.deletedCount', type: 'number' },
+    ],
+    count: [
+      { key: 'status', type: 'string' },
+      { key: 'data.count', type: 'number' },
+    ],
+  },
 };

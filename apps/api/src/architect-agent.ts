@@ -1,6 +1,18 @@
 import { ChatOpenAI } from '@langchain/openai';
 import { allArchitectTools } from './architect-tools.js';
 
+/** Sanitize sensitive info from strings (passwords in URLs, etc) */
+function sanitize(input: any): any {
+  if (!input) return input;
+  if (typeof input !== 'string') {
+    try {
+      const str = typeof input === 'object' ? JSON.stringify(input) : String(input);
+      return str.replace(/:[^:@/]+@/g, ':****@');
+    } catch { return '[Circular or Non-Serializable Object]'; }
+  }
+  return input.replace(/:[^:@/]+@/g, ':****@');
+}
+
 async function executeTool(toolName: string, toolInput: any): Promise<string> {
   const tool = allArchitectTools.find(t => t.name === toolName);
   if (!tool) return JSON.stringify({ error: `Tool ${toolName} not found` });
@@ -81,7 +93,7 @@ FOLLOW THIS SPEED RUN:
         for (const toolCall of response.tool_calls) {
           console.log(`[Architect] Executing: ${toolCall.name}`);
           const result = await executeTool(toolCall.name, toolCall.args);
-          console.log(`[Architect] Result: ${result.substring(0, 100)}...`);
+          console.log(`[Architect] Result: ${sanitize(result).substring(0, 100)}...`);
 
           messages.push({
             role: 'user', // LangChain/Gemini via OpenRouter often expects user role for results in this loop
@@ -142,7 +154,7 @@ FOLLOW THIS SPEED RUN:
       explanation: 'Could not fully auto-generate. Please configure nodes manually.',
     };
   } catch (err: any) {
-    console.error('[Architect] Fatal Error:', err.message);
+    console.error('[Architect] Fatal Error:', sanitize(err.message));
     throw err;
   }
 }
