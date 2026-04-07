@@ -9,7 +9,8 @@
       "Bash(npm install:*)",
       "Bash(pnpm install:*)",
       "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
-      "Bash(find C:UserssysteDesktophubappsweb -type f -name *canvas*)"
+      "Bash(find C:UserssysteDesktophubappsweb -type f -name *canvas*)",
+      "Bash(pnpm --filter @repo/worker dev)"
     ]
   }
 }

@@ -9,6 +9,10 @@ import { MongoClient } from 'mongodb';
 import { Redis } from 'ioredis';
 import dns, { Resolver } from 'dns';
 import { promisify } from 'util';
+import { PipedreamClient } from '@pipedream/sdk';
+import { Client as MCPClient } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { pipedreamApps, sql } from '@repo/database';
 
 const publicResolver = new Resolver();
 publicResolver.setServers(['8.8.8.8', '1.1.1.1']);
@@ -35,6 +39,30 @@ dotenv.config({ path: '../../.env' });
 
 const router: Router = express.Router();
 const db = createClient(process.env.POSTGRES_URL!);
+
+// ─── Pipedream SDK Shared Client ─────────────────────────────────────────────
+let _pdClient: PipedreamClient | null = null;
+function getPipedreamClient() {
+  if (!_pdClient) {
+    const { PIPEDREAM_CLIENT_ID, PIPEDREAM_CLIENT_SECRET, PIPEDREAM_PROJECT_ID } = process.env;
+    
+    // Connect explicitly requires Client Credentials (OAuth Client ID and Secret)
+    if (!PIPEDREAM_CLIENT_ID || !PIPEDREAM_CLIENT_SECRET || !PIPEDREAM_PROJECT_ID) return null;
+
+    try {
+      _pdClient = new PipedreamClient({
+        clientId: PIPEDREAM_CLIENT_ID,
+        clientSecret: PIPEDREAM_CLIENT_SECRET,
+        projectId: PIPEDREAM_PROJECT_ID,
+        projectEnvironment: (process.env.PIPEDREAM_ENVIRONMENT as any) || 'development'
+      });
+    } catch (err) {
+      console.error('[pipedream] Failed to initialize client:', err);
+      return null;
+    }
+  }
+  return _pdClient;
+}
 
 // ─── Proxy for listing models from LLM providers ─────────────────────────────
 router.get('/proxy/models', passport.authenticate('jwt', { session: false }), async (req: any, res) => {
@@ -205,6 +233,327 @@ router.get('/proxy/options', passport.authenticate('jwt', { session: false }), a
   } catch (err: any) {
     console.error('[credentials] Options proxy failed:', err.response?.data || err.message);
     res.status(500).json({ error: 'Failed to fetch options from provider' });
+  }
+});
+
+// ─── Pipedream Discovery Proxies ─────────────────────────────────────────────
+
+// 1. List apps from Local Cache (PG) - Fast & Scalable
+router.get('/pipedream/apps', passport.authenticate('jwt', { session: false }), async (req, res) => {
+  try {
+    const { search, limit = 100, offset = 0 } = req.query;
+
+    console.log('[pipedream] Fetching apps from cache...', { search, limit, offset });
+
+    // Simple query - fetch all and sort/filter in memory
+    const allApps = await (db as any).select().from(pipedreamApps);
+
+    // Sort by name
+    let sorted = allApps.sort((a: any, b: any) => a.name.localeCompare(b.name));
+
+    // Filter by search if provided
+    if (search) {
+      const searchStr = (search as string).toLowerCase();
+      sorted = sorted.filter((app: any) =>
+        app.name.toLowerCase().includes(searchStr) ||
+        app.slug.toLowerCase().includes(searchStr)
+      );
+    }
+
+    // Apply pagination
+    const start = Number(offset);
+    const end = start + Number(limit);
+    const paginated = sorted.slice(start, end);
+
+    res.json(paginated.map((app: any) => ({
+      id: app.slug,
+      name: app.name,
+      icon: app.icon || `https://pipedream.com/s.v0/app_${app.slug}/logo/96`,
+    })));
+  } catch (err: any) {
+    console.error('[pipedream] Apps proxy failed:', err.message, err.stack);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. List tools for a specific app
+router.get('/pipedream/tools', passport.authenticate('jwt', { session: false }), async (req, res) => {
+  try {
+    const { appSlug } = req.query;
+    if (!appSlug) return res.status(400).json({ error: 'appSlug is required' });
+
+    const { PIPEDREAM_CLIENT_ID, PIPEDREAM_CLIENT_SECRET, PIPEDREAM_PROJECT_ID, PIPEDREAM_ENVIRONMENT } = process.env;
+
+    if (!PIPEDREAM_CLIENT_ID || !PIPEDREAM_CLIENT_SECRET || !PIPEDREAM_PROJECT_ID) {
+      throw new Error('Pipedream credentials are not configured');
+    }
+
+    // Generate OAuth access token manually to ensure correct scopes
+    const tokenResponse = await axios.post(
+      'https://api.pipedream.com/v1/oauth/token',
+      {
+        grant_type: 'client_credentials',
+        client_id: PIPEDREAM_CLIENT_ID,
+        client_secret: PIPEDREAM_CLIENT_SECRET
+      },
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    const accessToken = tokenResponse.data.access_token;
+
+    const transport = new StreamableHTTPClientTransport(new URL('https://remote.mcp.pipedream.net'), {
+      requestInit: {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'x-pd-project-id': PIPEDREAM_PROJECT_ID!,
+          'x-pd-environment': (PIPEDREAM_ENVIRONMENT as any) || 'development',
+          'x-pd-app-slug': appSlug as string,
+          'x-pd-external-user-id': (req as any).user.id, // Scoped to current user
+        }
+      }
+    });
+
+    const mcpClient = new MCPClient({ name: 'WareweServer', version: '1.0.0' }, { capabilities: {} });
+    await mcpClient.connect(transport);
+    const tools = await mcpClient.listTools();
+    
+    res.json(tools.tools);
+  } catch (err: any) {
+    console.error('[pipedream] Tools proxy failed:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. Generate Pipedream Connect Token (for React SDK)
+router.post('/pipedream/token', passport.authenticate('jwt', { session: false }), async (req: any, res) => {
+  try {
+    const { FRONTEND_URL, PIPEDREAM_ENVIRONMENT, PIPEDREAM_PROJECT_ID, PIPEDREAM_CLIENT_ID, PIPEDREAM_CLIENT_SECRET } = process.env;
+    const externalUserId = String((req as any).user.id);
+    const { appSlug } = req.body; // Frontend sends the currently selected app slug
+
+    if (!PIPEDREAM_CLIENT_ID || !PIPEDREAM_CLIENT_SECRET) {
+      console.warn('[pipedream] Missing OAuth Client ID or Secret in .env');
+      throw new Error('Pipedream OAuth Client ID and Secret are missing from environment variables. Please check your .env file.');
+    }
+    
+    if (!PIPEDREAM_PROJECT_ID) {
+       console.warn('[pipedream] Missing Project ID in .env');
+       throw new Error('Pipedream Project ID is missing from environment variables.');
+    }
+
+    // ── RESOLVE THE CORRECT SLUG ──────────────────────────────────────────
+    // DB may have corrupt slugs (random 6-char IDs like "X7Lhxr" or "mArhnB")
+    // because the old sync used app.id.replace('app_','') instead of app.slug.
+    // We detect this and look up the real slug from the Pipedream API on-the-fly.
+    let resolvedAppSlug = appSlug || null;
+
+    if (appSlug) {
+      // A proper slug looks like "google_sheets", "notion", "youtube_analytics"
+      // A corrupt slug is short, alphanumeric, mixed-case: "X7Lhxr", "mArhnB"
+      const looksCorrupt = appSlug && !/^[a-z][a-z0-9_]+$/.test(appSlug);
+
+      if (looksCorrupt) {
+        console.log(`[pipedream] Corrupt slug detected "${appSlug}" - resolving via API...`);
+        try {
+          const pdId = `app_${appSlug}`;
+          const oauthRes = await axios.post(
+            'https://api.pipedream.com/v1/oauth/token',
+            { grant_type: 'client_credentials', client_id: PIPEDREAM_CLIENT_ID, client_secret: PIPEDREAM_CLIENT_SECRET },
+            { headers: { 'Content-Type': 'application/json' } }
+          );
+          const lookupToken = oauthRes.data.access_token;
+
+          // Try direct lookup first
+          let realSlug: string | null = null;
+          try {
+            const appRes = await axios.get(
+              `https://api.pipedream.com/v1/apps/${pdId}`,
+              { headers: { 'Authorization': `Bearer ${lookupToken}` } }
+            );
+            console.log(`[pipedream] App lookup raw response:`, JSON.stringify(appRes.data).slice(0, 300));
+            // Try all possible response shapes
+            realSlug = appRes.data?.data?.slug 
+              || appRes.data?.data?.name_slug // This was missing and caused the "lxhDwE" failure
+              || appRes.data?.slug
+              || appRes.data?.name_slug
+              || appRes.data?.app?.slug
+              || appRes.data?.app?.name_slug
+              || null;
+          } catch (directErr: any) {
+            console.warn('[pipedream] Direct app lookup failed:', directErr.message);
+          }
+
+          // Fallback: search for the app by its Pipedream internal ID
+          if (!realSlug) {
+            console.log(`[pipedream] Trying search fallback for id: ${pdId}...`);
+            try {
+              const searchRes = await axios.get(
+                `https://api.pipedream.com/v1/apps`,
+                { 
+                  params: { q: appSlug, limit: 5 },
+                  headers: { 'Authorization': `Bearer ${lookupToken}` } 
+                }
+              );
+              console.log(`[pipedream] Search response:`, JSON.stringify(searchRes.data).slice(0, 300));
+              const results = searchRes.data?.data || searchRes.data?.apps || [];
+              const matched = results.find((a: any) => a.id === pdId);
+              if (matched?.slug || matched?.name_slug) realSlug = matched.slug || matched.name_slug;
+            } catch (searchErr: any) {
+              console.warn('[pipedream] Search fallback failed:', searchErr.message);
+            }
+          }
+
+          if (realSlug) {
+            console.log(`[pipedream] Resolved "${appSlug}" → "${realSlug}"`);
+            // Update the DB so future requests are instant
+            try {
+              await (db as any).update(pipedreamApps)
+                .set({ slug: realSlug })
+                .where(eq(pipedreamApps.id, pdId));
+            } catch (dbErr: any) {
+              console.warn('[pipedream] DB update skipped:', dbErr.message);
+            }
+            resolvedAppSlug = realSlug;
+          } else {
+            console.warn(`[pipedream] Could not resolve slug for "${appSlug}". Please re-run: npx tsx scripts/sync_pipedream_apps.ts`);
+          }
+        } catch (lookupErr: any) {
+          console.warn('[pipedream] Slug lookup failed:', lookupErr.message);
+        }
+      }
+    }
+
+    console.log('[pipedream] Generating Connect Token...', {
+       projectId: PIPEDREAM_PROJECT_ID,
+       externalUserId,
+       env: PIPEDREAM_ENVIRONMENT || 'development',
+       appSlug,
+       resolvedAppSlug
+    });
+
+    // Generate OAuth access token fresh to avoid caching stale session
+    const tokenResponse = await axios.post(
+      'https://api.pipedream.com/v1/oauth/token',
+      {
+        grant_type: 'client_credentials',
+        client_id: PIPEDREAM_CLIENT_ID,
+        client_secret: PIPEDREAM_CLIENT_SECRET
+      },
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    const accessToken = tokenResponse.data.access_token;
+    if (!accessToken) throw new Error('No access_token returned by Pipedream OAuth');
+
+    // Make the explicit V2 Connect-First endpoint call
+    const response = await axios.post(
+      `https://api.pipedream.com/v1/connect/${PIPEDREAM_PROJECT_ID}/tokens`,
+      {
+        external_user_id: externalUserId,
+        app_slug: resolvedAppSlug || appSlug, // Set the app explicitly in the token
+        allowed_origins: [
+          FRONTEND_URL || 'http://localhost:3000',
+          'http://127.0.0.1:3000',
+          'http://localhost:3001',
+          'https://web-production-d1258.up.railway.app',
+          'https://api-production-f92d.up.railway.app'
+        ],
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'x-pd-environment': PIPEDREAM_ENVIRONMENT || 'development'
+        }
+      }
+    );
+
+    console.log('[pipedream] Token generated successfully');
+    res.json({ 
+      token: response.data.token,
+      connectLinkUrl: response.data.connect_link_url,
+      resolvedAppSlug  // Send back the validated slug for the Connect URL
+    });
+  } catch (err: any) {
+    console.error('[pipedream] Token creation failed:', err.response?.data || err.message);
+    res.status(500).json({ error: err.response?.data?.error || err.message });
+  }
+});
+
+
+// 4. Get connected accounts for this user from Pipedream
+router.get('/pipedream/accounts', passport.authenticate('jwt', { session: false }), async (req: any, res) => {
+  try {
+    const { PIPEDREAM_CLIENT_ID, PIPEDREAM_CLIENT_SECRET, PIPEDREAM_PROJECT_ID, PIPEDREAM_ENVIRONMENT } = process.env;
+    const externalUserId = String((req as any).user.id);
+    const { appSlug } = req.query;
+
+    if (!PIPEDREAM_CLIENT_ID || !PIPEDREAM_CLIENT_SECRET || !PIPEDREAM_PROJECT_ID) {
+      throw new Error('Pipedream credentials not configured');
+    }
+
+    // Get fresh OAuth token
+    const tokenResponse = await axios.post(
+      'https://api.pipedream.com/v1/oauth/token',
+      { grant_type: 'client_credentials', client_id: PIPEDREAM_CLIENT_ID, client_secret: PIPEDREAM_CLIENT_SECRET },
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    const accessToken = tokenResponse.data.access_token;
+
+    // Fetch connected accounts for this user, optionally filtered by app slug
+    const params: any = { external_user_id: externalUserId };
+    if (appSlug) params.app = appSlug;
+
+    const accountsRes = await axios.get(
+      `https://api.pipedream.com/v1/connect/${PIPEDREAM_PROJECT_ID}/accounts`,
+      {
+        params,
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'x-pd-environment': PIPEDREAM_ENVIRONMENT || 'development'
+        }
+      }
+    );
+
+    const accounts = accountsRes.data?.data || accountsRes.data?.accounts || [];
+    console.log(`[pipedream] Found ${accounts.length} connected accounts for user ${externalUserId}${appSlug ? ` (app: ${appSlug})` : ''}`);
+
+    res.json({ accounts });
+  } catch (err: any) {
+    console.error('[pipedream] Accounts fetch failed:', err.response?.data || err.message);
+    res.status(500).json({ error: err.response?.data?.error || err.message, accounts: [] });
+  }
+});
+
+
+// 5. Generate OAuth Connect URL for a specific platform (deprecated - use SDK instead)
+router.get('/pipedream/connect-url', passport.authenticate('jwt', { session: false }), async (req: any, res) => {
+  try {
+    const { appSlug } = req.query;
+    if (!appSlug) return res.status(400).json({ error: 'appSlug is required' });
+
+    const projectId = process.env.PIPEDREAM_PROJECT_ID;
+    const environment = process.env.PIPEDREAM_ENVIRONMENT || 'development';
+
+    if (!projectId) throw new Error('PIPEDREAM_PROJECT_ID not configured');
+
+    // Pipedream Connect URL format:
+    // https://pipedream.com/connect?project_id=...&external_user_id=...&app_slug=...&return_url=...
+    const returnUrl = new URL('/builder', process.env.BASE_URL || 'http://localhost:3000');
+
+    const connectUrl = new URL('https://pipedream.com/connect');
+    connectUrl.searchParams.set('project_id', projectId);
+    connectUrl.searchParams.set('external_user_id', req.user.id);
+    connectUrl.searchParams.set('app_slug', appSlug as string);
+    connectUrl.searchParams.set('return_url', returnUrl.toString());
+
+    res.json({
+      connectUrl: connectUrl.toString(),
+      projectId,
+      environment,
+      externalUserId: req.user.id,
+      appSlug
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -399,6 +748,73 @@ export const CREDENTIAL_SCHEMAS: Record<string, {
     label: 'Reddit (OAuth)',
     icon: 'reddit',
     fields: [], // Handled by OAuth flow
+  },
+  // ─── PIPEDREAM PLATFORM INTEGRATIONS ───────────────────────────────────
+  discord_oauth: {
+    label: 'Discord (Bot Token)',
+    icon: 'discord',
+    helpUrl: 'https://discord.com/developers/applications',
+    fields: [
+      { key: 'botToken', label: 'Bot Token', type: 'password', placeholder: 'MTk4NjIyNDgzNDU4MTI4Mzk1Ng...' },
+    ],
+  },
+  github_pat_oauth: {
+    label: 'GitHub (Personal Access Token)',
+    icon: 'github',
+    helpUrl: 'https://github.com/settings/tokens',
+    fields: [
+      { key: 'accessToken', label: 'Personal Access Token', type: 'password', placeholder: 'ghp_...' },
+    ],
+  },
+  stripe_api_key: {
+    label: 'Stripe (API Key)',
+    icon: 'stripe',
+    helpUrl: 'https://dashboard.stripe.com/apikeys',
+    fields: [
+      { key: 'apiKey', label: 'Secret API Key', type: 'password', placeholder: 'sk_live_...' },
+    ],
+  },
+  twilio_api_key: {
+    label: 'Twilio (API Key)',
+    icon: 'link',
+    helpUrl: 'https://www.twilio.com/console',
+    fields: [
+      { key: 'accountSid', label: 'Account SID', type: 'text', placeholder: 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' },
+      { key: 'authToken', label: 'Auth Token', type: 'password', placeholder: 'your_auth_token' },
+    ],
+  },
+  sendgrid_api_key: {
+    label: 'SendGrid (API Key)',
+    icon: 'mail',
+    helpUrl: 'https://app.sendgrid.com/settings/api_keys',
+    fields: [
+      { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'SG.xxx...' },
+    ],
+  },
+  salesforce_oauth: {
+    label: 'Salesforce (Access Token)',
+    icon: 'link',
+    helpUrl: 'https://help.salesforce.com/s/articleView?id=sf.user_security_token.htm',
+    fields: [
+      { key: 'accessToken', label: 'Access Token', type: 'password', placeholder: 'your_access_token' },
+      { key: 'instanceUrl', label: 'Instance URL', type: 'text', placeholder: 'https://your-instance.salesforce.com' },
+    ],
+  },
+  airtable_api_key: {
+    label: 'Airtable (API Key)',
+    icon: 'link',
+    helpUrl: 'https://airtable.com/account/tokens',
+    fields: [
+      { key: 'apiKey', label: 'Personal Access Token', type: 'password', placeholder: 'pat...' },
+    ],
+  },
+  notion_api_key: {
+    label: 'Notion (API Key)',
+    icon: 'notion',
+    helpUrl: 'https://www.notion.so/my-integrations',
+    fields: [
+      { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'secret_...' },
+    ],
   },
 };
 

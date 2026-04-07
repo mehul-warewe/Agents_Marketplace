@@ -1,5 +1,6 @@
 export type { NodeDefinition, NodeSocket, ConfigField, ConfigFieldType, NodeCategory, SocketType, SocketPosition, ToolContext, ToolHandler } from './types.js';
 
+// ─── CORE NODES (Hand-written, maintained by us) ──────────────────────────
 import { manualTrigger } from './definitions/manual-trigger/manual-trigger.js';
 import { chatTrigger } from './definitions/chat-trigger/chat-trigger.js';
 import { webhookTrigger } from './definitions/webhook-trigger/webhook-trigger.js';
@@ -9,76 +10,58 @@ import { geminiNode } from './definitions/gemini/gemini.js';
 import { claudeNode } from './definitions/claude/claude.js';
 import { openrouterNode } from './definitions/openrouter/openrouter.js';
 
-import { gmailNode } from './definitions/gmail/gmail.js';
-import { driveNode } from './definitions/drive/drive.js';
-import { calendarNode } from './definitions/calendar/calendar.js';
-import { sheetsNode } from './definitions/sheets/sheets.js';
-import { youtubeNode } from './definitions/youtube/youtube.js';
-
 import { ifNode } from './definitions/if/if.js';
 import { codeNode } from './definitions/code/code.js';
 
-import { mongodbNode } from './definitions/mongodb/mongodb.js';
-import { redisNode } from './definitions/redis/redis.js';
-
-import { githubNode } from './definitions/github/github.js';
-import { slackNode } from './definitions/slack/slack.js';
-import { linearNode } from './definitions/linear/linear.js';
-import { notionNode } from './definitions/notion/notion.js';
-import { supabaseNode } from './definitions/supabase/supabase.js';
 import { stickyNoteNode } from './definitions/sticky-note/sticky-note.js';
-import { linkedinNode } from './definitions/linkedin/linkedin.js';
-import { redditNode } from './definitions/reddit/reddit.js';
-
 import { structuredOutputParserNode } from './definitions/structured-output-parser/structured-output-parser.js';
+
+// ─── DYNAMIC INTEGRATIONS (3,000+ platforms via Pipedream) ───────────────
+import { pipedreamActionNode } from './definitions/pipedream/pipedream.js';
+export { pipedreamActionNode };
 
 import type { NodeDefinition } from './types.js';
 
 /**
- * The single source of truth for all node definitions.
+ * NODE_REGISTRY: Single source of truth for all node definitions
+ *
+ * Architecture:
+ *   ✓ CORE NODES: Triggers, Logic, LLMs, UI helpers
+ *       └─ Hand-written, actively maintained
+ *
+ *   ✓ DYNAMIC INTEGRATION NODES:
+ *       └─ One base 'pipedream.action' node
+ *       └─ The frontend clones this node to create individual platform identities
+ *       └─ Supports all 3,000+ Pipedream apps dynamically
  */
 export const NODE_REGISTRY: NodeDefinition[] = [
-  // Triggers
+  // ─── TRIGGERS (Workflow Entry Points) ──────────────────────────────────
   manualTrigger,
   chatTrigger,
   webhookTrigger,
 
-  // Model Actions (LLM Runners)
+  // ─── AI MODELS (LLM Runners) ──────────────────────────────────────────
   geminiNode,
   openaiNode,
   claudeNode,
   openrouterNode,
 
-  // Google & YouTube
-  gmailNode,
-  driveNode,
-  calendarNode,
-  sheetsNode,
-  youtubeNode,
-
-  // Logic
+  // ─── LOGIC & FLOW CONTROL ─────────────────────────────────────────────
   ifNode,
   codeNode,
 
-  // Databases
-  mongodbNode,
-  redisNode,
+  // ─── PIPEDREAM INTEGRATIONS (Dynamic platforms) ────────────────────────
+  pipedreamActionNode,
 
-  // MCP Platforms
-  githubNode,
-  slackNode,
-  linearNode,
-  notionNode,
-  supabaseNode,
+  // ─── UI & HELPERS ─────────────────────────────────────────────────────
   stickyNoteNode,
-  linkedinNode,
-  redditNode,
-
-  // Output
   structuredOutputParserNode,
 ];
 
-/** All unique executionKeys in the registry (used for worker validation). */
+/**
+ * All unique executionKeys in the registry.
+ * Used by worker to validate incoming nodes and warn about missing handlers.
+ */
 export const EXECUTION_KEYS: Set<string> = new Set(
   NODE_REGISTRY.map((n) => n.executionKey),
 );

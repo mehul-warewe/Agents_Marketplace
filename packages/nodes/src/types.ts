@@ -18,6 +18,7 @@ export interface NodeSocket {
   color?: string;
   label?: string;
   required?: boolean;
+  description?: string;
 }
 
 export type ConfigFieldType =
@@ -43,6 +44,8 @@ export interface ConfigField {
   displayOptions?: unknown;
   dynamicProvider?: string;
   dynamicResource?: string;
+  required?: boolean;
+  description?: string;
 }
 
 export type NodeCategory =
@@ -54,6 +57,7 @@ export type NodeCategory =
   | 'Data'
   | 'Databases'
   | 'Output'
+  | 'Integrations'
   | 'Core';
 
 export type InputType = 'string' | 'number' | 'boolean' | 'object' | 'array' | 'any' | 'json';

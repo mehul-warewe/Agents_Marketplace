@@ -1,0 +1,20 @@
+{
+  "name": "tmp_pipedream_test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@pipedream/sdk": "^2.4.3",
+    "@types/node": "^25.5.0",
+    "dotenv": "^16.3.1",
+    "tsx": "^4.6.2",
+    "typescript": "^6.0.2"
+  }
+}

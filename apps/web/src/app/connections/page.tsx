@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import SidebarLayout from '@/components/SidebarLayout';
 import { 
   useCredentials, 
@@ -53,6 +54,18 @@ export default function ConnectionsPage() {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [credName, setCredName] = useState('');
   const [testingId, setTestingId] = useState<string | null>(null);
+
+  // Auto-open modal if credentialType is passed via URL (from node settings)
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const credentialType = searchParams.get('credentialType');
+    const platform = searchParams.get('platform');
+    if (credentialType && schemas?.[credentialType]) {
+      setSelectedType(credentialType);
+      setCredName(platform ? `${platform} Workspace` : '');
+      setIsModalOpen(true);
+    }
+  }, [schemas]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

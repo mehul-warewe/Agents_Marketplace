@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, jsonb, pgEnum, integer, doublePrecision, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, jsonb, pgEnum, integer, doublePrecision, boolean, index } from 'drizzle-orm/pg-core';
 
 export const agentStatusEnum = pgEnum('agent_status', ['running', 'completed', 'failed', 'pending']);
 export const userTierEnum = pgEnum('user_tier', ['free', 'pro', 'ultra']);
@@ -109,6 +109,19 @@ export const memories = pgTable('memories', {
   key: text('key').notNull(),
   value: jsonb('value').notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const pipedreamApps = pgTable('pipedream_apps', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull(),
+  icon: text('icon'),
+  description: text('description'),
+  lastSyncedAt: timestamp('last_synced_at').defaultNow().notNull(),
+}, (table) => {
+  return {
+    nameIdx: index('pd_app_name_idx').on(table.name),
+  };
 });
 
 

@@ -60,7 +60,8 @@ Your goal is to build linear, sequential workflows that start with exactly ONE t
 
 - Triggers: trigger.chat, trigger.manual, trigger.webhook.
 - Models: llm.gemini (Gemini 2.0 Flash), llm.openai (GPT-4o).
-- Tools: Use 'get_platform_operations' to explore Gmail, Slack, GitHub, etc.
+- Tools: Use 'get_platform_operations' to explore built-in platforms (Gmail, Slack, GitHub).
+- Dynamic Tools: If a service is not built-in, use 'search_pipedream_apps' to find it, then 'get_pipedream_app_tools' to see available actions.
 `;
 
     const userMessage = `Build a workflow for: ${prompt}

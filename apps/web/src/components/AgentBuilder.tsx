@@ -29,7 +29,7 @@ import { useToast } from '@/components/ui/Toast';
 
 import FlowNode from './builder/FlowNode';
 import ToolSidebar from './builder/ToolSidebar';
-import NodeConfigPanel from './builder/NodeConfigPanel';
+import NodeSidebar from './builder/NodeSidebar';
 import BuilderTopbar from './builder/BuilderTopbar';
 import ArchitectBar from './builder/ArchitectBar';
 import { makeNode, getToolById, getToolByExecutionKey, INITIAL_NODES, INITIAL_EDGES, MODEL_TYPES, TOOL_REGISTRY } from './builder/toolRegistry';
@@ -116,8 +116,8 @@ function normaliseArchitectNodes(rawNodes: any[], rawEdges: any[]) {
     const knownIds = new Set(TOOL_REGISTRY.map(t => t.id));
     const knownExecKeys = new Set(TOOL_REGISTRY.map(t => n.data?.executionKey === t.executionKey));
 
-    let resolvedTool = (n.data?.toolId && knownIds.has(n.data.toolId))
-      ? TOOL_REGISTRY.find(t => t.id === n.data.toolId)!
+    let resolvedTool = (n.data?.toolId && (knownIds.has(n.data.toolId) || n.data.toolId.startsWith('pd:')))
+      ? (n.data.toolId.startsWith('pd:') ? getToolById(n.data.toolId) : TOOL_REGISTRY.find(t => t.id === n.data.toolId)!)
       : null;
 
     if (!resolvedTool) {
@@ -408,16 +408,21 @@ function AgentBuilderInner() {
 
     // Create new node offset from base
     const isTarget = handleType === 'target';
-    const newPos = { 
-      x: isTarget ? baseNode.position.x - 300 : baseNode.position.x + 300, 
-      y: baseNode.position.y 
+    const newPos = {
+      x: isTarget ? baseNode.position.x - 300 : baseNode.position.x + 300,
+      y: baseNode.position.y
     };
-    const newNode = makeNode(toolId, newPos, nodes) as any;
-    
+    const newTool = getToolById(toolId);
+    const newNode = makeNode(toolId, newPos, nodes, (newTool as any).override || pickerState.override) as any;
+
+    if (!newNode) {
+      setPickerState(null);
+      return;
+    }
+
     setNodes(ns => ns.concat(newNode));
 
     // Connect them
-    const newTool = getToolById(toolId);
     let newEdge: any;
 
     if (isTarget) {
@@ -465,11 +470,15 @@ function AgentBuilderInner() {
     setDescription(existingAgent.description ?? '');
     const wf = existingAgent.workflow;
     if (wf?.nodes?.length) {
-      setNodes(wf.nodes.map((n: any) => ({ ...n, type: 'wareweNode' })));
-      setEdges((wf.edges ?? []).map((e: any, idx: number) => ({ 
-        ...e, 
+      setNodes(wf.nodes.map((n: any) => ({
+        ...n,
+        type: 'wareweNode',
+        data: n.data || { status: 'idle', config: {} }
+      })));
+      setEdges((wf.edges ?? []).map((e: any, idx: number) => ({
+        ...e,
         id: e.id || `e-${e.source}-${e.target}-${idx}`,
-        ...EDGE_DEFAULTS 
+        ...EDGE_DEFAULTS
       })));
     }
     if (wf?.model) setModel(wf.model);
@@ -532,7 +541,7 @@ function AgentBuilderInner() {
   }, [setEdges]);
 
   // ── Tool actions ─────────────────────────────────────────────────────────────
-  const addToolNode = (toolId: string) => {
+  const addToolNode = (toolId: string, override?: { label?: string, icon?: string, appSlug?: string, actionName?: string }) => {
     if (pickerState) {
       handlePickerSelect(toolId);
       setSidebarOpen(false);
@@ -542,9 +551,11 @@ function AgentBuilderInner() {
     const pos = last
       ? { x: last.position.x + 280, y: last.position.y }
       : { x: 200, y: 200 };
-    const newNode = makeNode(toolId, pos, nodes) as any;
-    setNodes(ns => ns.concat(newNode));
-    setSelectedNode(newNode);
+    const newNode = makeNode(toolId, pos, nodes, override) as any;
+    if (newNode) {
+      setNodes(ns => ns.concat(newNode));
+      setSelectedNode(newNode);
+    }
     setSidebarOpen(false); // Auto-close sidebar after adding
   };
 
@@ -564,19 +575,19 @@ function AgentBuilderInner() {
 
   // Inject handlers into every node's data
   const nodesWithHandlers = useMemo(
-    () => nodes.map(n => ({ 
-      ...n, 
+    () => nodes.map(n => ({
+      ...n,
       zIndex: n.data?.executionKey === 'sticky_note' ? -50 : (n.zIndex ?? 0),
       className: n.data?.executionKey === 'sticky_note' ? 'sticky-note-wrapper' : '',
-      data: { 
-        ...n.data, 
+      data: {
+        ...(n.data || { status: 'idle', config: {} }),
         onTrigger: handleTrigger,
         onAddConnect: handleAddConnect,
         onDelete: deleteSelectedNode,
         onUpdate: (nid: string, newData: any) => {
           setNodes(ns => ns.map(n => n.id === nid ? { ...n, data: { ...n.data, ...newData } } : n));
         }
-      } 
+      }
     })),
     [nodes, handleTrigger, handleAddConnect, deleteSelectedNode],
   );
@@ -656,7 +667,7 @@ function AgentBuilderInner() {
         />
 
         {/* Centre: Canvas — Deep Aether Interface */}
-        <div className="flex-1 relative overflow-hidden bg-[#050505]">
+        <div className="flex-1 relative overflow-hidden bg-[#0d0d12]">
           <button
             onClick={() => setSidebarOpen(true)}
             className={`
@@ -691,6 +702,7 @@ function AgentBuilderInner() {
             minZoom={0.05}
             maxZoom={4}
             fitView
+            proOptions={{ hideAttribution: true }}
             fitViewOptions={{ padding: 1.2 }}
             defaultEdgeOptions={{
               ...EDGE_DEFAULTS,
@@ -770,16 +782,16 @@ function AgentBuilderInner() {
 
         {/* Floating Tool Picker removed in favor of Sidebar integration */}
 
-        {/* Right: Node inspector */}
+        {/* Right: Node Sidebar */}
         {selectedNode && selectedNode.data?.executionKey !== 'sticky_note' && (
-          <NodeConfigPanel
+          <NodeSidebar
             node={selectedNode}
-            onUpdate={updateSelectedNode}
-            onClose={() => setSelectedNode(null)}
-            onDelete={deleteSelectedNode}
-            onTrigger={handleTrigger}
             nodes={nodes}
             edges={edges}
+            onClose={() => setSelectedNode(null)}
+            onUpdate={updateSelectedNode}
+            onDelete={deleteSelectedNode}
+            onTrigger={handleTrigger}
           />
         )}
       </div>

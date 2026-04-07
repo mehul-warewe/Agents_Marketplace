@@ -1,10 +1,16 @@
 'use client';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { X, Trash2, CheckSquare, Info, Link2, ChevronDown, Settings2, Database, Terminal, ShieldCheck, Activity, SlidersHorizontal, Copy, Check, Search, Globe, Loader2, Play, Zap, LogIn, ChevronLeft, ExternalLink } from 'lucide-react';
+import { X, Trash2, CheckSquare, Info, Link2, ChevronDown, Settings2, Database, Terminal, ShieldCheck, Activity, SlidersHorizontal, Copy, Check, Search, Globe, Loader2, Play, Zap, LogIn, ChevronLeft, ExternalLink, AlertCircle } from 'lucide-react';
 import { getToolByExecutionKey, TOOL_REGISTRY, getToolById } from './toolRegistry';
 import VariablePicker from './VariablePicker';
 import { useCredentials, useCreateCredential, useCredentialSchemas } from '@/hooks/useApi';
 import { useAuthStore } from '@/store/authStore';
+import PipedreamConfigSection from './PipedreamConfigSection';
+import PipedreamNodeSettings from './PipedreamNodeSettings';
+import DynamicParameterForm from './DynamicParameterForm';
+import { CustomSelect } from './CustomSelect';
+
+import { usePipedreamTools } from '@/hooks/usePipedreamApps';
 
 interface NodeConfigPanelProps {
   node: any;
@@ -17,96 +23,6 @@ interface NodeConfigPanelProps {
 }
 
 type TabType = 'input' | 'parameters' | 'output' | 'settings';
-
-interface CustomSelectProps {
-  value: string;
-  onChange: (val: string) => void;
-  options: { id: string; label: string }[];
-  placeholder?: string;
-  disabled?: boolean;
-  isLoading?: boolean;
-}
-
-const CustomSelect = ({ value, onChange, options, placeholder = 'Select...', disabled, isLoading }: CustomSelectProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const selectedOption = options.find(o => o.id === value);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const filteredOptions = options.filter(o => 
-    o.label.toLowerCase().includes(search.toLowerCase()) || 
-    o.id.toLowerCase().includes(search.toLowerCase())
-  );
-
-  return (
-    <div className="relative" ref={containerRef}>
-      <div
-        onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`
-          flex items-center justify-between w-full px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-xl text-[12px] font-medium transition-all group cursor-pointer
-          ${isOpen ? 'border-foreground/40 ring-2 ring-foreground/5' : 'hover:border-border/80'}
-          ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-        `}
-      >
-        <span className={!selectedOption ? 'text-muted/60' : 'text-foreground'}>
-          {isLoading ? 'Loading...' : (selectedOption ? selectedOption.label : placeholder)}
-        </span>
-        <ChevronDown size={14} className={`text-muted transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
-      </div>
-
-      {isOpen && (
-        <div className="absolute top-[calc(100%+6px)] left-0 w-full bg-card border border-border/60 rounded-xl shadow-2xl p-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="relative mb-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted/40" size={12} />
-            <input
-              autoFocus
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search..."
-              className="w-full pl-8 pr-3 py-2 bg-foreground/[0.02] border border-border/20 rounded-lg text-[11px] outline-none focus:border-foreground/20"
-            />
-          </div>
-          <div className="max-h-[200px] overflow-y-auto no-scrollbar space-y-0.5">
-            {filteredOptions.length > 0 ? (
-              filteredOptions.map((opt) => (
-                <div
-                  key={opt.id}
-                  onClick={() => {
-                    onChange(opt.id);
-                    setIsOpen(false);
-                    setSearch('');
-                  }}
-                  className={`
-                    flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all text-[11px]
-                    ${opt.id === value ? 'bg-foreground text-background font-bold' : 'hover:bg-foreground/[0.04] text-foreground/80'}
-                  `}
-                >
-                  <span className="truncate pr-4">{opt.label}</span>
-                  {opt.id === value && <Check size={12} />}
-                </div>
-              ))
-            ) : (
-              <div className="px-3 py-4 text-center text-[10px] text-muted italic">
-                {placeholder || "No matches found"}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
 const RichTextarea = ({ value, onChange, placeholder, rows = 4, className }: any) => {
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -223,6 +139,27 @@ const RichTextarea = ({ value, onChange, placeholder, rows = 4, className }: any
   );
 };
 
+/**
+ * Check if this is a Pipedream integration node
+ */
+const isPipedreamNode = (node: any): boolean => {
+  const executionKey = node.data?.executionKey;
+  const toolId = node.data?.toolId;
+  
+  // Explicitly exclude core non-Pipedream nodes
+  const coreNodes = [
+    'llm_run', 'logic_if', 'logic_code', 
+    'trigger_manual', 'trigger_chat', 'trigger_webhook', 
+    'sticky_note'
+  ];
+  
+  return (
+    toolId?.startsWith('pd:') || 
+    executionKey === 'pipedream_action' || 
+    (executionKey && executionKey.includes('_') && !coreNodes.includes(executionKey) && !executionKey.startsWith('ai.'))
+  );
+};
+
 export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose, onDelete, onTrigger }: NodeConfigPanelProps) {
   const tool = node.data.toolId 
     ? getToolById(node.data.toolId)
@@ -262,6 +199,28 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
     targetKey: '',
     cursorPos: 0
   });
+  
+
+  // Pipedream Dynamic State
+  const [pipedreamActionSchema, setPipedreamActionSchema] = useState<any>(null);
+
+  const isPd = isPipedreamNode(node);
+  const appSlug = node.data.config.appSlug || (isPd && node.data.executionKey !== 'pipedream_action' ? node.data.executionKey.split('_')[0] : '');
+  const actionName = node.data.config.actionName || (isPd && node.data.executionKey !== 'pipedream_action' ? node.data.executionKey.split('_').slice(1).join('_') : '');
+  
+  const { data: pipedreamToolsData, isLoading: isLoadingPdTools, isError: isPdToolsError } = usePipedreamTools(appSlug, isPd && !!appSlug);
+  const pipedreamTools = pipedreamToolsData || [];
+
+
+  useEffect(() => {
+    if (isPd && actionName && pipedreamTools.length > 0) {
+      const selected = pipedreamTools.find(t => t.name === actionName);
+      if (selected) {
+        setPipedreamActionSchema(selected.inputSchema);
+      }
+    }
+  }, [isPd, actionName, pipedreamTools]);
+
 
   const handleTextChange = (e: React.ChangeEvent<any>, key: string, isOp: boolean = false, opIdx?: number) => {
     const val = e.target.value;
@@ -328,6 +287,9 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
       label:        node.data.label ?? '',
       description:  node.data.description ?? '',
       credentialId: cfg.credentialId ?? '',
+      // ─── PIPEDREAM FIELDS ─────────────────────────────────────────
+      appSlug:      cfg.appSlug ?? '',
+      actionName:   cfg.actionName ?? '',
     };
     if (!(tool as any).operationFields) {
       (tool.configFields as any).forEach((f: any) => { base[f.key] = cfg[f.key] ?? ''; });
@@ -335,7 +297,7 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
       if (selectedOperation && (tool as any).operationInputs) {
         const operationSchema = (tool as any).operationInputs[selectedOperation];
         if (operationSchema) {
-          operationSchema.forEach((f: any) => { 
+          operationSchema.forEach((f: any) => {
             if (cfg[f.key] !== undefined) base[f.key] = cfg[f.key];
             else if (f.default !== undefined) base[f.key] = f.default;
             else base[f.key] = '';
@@ -523,22 +485,29 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
     }
   };
 
+  const nodeIcon = node.data.icon || tool.icon;
+  const nodeLabel = values.label || node.data.label || tool.label;
+  const nodeBg = tool.bg || 'bg-indigo-500/10';
+  const nodeColor = tool.color || 'text-indigo-500';
+
   return (
     <aside className="w-[450px] shrink-0 bg-background border-l border-border flex flex-col h-full font-inter z-50 shadow-2xl animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div className="flex flex-col border-b border-border/60 bg-background/50 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border/40">
            <div className="flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center border border-border/40 ${tool.bg}`}>
-                {typeof tool.icon === 'string' ? (
-                  <img src={tool.icon} alt={tool.label} className="w-5 h-5 object-contain" />
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center border border-border/40 ${nodeBg}`}>
+                {typeof nodeIcon === 'string' ? (
+                  <img src={nodeIcon} alt={nodeLabel} className="w-5 h-5 object-contain" />
                 ) : (
-                  <Icon size={18} className={tool.color} />
+                  <Icon size={18} className={nodeColor} />
                 )}
               </div>
               <div className="flex flex-col">
-                <span className="text-[14px] font-bold text-foreground leading-none">{values.label || tool.label}</span>
-                <span className="text-[10px] text-muted font-black uppercase tracking-widest mt-1 opacity-40">{tool.category} Node</span>
+                <span className="text-[14px] font-bold text-foreground leading-none">{nodeLabel}</span>
+                <span className="text-[10px] text-muted font-black uppercase tracking-widest mt-1 opacity-40">
+                  {isPd ? `${appSlug || 'Integration'} Action` : `${tool.category} Node`}
+                </span>
               </div>
            </div>
            <div className="flex items-center gap-2">
@@ -611,17 +580,81 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
 
           {activeTab === 'parameters' && (
             <div className="space-y-6">
-               <div className="flex items-center justify-between">
+              {isPd && appSlug && actionName ? (
+                // ─── UNIFIED PIPEDREAM NODE: Show action parameters ──
+                <div className="space-y-4">
                   <div className="flex items-center gap-2 text-[10px] font-bold text-muted uppercase tracking-widest opacity-50">
                     <SlidersHorizontal size={12} />
-                    Pipeline Inputs
+                    Action Parameters
                   </div>
-                  {onTrigger && tool.executionKey !== 'sticky_note' && (
-                    <button onClick={() => onTrigger(node.id)} className="flex items-center gap-1.5 px-4 py-1.5 bg-accent text-white rounded-lg text-[10px] font-black hover:opacity-90 transition-all shadow-lg">
-                      <Play size={10} fill="currentColor" /> RUN STEP
-                    </button>
+                  {isPdToolsError ? (
+                    <div className="p-6 text-center bg-red-500/5 border border-red-500/10 rounded-xl">
+                      <AlertCircle size={24} className="text-red-500 mx-auto mb-3 opacity-50" />
+                      <p className="text-[11px] text-red-600/80 font-bold mb-2 uppercase tracking-tight">Account Not Connected</p>
+                      <p className="text-[10px] text-red-500/60 mb-5 leading-relaxed">
+                        You need to connect your {appSlug} account to reveal available actions and parameters.
+                      </p>
+                      <button 
+                        onClick={() => setActiveTab('settings')}
+                        className="w-full px-4 py-3 bg-red-500/10 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all border border-red-500/10"
+                      >
+                        Go to Authentication
+                      </button>
+                    </div>
+                  ) : isLoadingPdTools ? (
+                    <div className="p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-xl flex gap-3">
+                      <Loader2 size={16} className="text-yellow-600 animate-spin shrink-0" />
+                      <p className="text-[11px] text-yellow-600/80 font-medium">Fetching action details from Pipedream...</p>
+                    </div>
+                  ) : pipedreamTools.length > 0 ? (
+                    (() => {
+                      const selectedTool = pipedreamTools.find((t: any) => t.name === actionName);
+                      if (selectedTool?.inputSchema) {
+                        return (
+                          <DynamicParameterForm
+                            schema={selectedTool.inputSchema}
+                            values={values}
+                            onChange={(updates) => {
+                              setValues(prev => ({ ...prev, ...updates }));
+                            }}
+                          />
+                        );
+                      }
+                      return (
+                        <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-xl flex gap-3">
+                          <Info size={16} className="text-blue-500 shrink-0" />
+                          <p className="text-[11px] text-blue-500/80 font-medium">No parameters required for this action</p>
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <div className="p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-xl flex gap-3">
+                      <AlertCircle size={16} className="text-yellow-600 shrink-0" />
+                      <p className="text-[11px] text-yellow-600/80 font-medium">Loading action details...</p>
+                    </div>
                   )}
-               </div>
+                </div>
+              ) : isPd ? (
+                // ─── PARTIAL PIPEDREAM NODE: Select action first if not yet selected ──
+                <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-xl flex gap-3">
+                  <Info size={16} className="text-blue-500 shrink-0" />
+                  <p className="text-[11px] text-blue-500/80 font-medium">Select an action in the configuration to reveal parameters</p>
+                </div>
+              ) : (
+
+                // ─── STANDARD NODES (Existing Logic) ──────────────────────
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-muted uppercase tracking-widest opacity-50">
+                      <SlidersHorizontal size={12} />
+                      Pipeline Inputs
+                    </div>
+                    {onTrigger && tool.executionKey !== 'sticky_note' && (
+                      <button onClick={() => onTrigger(node.id)} className="flex items-center gap-1.5 px-4 py-1.5 bg-accent text-white rounded-lg text-[10px] font-black hover:opacity-90 transition-all shadow-lg">
+                        <Play size={10} fill="currentColor" /> RUN STEP
+                      </button>
+                    )}
+                  </div>
 
                <div className="space-y-6">
                   {/* Global Notices */}
@@ -768,27 +801,11 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
                         );
                       });
                   })()}
-               </div>
-               
-               {/* Identity & Danger for Triggers (since Settings tab is hidden) */}
-               {tool.isTrigger && (
-                 <div className="pt-10 space-y-10 border-t border-border/40 mt-10">
-                   <div className="space-y-4">
-                     <div className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest opacity-40">
-                       <Activity size={12} />
-                       Node Information
-                     </div>
-                     <div className="space-y-2">
-                       <label className="text-[10px] font-bold text-muted/60 uppercase ml-1">Visible Label</label>
-                       <input value={values.label ?? ''} onChange={e => set('label', e.target.value)} className="w-full px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-xl text-[12px] outline-none focus:border-foreground/40 transition-all font-bold" />
-                     </div>
-                   </div>
-                   
-                   <button onClick={onDelete} className="w-full py-3 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Remove Trigger</button>
-                 </div>
-               )}
-            </div>
-          )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
           {activeTab === 'output' && (
             <div className="space-y-6">
@@ -808,6 +825,24 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
 
           {activeTab === 'settings' && (
             <div className="space-y-8 animate-in fade-in duration-500">
+              {/* PIPEDREAM NODE SETTINGS */}
+              {isPd && appSlug && actionName && (
+                <PipedreamNodeSettings
+                  appSlug={appSlug}
+                  actionName={actionName}
+                  credentialId={values.credentialId}
+                  onCredentialConnect={(platform) => {
+                    const connectUrl = new URL('/connections', window.location.origin);
+                    connectUrl.searchParams.set('credentialType', `${platform}_oauth`);
+                    connectUrl.searchParams.set('platform', platform);
+                    window.open(connectUrl.toString(), `Connect ${platform}`, 'width=800,height=900');
+                  }}
+                  onCredentialSelect={(credentialId) => {
+                    setValues(prev => ({ ...prev, credentialId }));
+                  }}
+                />
+              )}
+
                {/* Identity */}
                <div className="space-y-4">
                   <div className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest opacity-40">
@@ -822,8 +857,10 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
                   </div>
                </div>
 
-               {/* Auth */}
-               <div className="space-y-4 border-t border-border/40 pt-6">
+               {/* Auth (Only for non-Pipedream nodes) */}
+               {!isPd && (
+                 <div className="space-y-4 border-t border-border/40 pt-6">
+
                   <div className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest opacity-40">
                     <ShieldCheck size={12} />
                     Authentication
@@ -910,10 +947,11 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
                           />
                           <button onClick={() => setIsAddingCred(true)} className="text-[10px] font-black text-foreground/40 hover:text-foreground uppercase text-center">+ Add New Credential</button>
                         </div>
-                      );
+                      )
                     })()}
                   </div>
-               </div>
+                </div>
+              )}
 
                {/* Danger */}
                <div className="pt-10 border-t border-border/40">

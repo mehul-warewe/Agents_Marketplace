@@ -1,5 +1,13 @@
 import { DynamicTool } from '@langchain/core/tools';
 import { NODE_REGISTRY } from '@repo/nodes';
+import { createClient, pipedreamApps } from '@repo/database';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { ilike, or } from 'drizzle-orm';
+import * as dotenv from 'dotenv';
+
+dotenv.config({ path: '../../.env' });
+const db = createClient(process.env.POSTGRES_URL!);
 
 /**
  * Tool 0: Get Architect Context (Discovery)
@@ -61,6 +69,83 @@ export const getArchitectContextTool = new DynamicTool({
       });
     } catch (err) {
       return JSON.stringify({ error: String(err) });
+    }
+  }
+});
+
+/**
+ * Tool 0.1: Search Pipedream Apps
+ * Search through 10,000+ platform integrations.
+ */
+export const searchPipedreamAppsTool = new DynamicTool({
+  name: 'search_pipedream_apps',
+  description: 'Search for any platform integration (e.g. Salesforce, Discord, QuickBooks). Returns appSlug and name. Use this if a platform is not in core context.',
+  func: async (input: string) => {
+    try {
+      const q = (input || '').toLowerCase().trim();
+
+      // Fetch all apps and filter in-memory
+      const allApps = await (db as any).select().from(pipedreamApps);
+
+      // Filter and limit
+      const results = allApps
+        .filter((app: any) =>
+          app.name.toLowerCase().includes(q) ||
+          app.slug.toLowerCase().includes(q)
+        )
+        .slice(0, 20);
+
+      return JSON.stringify(results.map((r: any) => ({
+        appSlug: r.slug,
+        name: r.name,
+        description: 'Pipedream Integration (Dynamic). Use get_pipedream_app_tools with this appSlug to see available actions.'
+      })));
+    } catch (err) {
+       return JSON.stringify({ error: String(err) });
+    }
+  }
+});
+
+/**
+ * Tool 0.2: Get Pipedream App Tools (Discovery)
+ * Fetch all available actions for a specific Pipedream app via MCP.
+ */
+export const getPipedreamAppToolsTool = new DynamicTool({
+  name: 'get_pipedream_app_tools',
+  description: 'List all available actions (tools) for a specific Pipedream integration (e.g. shopify, discord_bot, google_sheets). Use after search_pipedream_apps to see what is possible. Input: appSlug string.',
+  func: async (input: string) => {
+    try {
+      const appSlug = (input || '').trim().replace(/['"]/g, '');
+      const { PIPEDREAM_CLIENT_SECRET, PIPEDREAM_PROJECT_ID, PIPEDREAM_ENVIRONMENT } = process.env;
+
+      if (!PIPEDREAM_CLIENT_SECRET || !PIPEDREAM_PROJECT_ID) {
+        return JSON.stringify({ error: 'Pipedream Connect not configured' });
+      }
+
+      const transport = new StreamableHTTPClientTransport(new URL('https://remote.mcp.pipedream.net'), {
+        requestInit: {
+          headers: {
+            'Authorization': `Bearer ${PIPEDREAM_CLIENT_SECRET}`,
+            'x-pd-project-id': PIPEDREAM_PROJECT_ID,
+            'x-pd-environment': PIPEDREAM_ENVIRONMENT || 'development',
+            'x-pd-app-slug': appSlug,
+            'x-pd-external-user-id': 'architect-discovery', // Static ID for discovery
+            'x-pd-tool-mode': 'tools-only'
+          }
+        }
+      });
+
+      const mcpClient = new Client({ name: 'Warewe-Architect', version: '1.0.0' }, { capabilities: {} });
+      await mcpClient.connect(transport);
+      const tools = await mcpClient.listTools();
+      
+      return JSON.stringify(tools.tools.map(t => ({
+        name: t.name,
+        description: t.description,
+        inputSchema: t.inputSchema
+      })));
+    } catch (err: any) {
+      return JSON.stringify({ error: `MCP Fetch failed: ${err.message}` });
     }
   }
 });
@@ -238,6 +323,28 @@ export const generateFinalWorkflowTool = new DynamicTool({
           });
           continue;
         }
+
+        // C. Pipedream Dynamic Nodes
+        if (spec.appSlug || spec.platform) {
+           const slug = spec.appSlug || spec.platform.toLowerCase().replace(/\s+/g, '');
+           const id = `pd_${slug}_${(nodeCounters[slug] || 0) + 1}`;
+           nodeCounters[slug] = (nodeCounters[slug] || 0) + 1;
+           
+           builtNodes.push({
+             id,
+             label: spec.label || spec.platform,
+             data: {
+               label: spec.label || spec.platform,
+               toolId: 'pipedream.action', // The universal bridge ID
+               config: {
+                 appSlug: slug,
+                 actionName: spec.operation || spec.actionName,
+                 ...userConfig,
+               }
+             },
+             position
+           });
+        }
       }
 
       // LINEAR WIRING: Auto-connect
@@ -287,6 +394,8 @@ export const getOperationOutputsTool = new DynamicTool({
 // Final Export List (Highly Simplified)
 export const allArchitectTools = [
   getArchitectContextTool,
+  searchPipedreamAppsTool,
+  getPipedreamAppToolsTool,
   getPlatformOperationsTool,
   assembleNodeConfigTool,
   generateFinalWorkflowTool,

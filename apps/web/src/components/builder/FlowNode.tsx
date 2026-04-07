@@ -53,10 +53,16 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   const textAreaRef = React.useRef<HTMLTextAreaElement>(null);
 
   const tool = useMemo(() => {
-    return data.toolId 
+    const base = data.toolId 
       ? getToolById(data.toolId) 
       : getToolByExecutionKey(data.executionKey);
-  }, [data.toolId, data.executionKey]);
+    
+    // Prioritize icon from data (set by makeNode override)
+    if (base && (data as any).icon && typeof (data as any).icon === 'string') {
+      return { ...base, icon: (data as any).icon };
+    }
+    return base;
+  }, [data.toolId, data.executionKey, (data as any).icon]);
   
   const edges = useEdges();
   const status = data.status ?? 'idle';
@@ -71,8 +77,6 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
     e.stopPropagation();
     data.onDelete?.(id);
   }, [data, id]);
-
-  if (!tool) return null;
 
   // ─── Sticky Note Variant ───────────────────────────────────────────────────
   if (isStickyNote) {
@@ -92,7 +96,9 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
         {/* Note Toolbar (Mirroring standard node toolbar style) */}
         <div className="absolute -top-12 left-1/2 -translate-x-1/2 hidden group-hover:flex items-center gap-3 px-3 py-1.5 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-[100] animate-in fade-in zoom-in-95 duration-200 before:content-[''] before:absolute before:top-full before:left-0 before:right-0 before:h-4 before:bg-transparent">
           <div className="relative group/color p-1.5 cursor-pointer">
-            <Palette size={14} className="text-white/50 hover:text-white transition-colors" />
+            <Palette size={14} className="t
+
+  if (!tool) return null;ext-white/50 hover:text-white transition-colors" />
             <input 
               type="color" 
               className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
@@ -177,9 +183,9 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
         )}
 
         {/* Icon Section */}
-        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 ${tool.bg} shadow-inner`}>
-          {typeof tool.icon === 'string' ? (
-            <img src={tool.icon} alt={tool.label} className="w-6 h-6 object-contain" />
+        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 ${tool.bg} shadow-inner overflow-hidden`}>
+          {typeof tool.icon === 'string' && (tool.icon.startsWith('http') || tool.icon.startsWith('/')) ? (
+            <img src={tool.icon} alt={tool.label} className="w-full h-full object-contain p-2" />
           ) : (
             <Icon size={20} className={tool.color} />
           )}
@@ -214,7 +220,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
         />
       )}
       
-      {tool.outputs.map(socket => {
+      {tool.outputs.map((socket: any) => {
         const isConnected = edges.some(e => e.source === id && (e.sourceHandle === socket.name || tool.outputs.length === 1));
         return (
           <React.Fragment key={socket.name}>

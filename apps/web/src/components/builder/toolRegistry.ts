@@ -11,27 +11,12 @@ import {
   ListTodo,
   BookOpen,
   StickyNote,
+  Zap
 } from 'lucide-react';
 import { MarkerType } from 'reactflow';
-
-export const EDGE_DEFAULTS = {
-  type: 'deletableEdge',
-  animated: false,
-  markerEnd: { 
-    type: MarkerType.ArrowClosed, 
-    width: 12, 
-    height: 12,
-    color: '#777',
-  },
-  style: { 
-    strokeWidth: 1.5, 
-    stroke: '#777', 
-    opacity: 0.9 
-  },
-};
-
 import { NODE_REGISTRY } from '@repo/nodes';
 import type { NodeDefinition, NodeSocket, ConfigField } from '@repo/nodes';
+
 export type { NodeSocket, ConfigField };
 
 /** React component icon (Lucide-style) or an SVG path string. */
@@ -61,6 +46,48 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
   ListTodo,
   BookOpen,
   StickyNote,
+  Zap,
+};
+
+export const EDGE_DEFAULTS = {
+  type: 'deletableEdge',
+  animated: false,
+  markerEnd: { 
+    type: MarkerType.ArrowClosed, 
+    width: 12, 
+    height: 12,
+    color: '#777',
+  },
+  style: { 
+    strokeWidth: 1.5, 
+    stroke: '#777', 
+    opacity: 0.9 
+  },
+};
+
+/**
+ * Universal Pipedream Action Template
+ * Shared across all 3,000+ Pipedream integrations.
+ */
+const PIPEDREAM_TEMPLATE = {
+  id: 'pipedream.action',
+  name: 'Pipedream Action',
+  label: 'Integration Node',
+  icon: 'Zap',
+  category: 'Integrations',
+  description: 'Connect to any of 3,100+ platforms via Pipedream.',
+  executionKey: 'pipedream_action',
+  bg: 'bg-indigo-500/10',
+  color: 'text-indigo-500',
+  border: 'border-indigo-500/20',
+  isTrigger: false,
+  inputs: [{ name: 'input', label: 'Input', type: 'any' }],
+  outputs: [{ name: 'output', label: 'Output', type: 'any' }],
+  configFields: [
+    { key: 'appSlug', label: 'Platform Identifier', type: 'text', required: true },
+    { key: 'actionName', label: 'Specific Action', type: 'text', required: true },
+    { key: 'credentialId', label: 'Authentication ID', type: 'credential', required: false }
+  ],
 };
 
 /**
@@ -70,15 +97,13 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
 export const TOOL_REGISTRY: (ToolDefinition & { isGroup?: boolean; subActions?: any[] })[] = NODE_REGISTRY.flatMap((node) => {
   const icon = (ICON_MAP[node.icon] ?? node.icon) as IconType;
   
-  // 1. Identify Operations OR Models (but not for LLM nodes anymore)
+  // Identify Operations for grouping
   const isLLM = node.executionKey === 'llm_run' || node.category === 'Models';
   const subActions: any[] = [];
   
   if (!isLLM) {
     const opField = node.configFields.find(f => f.key === 'operation');
     const opInputs = (node as any).operationInputs;
-
-    // Use a Set to avoid duplicates if they exist in both places
     const ops = new Set<string>();
     const labels = new Map<string, string>();
 
@@ -100,7 +125,6 @@ export const TOOL_REGISTRY: (ToolDefinition & { isGroup?: boolean; subActions?: 
        });
     }
 
-    // Convert Set back to subActions
     ops.forEach(val => {
       subActions.push({ 
         id: `${node.id}:${val}`, 
@@ -121,12 +145,12 @@ export const TOOL_REGISTRY: (ToolDefinition & { isGroup?: boolean; subActions?: 
 });
 
 /**
- * List of unique categories derived from the registry, in a preferred order.
+ * List of unique categories derived from the registry.
  */
 export const TOOL_CATEGORIES = [
   ...new Set(NODE_REGISTRY.map(n => n.category))
 ].sort((a, b) => {
-  const order = ['Triggers', 'Models', 'Tools', 'Logic', 'Data', 'Databases', 'Core', 'Output'];
+  const order = ['Triggers', 'Models', 'Integrations', 'Logic', 'Data', 'Databases', 'Core', 'Output'];
   return order.indexOf(a) - order.indexOf(b);
 });
 
@@ -166,54 +190,73 @@ export const INITIAL_NODES = [
       config: {},
     },
   },
-  {
-    id: 'llm_1',
-    type: 'wareweNode',
-    position: { x: 450, y: 300 },
-    data: {
-      label: 'Gemini',
-      toolId: 'llm.gemini',
-      executionKey: 'llm_run',
-      isTrigger: false,
-      status: 'idle',
-      config: {
-        model: 'google/gemini-2.0-flash-001',
-        prompt: 'Task for Gemini: {{ message }}'
-      },
-    },
-  },
 ];
 
-export const INITIAL_EDGES = [
-  {
-    id: 'e_initial_trigger_llm',
-    source: 'node_trigger_1',
-    sourceHandle: 'output',
-    target: 'node_1',
-    targetHandle: 'input',
-    ...EDGE_DEFAULTS 
-  },
-];
+export const INITIAL_EDGES = [];
 
-export const makeNode = (toolId: string, position: { x: number; y: number }, nodes: any[] = []) => {
-  // Check if it's a sub-action ID like "github.mcp:createIssue"
+/**
+ * Creates a new React Flow node based on its tool definition.
+ * Handles both core nodes and dynamic Pipedream integration nodes.
+ */
+export const makeNode = (
+  toolId: string, 
+  position: { x: number; y: number }, 
+  nodes: any[] = [], 
+  override?: { label?: string; icon?: string; appSlug?: string; actionName?: string }
+) => {
   const isSub = toolId.includes(':');
   const baseId = isSub ? toolId.split(':')[0] : toolId;
   const subKey = isSub ? toolId.split(':')[1] : null;
 
-  const tool = TOOL_REGISTRY.find((t) => t.id === baseId);
-  if (!tool) return null;
+  // ─── 1. RESOLVE TOOL DEFINITION ──────────────────────────────────────────
+  let tool = TOOL_REGISTRY.find((t) => t.id === baseId);
 
-  // Generate Human-Readable ID: e.g. gemini_1, github_2
-  const prefix = tool.name.toLowerCase().replace(/\s+/g, '_');
-  const existingCount = nodes.filter(n => n.id.startsWith(prefix)).length;
-  const id = `${prefix}_${existingCount + 1}`;
+  // Fallback for Pipedream dynamic nodes (Format: pd:platform:action)
+  if (toolId.startsWith('pd:') || !tool) {
+    const pdTemplate = TOOL_REGISTRY.find(t => t.id === 'pipedream.action') 
+      || TOOL_REGISTRY.find(t => t.executionKey === 'pipedream_action')
+      || (PIPEDREAM_TEMPLATE as any); // Hard fallback to co-located template
+    
+    if (pdTemplate) {
+      tool = { ...pdTemplate, icon: (ICON_MAP[pdTemplate.icon] || Zap) };
+    }
+  }
+
+  if (!tool) {
+    console.error(`[WAREWE_BUILDER] makeNode: Could not resolve tool definition for "${toolId}"`);
+    return null;
+  }
+
+  // ─── 2. GENERATE UNIQUE ID ──────────────────────────────────────────────
+  const nameToBrand = override?.label || tool.label || tool.id;
+  const nodeBrand = nameToBrand.toLowerCase()
+    .replace(/[^a-z0-9]/g, '_')   // Be much stricter with ID characters
+    .replace(/_+/g, '_')          // Collapse underscores
+    .replace(/^_+|_+$/g, '');     // Trim underscores
   
-  // Resolve preConfig if it was a subAction
-  let preConfig = {};
+  const existingCount = nodes.filter(n => n.id.startsWith(nodeBrand)).length;
+  const id = `${nodeBrand}_${existingCount + 1}`;
+
+  // Configuration initialization
+  let initialConfig: any = {};
+  
+  // 1. If it was a sub-action (like "Slack: Select Channel")
   if (isSub && tool.subActions) {
     const subAction = tool.subActions.find(s => s.id === toolId);
-    if (subAction) preConfig = subAction.preConfig || {};
+    if (subAction) initialConfig = { ...subAction.preConfig };
+  }
+
+  // 2. If it's a Pipedream node, ensure appSlug and actionName are set
+  const isPipedream = tool.executionKey === 'pipedream_action' || toolId.startsWith('pd:');
+  if (isPipedream) {
+    const appSlug = override?.appSlug || (toolId.startsWith('pd:') ? toolId.split(':')[1] : null);
+    const actionName = override?.actionName || (toolId.startsWith('pd:') ? toolId.split(':')[2] : null);
+    
+    initialConfig = {
+      ...initialConfig,
+      ...(appSlug ? { appSlug } : {}),
+      ...(actionName ? { actionName } : {})
+    };
   }
 
   return {
@@ -221,29 +264,27 @@ export const makeNode = (toolId: string, position: { x: number; y: number }, nod
     type: 'wareweNode',
     position,
     data: {
-      label: isSub && tool.subActions ? `${tool.label} ${subKey}` : tool.label,
-      toolId: baseId, 
+      label: override?.label || tool.label,
+      toolId: baseId,
       executionKey: tool.executionKey,
       isTrigger: tool.isTrigger,
       status: 'idle',
-      config: { ...preConfig }, 
+      config: initialConfig,
+      icon: override?.icon || tool.icon,
     },
     zIndex: tool.executionKey === 'sticky_note' ? -50 : 0,
   };
 };
 
-export const getToolById = (id: string) => {
-  // If id is "github.mcp:createIssue", first try exact match
-  let tool = TOOL_REGISTRY.find((t) => t.id === id);
-  if (!tool) {
-    // Then try base ID (github.mcp)
-    const baseId = id.split(':')[0];
-    tool = TOOL_REGISTRY.find((t) => t.id === baseId || t.id.startsWith(baseId + ':'));
-  }
-  return tool ?? TOOL_REGISTRY[0]!;
+export const getToolById = (id: string): ToolDefinition => {
+  const tool = TOOL_REGISTRY.find((t) => t.id === id);
+  if (tool) return tool;
+  
+  // Return Pipedream as fallback
+  const pd = TOOL_REGISTRY.find(t => t.id === 'pipedream.action') || (PIPEDREAM_TEMPLATE as any);
+  return { ...pd, icon: (ICON_MAP[pd.icon] || Zap) };
 };
 
-export const getToolByExecutionKey = (key: string) => {
-  const tool = TOOL_REGISTRY.find((t) => t.executionKey === key);
-  return tool ?? TOOL_REGISTRY[0]!;
+export const getToolByExecutionKey = (key: string): ToolDefinition => {
+  return TOOL_REGISTRY.find((t) => t.executionKey === key) || TOOL_REGISTRY[0]!;
 };
