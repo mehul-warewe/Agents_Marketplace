@@ -1,9 +1,23 @@
 import * as dotenv from 'dotenv';
-import { resolve } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
 import { PipedreamClient } from '@pipedream/sdk';
 import { createClient, pipedreamApps, sql } from '@repo/database';
 
-dotenv.config({ path: resolve(process.cwd(), '../../.env') });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Try to find .env in multiple locations
+const envPaths = [
+  resolve(process.cwd(), '.env'),
+  resolve(process.cwd(), '../../.env'),
+  resolve(__dirname, '../../../.env')
+];
+
+for (const p of envPaths) {
+  dotenv.config({ path: p });
+  if (process.env.PIPEDREAM_CLIENT_ID) break;
+}
 
 const db = createClient(process.env.POSTGRES_URL!);
 
@@ -29,19 +43,19 @@ async function sync() {
   try {
     while (true) {
       try {
-        const response = await (pd as any).apps.list({ limit: 100, cursor });
+        const pdResponse: any = await (pd as any).apps.list({ limit: 100, cursor });
         
-        let items = [];
-        if (Array.isArray(response)) {
-          items = response;
-          cursor = (response as any).next_page_cursor; // Try to extract from metadata if present
-        } else if (response.apps) {
-          items = response.apps;
-          cursor = response.next_page_cursor;
+        let items: any[] = [];
+        if (Array.isArray(pdResponse)) {
+          items = pdResponse;
+          cursor = (pdResponse as any).next_page_cursor; // Try to extract from metadata if present
+        } else if (pdResponse.apps) {
+          items = pdResponse.apps;
+          cursor = pdResponse.next_page_cursor;
         } else {
           // If response is iterator, we can't easily skip to cursor without iterating
           let skip = 0;
-          for await (const app of response) {
+          for await (const app of pdResponse) {
              if (skip < count) { skip++; continue; }
              items.push(app);
              if (items.length >= 100) break;
@@ -52,10 +66,21 @@ async function sync() {
 
         for (const app of items) {
           count++;
+
+          // Derive a proper slug from the app name when the SDK doesn't return one.
+          // e.g. "Google Sheets" → "google_sheets", "Slack" → "slack"
+          const nameToSlug = (name: string) =>
+            name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
+          const slug =
+            (app.slug && !app.slug.startsWith('app_') ? app.slug : null) ||
+            (app.name_slug && !app.name_slug.startsWith('app_') ? app.name_slug : null) ||
+            nameToSlug(app.name);
+
           const payload = {
             id: app.id,
             name: app.name,
-            slug: app.slug || app.id.replace('app_', ''), // PRIORITIZE SLUG
+            slug,
             icon: app.icon || `https://pipedream.com/s.v0/${app.id}/logo/96`,
             description: `Powered by Pipedream Connect`,
             lastSyncedAt: new Date(),

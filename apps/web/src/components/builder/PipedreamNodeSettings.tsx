@@ -1,14 +1,12 @@
 'use client';
 
 /**
- * Pipedream Node Settings Component
+ * PipedreamNodeSettings
  *
- * Full connect flow:
- * 1. User clicks "Connect Account"
- * 2. Popup opens with Pipedream Connect
- * 3. When popup closes, we poll Pipedream API for connected accounts
- * 4. Display connected accounts and let user select one
- * 5. Node is updated with the selected Pipedream account ID
+ * Handles:
+ *  1. Connect button → opens Pipedream Connect popup for the correct platform
+ *  2. Polls for connected accounts after popup closes
+ *  3. Lets user select which connected account to use for this node
  */
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -24,7 +22,7 @@ interface PipedreamAccount {
 }
 
 interface PipedreamNodeSettingsProps {
-  appSlug: string;
+  appSlug: string;        // raw ID from node config, e.g. "app_m5ghAd" or already "openai"
   actionName: string;
   credentialId?: string;
   onCredentialConnect?: (platform: string) => void;
@@ -35,37 +33,41 @@ export default function PipedreamNodeSettings({
   appSlug,
   actionName,
   credentialId,
-  onCredentialSelect
+  onCredentialSelect,
 }: PipedreamNodeSettingsProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isFetchingAccounts, setIsFetchingAccounts] = useState(false);
   const [accounts, setAccounts] = useState<PipedreamAccount[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [resolvedSlug, setResolvedSlug] = useState<string>(appSlug);
+
   const popupRef = useRef<Window | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const platformName = appSlug
-    ? appSlug.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  // Derive a display name from the resolved slug, not the raw ID
+  const platformName = resolvedSlug
+    ? resolvedSlug.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
     : 'Platform';
 
-  // Fetch connected accounts from Pipedream for this user + app
-  const fetchAccounts = async (slug?: string) => {
+  /** Fetch connected accounts from the backend */
+  const fetchAccounts = async (slug: string) => {
+    if (!slug) return;
     setIsFetchingAccounts(true);
     setError(null);
     try {
       const res = await api.get('/credentials/pipedream/accounts', {
-        params: { appSlug: slug || appSlug }
+        params: { appSlug: slug },
       });
-      setAccounts(res.data?.accounts || []);
+      // Backend returns { accounts: [...] }
+      setAccounts(res.data?.accounts ?? []);
     } catch (err: any) {
       console.error('[pipedream] Failed to fetch accounts:', err);
-      // Don't show error on initial load if there are no accounts yet
     } finally {
       setIsFetchingAccounts(false);
     }
   };
 
-  // Fetch accounts on mount (to show any already-connected accounts)
+  // On mount (or when appSlug changes), fetch existing accounts
   useEffect(() => {
     if (appSlug) fetchAccounts(appSlug);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -76,23 +78,19 @@ export default function PipedreamNodeSettings({
       setIsConnecting(true);
       setError(null);
 
-      // Send appSlug so backend can resolve/validate it
+      // Backend resolves appSlug → correct platform slug and returns connect URL
       const response = await api.post('/credentials/pipedream/token', { appSlug });
 
-      if (!response.data.token || !response.data.connectLinkUrl) {
+      if (!response.data?.connectLinkUrl) {
         throw new Error('No connect URL returned from server');
       }
 
-      // Use the resolved slug that the backend validated
-      const finalAppSlug = (response.data.resolvedAppSlug || appSlug).toLowerCase();
+      const { connectLinkUrl, resolvedAppSlug } = response.data;
 
-      // IMPORTANT: Use the backend-generated connectLinkUrl but we must append the 'app' 
-      // and 'connectLink' params for Pipedream Connect Link flow to work.
-      const connectUrl = new URL(response.data.connectLinkUrl);
-      connectUrl.searchParams.set('app', finalAppSlug);
-      connectUrl.searchParams.set('connectLink', 'true');
+      // Update the displayed platform name once we know the resolved slug
+      if (resolvedAppSlug) setResolvedSlug(resolvedAppSlug);
 
-      console.log('[pipedream] Launching Connect URL:', connectUrl.toString(), '| App:', finalAppSlug);
+      console.log('[pipedream] Opening Connect URL:', connectLinkUrl, 'for app:', resolvedAppSlug);
 
       // Open centered popup
       const width = 600;
@@ -101,27 +99,26 @@ export default function PipedreamNodeSettings({
       const top = window.screenY + (window.outerHeight - height) / 2;
 
       const popup = window.open(
-        connectUrl.toString(),
-        `Connect ${finalAppSlug}`,
-        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`
+        connectLinkUrl,
+        'ConnectPipedream',
+        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`,
       );
       popupRef.current = popup;
 
-      // Poll until popup closes, then fetch accounts
+      // Poll until popup closes, then refresh accounts
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = setInterval(async () => {
         if (!popupRef.current || popupRef.current.closed) {
           clearInterval(pollRef.current!);
           pollRef.current = null;
           setIsConnecting(false);
-          // Wait a moment for Pipedream to finish saving the account
+          // Give Pipedream a moment to persist the account
           await new Promise(r => setTimeout(r, 1500));
-          await fetchAccounts(finalAppSlug);
+          await fetchAccounts(resolvedAppSlug || appSlug);
         }
       }, 500);
-
     } catch (err: any) {
-      console.error('[pipedream] Failed to connect:', err);
+      console.error('[pipedream] Connection failed:', err);
       setError(err.response?.data?.error || err.message || 'Failed to open authentication');
       setIsConnecting(false);
     }
@@ -143,8 +140,10 @@ export default function PipedreamNodeSettings({
         </label>
         <div className="p-3 bg-foreground/[0.03] border border-border/20 rounded-lg">
           <div className="text-[12px] font-bold text-foreground">
-            {platformName}{actionName ? ` — ${actionName.replace(/_/g, ' ')}` : ''}
+            {platformName}
+            {actionName ? ` — ${actionName.replace(/_/g, ' ')}` : ''}
           </div>
+          <div className="text-[10px] text-muted/40 font-mono mt-0.5">{appSlug}</div>
         </div>
       </div>
 
@@ -156,12 +155,12 @@ export default function PipedreamNodeSettings({
         </div>
       )}
 
-      {/* Connected Accounts Section */}
+      {/* Connected Accounts */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="block text-xs font-bold uppercase text-muted/80">Authentication</label>
           <button
-            onClick={() => fetchAccounts()}
+            onClick={() => fetchAccounts(appSlug)}
             disabled={isFetchingAccounts}
             className="p-1 hover:bg-foreground/10 rounded transition-colors"
             title="Refresh accounts"
@@ -193,7 +192,7 @@ export default function PipedreamNodeSettings({
                 />
                 <div className="min-w-0 flex-1">
                   <div className="text-[11px] font-bold text-foreground truncate">
-                    {account.name || account.id}
+                    {account.name || account.app?.name || account.id}
                   </div>
                   <div className="text-[9px] text-muted/50 font-mono truncate">{account.id}</div>
                 </div>
@@ -216,7 +215,7 @@ export default function PipedreamNodeSettings({
           ) : (
             <>
               <LogIn size={14} />
-              {accounts.length > 0 ? `Add Another ${platformName} Account` : `Connect ${platformName} Account`}
+              {accounts.length > 0 ? `Add Another ${platformName} Account` : `Connect ${platformName}`}
             </>
           )}
         </button>

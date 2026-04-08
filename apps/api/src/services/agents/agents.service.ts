@@ -1,0 +1,163 @@
+import { agents, agentRuns, eq, desc, and } from '@repo/database';
+import { db } from '../../shared/db.js';
+import { createExecutionQueue, getRedisConnection } from '@repo/queue';
+
+const redis = getRedisConnection();
+const executionQueue = createExecutionQueue(redis);
+
+export const agentsService = {
+  async listPublishedAgents() {
+    return await db.select().from(agents)
+      .where(eq(agents.isPublished, true))
+      .orderBy(desc(agents.createdAt));
+  },
+
+  async listMyAgents(userId: string) {
+    return await db.select().from(agents).where(eq(agents.creatorId, userId));
+  },
+
+  async getAgent(agentId: string) {
+    const rows = await db.select().from(agents).where(eq(agents.id, agentId));
+    return rows[0];
+  },
+
+  async createAgent(userId: string, data: any) {
+    const { name, description, workflow, price, category } = data;
+    const [newAgent] = await db.insert(agents).values({
+      name, description, workflow, price: price || 0, category, creatorId: userId,
+    }).returning();
+    return newAgent;
+  },
+
+  async updateAgent(agentId: string, userId: string, data: any) {
+    const { name, description, workflow, price, category, isPublished } = data;
+    
+    // Ownership check
+    const existing = await this.getAgent(agentId);
+    if (!existing || existing.creatorId !== userId) {
+       throw new Error('Unauthorized or not found');
+    }
+
+    const [updated] = await db.update(agents).set({
+      name, description, workflow, price, category, isPublished, updatedAt: new Date()
+    }).where(eq(agents.id, agentId)).returning();
+    
+    return updated;
+  },
+
+  async deleteAgent(agentId: string, userId: string) {
+    const existing = await this.getAgent(agentId);
+    if (!existing || existing.creatorId !== userId) {
+       throw new Error('Unauthorized or not found');
+    }
+    
+    await db.delete(agentRuns).where(eq(agentRuns.agentId, agentId));
+    const [deleted] = await db.delete(agents).where(eq(agents.id, agentId)).returning();
+    return deleted;
+  },
+
+  async publishAgent(agentId: string, userId: string, data: any) {
+    const { published, price, category } = data;
+    const existing = await this.getAgent(agentId);
+    
+    if (!existing || existing.creatorId !== userId) {
+      throw new Error('Unauthorized or not found');
+    }
+
+    const [updated] = await db.update(agents)
+      .set({ 
+        isPublished: published === undefined ? existing.isPublished : !!published,
+        price: price === undefined ? existing.price : parseFloat(price),
+        category: category === undefined ? existing.category : category,
+        updatedAt: new Date()
+      })
+      .where(eq(agents.id, agentId))
+      .returning();
+    
+    return updated;
+  },
+
+  async acquireAgent(agentId: string, userId: string) {
+    const agent = await this.getAgent(agentId);
+    
+    if (!agent || !agent.isPublished) {
+      throw new Error('Marketplace agent not found');
+    }
+
+    const [acquired] = await db.insert(agents).values({
+      name: agent.name,
+      description: agent.description,
+      workflow: agent.workflow,
+      category: agent.category,
+      price: 0,
+      creatorId: userId,
+      isPublished: false,
+      originalId: agent.id
+    }).returning();
+
+    return acquired;
+  },
+
+  async runAgent(agentId: string, userId: string, data: any) {
+    const { inputData, triggerNodeId, runMode } = data;
+    const agent = await this.getAgent(agentId);
+    if (!agent) throw new Error('Agent not found');
+
+    if (agent.creatorId !== userId) {
+       throw new Error('Unauthorized');
+    }
+
+    const [run] = await db.insert(agentRuns).values({
+      agentId: agent.id, userId, status: 'pending',
+    }).returning();
+    
+    await executionQueue.add('execute-workflow', { 
+      runId: run.id, 
+      agentId: agent.id, 
+      workflow: agent.workflow, 
+      userId, 
+      inputData, 
+      triggerNodeId, 
+      runMode 
+    });
+    
+    return { runId: run.id, status: 'queued' };
+  },
+
+  async getAgentRun(runId: string) {
+    const rows = await db.select().from(agentRuns).where(eq(agentRuns.id, runId));
+    return rows[0];
+  },
+
+  async getMyRuns(userId: string) {
+    return await db.select({
+      id: agentRuns.id,
+      agentId: agentRuns.agentId,
+      agentName: agents.name,
+      userId: agentRuns.userId,
+      status: agentRuns.status,
+      startTime: agentRuns.startTime,
+      endTime: agentRuns.endTime,
+      duration: agentRuns.duration,
+      logs: agentRuns.logs,
+      output: agentRuns.output,
+    }).from(agentRuns)
+      .innerJoin(agents, eq(agentRuns.agentId, agents.id))
+      .where(eq(agentRuns.userId, userId))
+      .orderBy(desc(agentRuns.startTime));
+  },
+
+  async getDashboardStats(userId: string) {
+    const userRuns = await db.select().from(agentRuns).where(eq(agentRuns.userId, userId));
+    const userAgents = await db.select().from(agents).where(eq(agents.creatorId, userId));
+    const totalRuns = userRuns.length;
+    
+    return { 
+      totalRuns, 
+      activeAgents: userAgents.length,
+      successRate: 100, // Calculation logic could be added
+      aiUsage: "2.4K", 
+      toolsConnected: 4
+    };
+  }
+};

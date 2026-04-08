@@ -2,12 +2,9 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import jwt from 'jsonwebtoken';
-import { createClient, users, eq } from '@repo/database';
-import * as dotenv from 'dotenv';
+import { users, eq } from '@repo/database';
+import { db } from '../shared/db.js';
 
-dotenv.config({ path: '../../.env' });
-
-const db = createClient(process.env.POSTGRES_URL!);
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret';
 
 passport.use(
@@ -61,7 +58,6 @@ passport.use(
         return done(err, false);
       }
     }
-
   )
 );
 

@@ -4,83 +4,49 @@ dotenv.config({ path: '../../.env' });
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
+import passport from './middleware/auth.middleware.js';
+import { globalLimiter } from './middleware/rateLimit.middleware.js';
+import { errorMiddleware } from './middleware/error.middleware.js';
+import { log } from './shared/logger.js';
 
-import passport, { generateToken } from './auth.js';
-import agentRouter from './agents.js';
-import localAuthRouter from './localAuth.js';
-import credentialsRouter from './credentials.js';
-import billingRouter from './billing.js';
-import templatesRouter from './templates.js';
-import { rateLimit } from 'express-rate-limit';
+import authRoutes from './routes/auth.routes.js';
+import credentialRoutes from './routes/credentials.routes.js';
+import agentRoutes from './routes/agents.routes.js';
+import billingRoutes from './routes/billing.routes.js';
+import templatesRoutes from './routes/templates.routes.js';
 
 const app = express();
 const port = process.env.PORT || 3001;
 
-// Trust Railway's reverse proxy so rate-limiting & IP detection work correctly
 app.set('trust proxy', 1);
+app.use(globalLimiter);
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10000, // Increased for polling
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: { error: 'Too many requests, please try again later.' }
-});
-
-app.use(limiter);
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true,
 }));
+
 app.use(morgan('dev'));
 
-
-// Special handling for Stripe Webhooks - must come BEFORE express.json()
+// Webhook must come BEFORE express.json()
 app.use('/billing/webhook', express.raw({ type: 'application/json' }));
-
 app.use(express.json());
 app.use(passport.initialize());
 
-
-// Auth Routes
-app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }));
-
-app.get(
-  '/auth/google/callback',
-  passport.authenticate('google', { session: false }),
-  (req: any, res) => {
-    const token = generateToken(req.user);
-    // Redirect to frontend with token in URL (simple for MVP)
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login/callback?token=${token}`);
-  }
-);
-
-app.get('/auth/me', passport.authenticate('jwt', { session: false }), (req, res) => {
-  res.json(req.user);
-});
-
-app.use('/auth', localAuthRouter);
-app.use('/agents', agentRouter);
-app.use('/credentials', credentialsRouter);
-app.use('/billing', billingRouter);
-app.use('/templates', templatesRouter);
-
-
+// Routes
+app.use('/auth', authRoutes);
+app.use('/credentials', credentialRoutes);
+app.use('/agents', agentRoutes);
+app.use('/billing', billingRoutes);
+app.use('/templates', templatesRoutes);
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'api' });
+  res.json({ status: 'ok', service: 'api', timestamp: new Date().toISOString() });
 });
 
-// Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('API Error:', err);
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal Server Error',
-  });
-});
+// Global Error Handler
+app.use(errorMiddleware);
 
 app.listen(port, () => {
-
-  console.log(`API service listening at http://localhost:${port}`);
+  log.info(`API core services initialized. Listening at http://localhost:${port}`);
 });
