@@ -1,7 +1,6 @@
 import { DynamicTool } from '@langchain/core/tools';
 import { NODE_REGISTRY } from '@repo/nodes';
-import { pipedreamApps } from '@repo/database';
-import { db } from '../../shared/db.js';
+import { pipedreamAppsService } from '../pipedream/pipedream-apps.service.js';
 import { pipedreamService } from '../pipedream/pipedream.service.js';
 import { pipedreamMcpService } from '../pipedream/pipedream-mcp.service.js';
 import { log } from '../../shared/logger.js';
@@ -69,10 +68,8 @@ export const searchPipedreamAppsTool = new DynamicTool({
   func: async (input: string) => {
     try {
       const q = (input || '').toLowerCase().trim();
-      const allApps = await db.select().from(pipedreamApps);
-      const results = allApps
-        .filter((app: any) => app.name.toLowerCase().includes(q) || app.slug.toLowerCase().includes(q))
-        .slice(0, 20);
+      // Use the live in-memory cache — no DB required
+      const results = await pipedreamAppsService.searchApps(q, 20, 0);
 
       return JSON.stringify(results.map((r: any) => ({
         appSlug: r.slug,

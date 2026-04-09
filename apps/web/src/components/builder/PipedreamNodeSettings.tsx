@@ -22,7 +22,8 @@ interface PipedreamAccount {
 }
 
 interface PipedreamNodeSettingsProps {
-  appSlug: string;        // raw ID from node config, e.g. "app_m5ghAd" or already "openai"
+  appSlug: string;
+  platformName?: string;
   actionName: string;
   credentialId?: string;
   onCredentialConnect?: (platform: string) => void;
@@ -31,6 +32,7 @@ interface PipedreamNodeSettingsProps {
 
 export default function PipedreamNodeSettings({
   appSlug,
+  platformName: injectedPlatformName,
   actionName,
   credentialId,
   onCredentialSelect,
@@ -44,10 +46,9 @@ export default function PipedreamNodeSettings({
   const popupRef = useRef<Window | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Derive a display name from the resolved slug, not the raw ID
-  const platformName = resolvedSlug
-    ? resolvedSlug.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-    : 'Platform';
+  // Derive a display name
+  const platformName = injectedPlatformName || 
+    (resolvedSlug ? resolvedSlug.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Platform');
 
   /** Fetch connected accounts from the backend */
   const fetchAccounts = async (slug: string) => {

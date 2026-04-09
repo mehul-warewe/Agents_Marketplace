@@ -6,7 +6,7 @@ import api from '@/lib/api';
 import { usePipedreamTools } from '@/hooks/usePipedreamApps';
 
 interface ToolSidebarProps {
-  onAddTool: (toolId: string, override?: { label?: string, icon?: string, appSlug?: string, actionName?: string }) => void;
+  onAddTool: (toolId: string, override?: { label?: string, icon?: string, appSlug?: string, actionName?: string, platformName?: string }) => void;
   isOpen: boolean;
   onToggle: () => void;
   socketType?: string | null;
@@ -47,12 +47,16 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType }:
       setIsLoadingApps(true);
       try {
         const offset = page * 100;
-        const { data } = await api.get(`/credentials/pipedream/apps?limit=100&search=${query}&offset=${offset}`);
+        const { data } = await api.get(`/credentials/pipedream/apps?limit=100&search=${encodeURIComponent(query)}&offset=${offset}`);
 
-        const mapped = data.map((app: any) => ({
+        // API now returns { results: [...], total: number }
+        const items = data.results ?? data; // fallback for safety
+        const total: number = data.total ?? items.length;
+
+        const mapped = items.map((app: any) => ({
           id: app.id,
           name: app.name,
-          icon: app.icon,
+          icon: app.icon,        // already mapped from icon_url on the backend
           isGroup: true,
         }));
 
@@ -62,7 +66,8 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType }:
           setPipedreamApps(prev => [...prev, ...mapped]);
         }
 
-        setHasMore(mapped.length === 100);
+        // hasMore is true when there are more items beyond the current page
+        setHasMore(offset + mapped.length < total);
       } catch (err) {
         console.error('Failed to fetch Pipedream apps:', err);
       } finally {
@@ -277,7 +282,8 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType }:
                         label: `${platform?.name} - ${tool.name}`,
                         icon: platform?.icon,
                         appSlug: activePlatform,
-                        actionName: tool.name
+                        actionName: tool.name,
+                        platformName: platform?.name
                       });
                     }}
                     className="w-full flex items-start gap-3 p-3 rounded-xl hover:bg-foreground/[0.04] transition-all text-left group border border-transparent hover:border-border/20"

@@ -44,15 +44,20 @@ router.get('/proxy/models', async (req: any, res, next) => {
 
 // ─── Pipedream ────────────────────────────────────────────────────────────────
 
-/** List all synced platforms (paginated + searchable) */
+/** List all platforms (paginated + searchable) — live from Pipedream in-memory cache */
 router.get('/pipedream/apps', async (req, res, next) => {
   try {
     const { search, limit, offset } = req.query;
-    res.json(await pipedreamAppsService.searchApps(
+    const { results, total } = await pipedreamAppsService.searchApps(
       search as string,
       limit ? parseInt(limit as string, 10) : 100,
       offset ? parseInt(offset as string, 10) : 0
-    ));
+    );
+    // No-cache: prevent browser from serving stale 304 during cache warm-up
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.json({ results, total });
   } catch (err) { next(err); }
 });
 
@@ -93,6 +98,12 @@ router.get('/pipedream/tools', async (req: any, res, next) => {
     const rawSlug = req.query.appSlug as string;
     const resolvedSlug = await pipedreamService.resolveAppSlug(rawSlug);
     const accessToken = await pipedreamService.getOAuthToken();
+    
+    // Disable caching to prevent 304 Not Modified on stale empty responses
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     res.json(await pipedreamMcpService.listToolsForApp(resolvedSlug, req.user.id, accessToken));
   } catch (err) { next(err); }
 });

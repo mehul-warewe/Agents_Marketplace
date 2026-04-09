@@ -1,61 +1,23 @@
 import axios from 'axios';
 import { log } from '../../shared/logger.js';
-import { pipedreamApps, eq } from '@repo/database';
-import { db } from '../../shared/db.js';
+import { pipedreamAppsService } from './pipedream-apps.service.js';
+import { pipedreamAuthService } from './pipedream-auth.service.js';
 
 export const pipedreamService = {
   /** Get a short-lived OAuth access token from Pipedream using client credentials */
   async getOAuthToken(): Promise<string> {
-    const { PIPEDREAM_CLIENT_ID, PIPEDREAM_CLIENT_SECRET } = process.env;
-    const auth = Buffer.from(`${PIPEDREAM_CLIENT_ID}:${PIPEDREAM_CLIENT_SECRET}`).toString('base64');
-    const res = await axios.post(
-      'https://api.pipedream.com/v1/oauth/token',
-      new URLSearchParams({ grant_type: 'client_credentials' }),
-      { headers: { Authorization: `Basic ${auth}` } }
-    );
-    return res.data.access_token;
+    return pipedreamAuthService.getOAuthToken();
   },
 
   /**
-   * Resolve a Pipedream app ID (e.g. "app_m5ghAd") or slug (e.g. "openai")
-   * to a canonical slug that Pipedream Connect accepts.
-   *
-   * Resolution order:
-   *  1. Already a slug (no "app_" prefix) → return as-is
-   *  2. Database lookup — use stored slug, or derive from app name
-   *  3. Hardcoded fail-safe for the most common apps
-   *  4. Return raw value with warning
+   * Resolve a Pipedream app ID or slug to a canonical slug.
+   * Now uses the LIVE apps cache instead of the database.
    */
   async resolveAppSlug(appSlug: string): Promise<string> {
     if (!appSlug) return '';
 
-    // Already a human-readable slug
-    if (!appSlug.startsWith('app_')) return appSlug;
-
-    // 1. Database lookup
-    try {
-      const rows = await db.select({
-        name: pipedreamApps.name,
-        slug: pipedreamApps.slug,
-      }).from(pipedreamApps).where(eq(pipedreamApps.id, appSlug)).limit(1);
-
-      const row = rows[0];
-      if (row) {
-        // Proper slug stored
-        if (row.slug && !row.slug.startsWith('app_')) return row.slug;
-
-        // DB has corrupted slug (still the raw ID) — derive from app name
-        // "Google Sheets" → "google_sheets", "Slack" → "slack"
-        if (row.name) {
-          return row.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-        }
-      }
-    } catch (err) {
-      log.error(`[pipedream] resolveAppSlug: DB error for "${appSlug}":`, err);
-    }
-
-    // 2. Hardcoded fail-safe for widely-used apps
-    const FALLBACKS: Record<string, string> = {
+    // 1. Hardcoded Priority Overrides
+    const OVERRIDES: Record<string, string> = {
       'app_168hvn': 'google_sheets',
       'app_OkrhR1': 'slack',
       'app_m5ghAd': 'openai',
@@ -65,16 +27,44 @@ export const pipedreamService = {
       'app_13GhxE': 'zoom_admin',
       'app_167h6y': 'anthropic',
       'app_m7ghE4': 'google_drive',
+      'app_XKvhQ3': 'youtube',
+      'app_mArhnB': 'youtube',
+      'youtube_data': 'youtube',
+      'youtube_analytics': 'youtube'
     };
-    if (FALLBACKS[appSlug]) return FALLBACKS[appSlug];
+    if (OVERRIDES[appSlug]) return OVERRIDES[appSlug];
 
-    log.warn(`[pipedream] resolveAppSlug: could not resolve "${appSlug}" — using raw value`);
+    // Already a human-readable slug (not an app_ ID)
+    if (!appSlug.startsWith('app_')) return appSlug;
+
+    // 2. Lookup in our LIVE in-memory cache (no DB)
+    const cachedSlug = await pipedreamAppsService.getSlugById(appSlug);
+    if (cachedSlug && !cachedSlug.startsWith('app_')) {
+      return cachedSlug;
+    }
+
+    // 3. Last Resort: Live API lookup for 100% accuracy
+    try {
+      log.info(`[pipedream] resolveAppSlug: Requesting live slug from Pipedream for ID "${appSlug}"`);
+      const accessToken = await this.getOAuthToken();
+      const res = await axios.get(`https://api.pipedream.com/v1/apps/${appSlug}`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      
+      const realSlug = res.data?.data?.slug;
+      if (realSlug && !realSlug.startsWith('app_')) {
+        log.info(`[pipedream] resolveAppSlug: Live API resolved "${appSlug}" → "${realSlug}"`);
+        return realSlug;
+      }
+    } catch (apiErr: any) {
+      log.warn(`[pipedream] resolveAppSlug: Live API lookup failed for "${appSlug}":`, apiErr.message);
+    }
+
     return appSlug;
   },
 
   /**
    * Generate a Pipedream Connect token for a specific user + app.
-   * Accepts a pre-resolved slug — call resolveAppSlug before this.
    */
   async generateConnectToken(externalUserId: string, resolvedAppSlug: string) {
     const accessToken = await this.getOAuthToken();
@@ -90,9 +80,8 @@ export const pipedreamService = {
     const token = (res.data.token || '').trim();
     let connectLinkUrl = (res.data.connect_link_url || '').trim();
 
-    // Build a clean URL with the correct app param (strip any Pipedream-returned app= param)
     if (connectLinkUrl) {
-      const base = connectLinkUrl.split('&app=')[0].split('?app=')[0];
+      const base = connectLinkUrl.split('&app=')[0].split('?app=')[0].split('&connectLink=')[0];
       const sep = base.includes('?') ? '&' : '?';
       connectLinkUrl = `${base}${sep}app=${resolvedAppSlug}&connectLink=true`;
     } else {
@@ -106,7 +95,6 @@ export const pipedreamService = {
 
   /**
    * Fetch connected accounts for a user from Pipedream.
-   * Returns the accounts array directly.
    */
   async getConnectedAccounts(externalUserId: string, resolvedAppSlug?: string) {
     const accessToken = await this.getOAuthToken();
@@ -120,7 +108,6 @@ export const pipedreamService = {
       headers: { Authorization: `Bearer ${accessToken}`, 'x-pd-environment': environment },
     });
 
-    // Pipedream returns { data: [...accounts] }
     return res.data?.data ?? [];
   },
 };

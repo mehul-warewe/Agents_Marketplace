@@ -127,10 +127,69 @@ export const pipedreamHandler = async (
     return { status: 'failed', error };
   }
 
+  const cleanSlug = appSlug.startsWith('app_') ? appSlug.replace('app_', '') : appSlug;
+
   // ─── PHASE 6: EXECUTE TOOL ──────────────────────────────────────────
 
   let mcpResult;
   try {
+    if (actionName === '__custom_api_call') {
+      // 🚀 NATIVE API PROXY ROUTING 🚀
+      // We bypass MCP entirely and use the official Pipedream Connect API Proxy.
+      const { method, path, body, headers } = cleanedParams;
+      
+      const parsedBody = body ? (typeof body === 'string' ? JSON.parse(body) : body) : undefined;
+      const parsedHeaders = headers ? (typeof headers === 'string' ? JSON.parse(headers) : headers) : undefined;
+      
+      // The API proxy requires the user's specific accountId for relative paths.
+      // We query Pipedream for the user's account ID for this specific app.
+      let accountId: string | undefined = undefined;
+      try {
+        const accountsRes: any = await pd.accounts.list({ externalUserId: userId });
+        const match = accountsRes?.data?.find((a: any) => a.app?.name_slug === cleanSlug);
+        if (match) accountId = match.id;
+      } catch (e: any) {
+        console.warn(`[Pipedream] Failed to fetch accountId for ${cleanSlug}:`, e.message);
+      }
+
+      if (!accountId && !path.startsWith('http')) {
+        throw new Error('Could not resolve your connected account to securely proxy the request.');
+      }
+
+      // Typed as `any` to prevent TypeScript inferring `accountId?: string | undefined`
+      // which conflicts with ProxyPostRequest requiring `accountId: string`.
+      // The guard above (line ~155) already throws if accountId is missing for relative paths.
+      const proxyOpts: any = {
+        url: path,
+        externalUserId: userId,
+        ...(accountId ? { accountId } : {})
+      };
+
+      const m = (method || 'GET').toUpperCase();
+      let proxyResult: any;
+      
+      if (m === 'POST') proxyResult = await pd.proxy.post({ ...proxyOpts, body: parsedBody, headers: parsedHeaders });
+      else if (m === 'PUT') proxyResult = await pd.proxy.put({ ...proxyOpts, body: parsedBody, headers: parsedHeaders });
+      else if (m === 'PATCH') proxyResult = await pd.proxy.patch({ ...proxyOpts, body: parsedBody, headers: parsedHeaders });
+      else if (m === 'DELETE') proxyResult = await pd.proxy.delete({ ...proxyOpts, params: parsedBody, headers: parsedHeaders });
+      else proxyResult = await pd.proxy.get({ ...proxyOpts, params: parsedBody, headers: parsedHeaders });
+
+      const duration = Date.now() - startTime;
+      console.log(`[Pipedream] ✓ Proxy Call to ${cleanSlug} completed in ${duration}ms`);
+      
+      if (nodeId && logNodeStatus) await logNodeStatus(nodeId, 'completed', proxyResult.data || proxyResult);
+      return {
+        status: 'completed',
+        data: proxyResult.data || proxyResult,
+        text: JSON.stringify(proxyResult.data || proxyResult),
+        app: appSlug,
+        tool: actionName,
+        duration,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    // Standard pre-built component execution
     mcpResult = await callPipedreamTool(mcpClient, {
       name: actionName,
       arguments: cleanedParams

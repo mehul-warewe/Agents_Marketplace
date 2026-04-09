@@ -202,7 +202,7 @@ export const makeNode = (
   toolId: string, 
   position: { x: number; y: number }, 
   nodes: any[] = [], 
-  override?: { label?: string; icon?: string; appSlug?: string; actionName?: string }
+  override?: { label?: string; icon?: string; appSlug?: string; actionName?: string; platformName?: string }
 ) => {
   const isSub = toolId.includes(':');
   const baseId = isSub ? toolId.split(':')[0] : toolId;
@@ -255,7 +255,8 @@ export const makeNode = (
     initialConfig = {
       ...initialConfig,
       ...(appSlug ? { appSlug } : {}),
-      ...(actionName ? { actionName } : {})
+      ...(actionName ? { actionName } : {}),
+      ...(override?.platformName ? { platformName: override.platformName } : {})
     };
   }
 

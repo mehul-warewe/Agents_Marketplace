@@ -56,6 +56,7 @@ export default function NodeSidebar({
       appSlug: cfg.appSlug ?? '',
       actionName: cfg.actionName ?? '',
       credentialId: cfg.credentialId ?? '',
+      platformName: cfg.platformName ?? '',
       ...cfg
     };
   });
@@ -111,7 +112,7 @@ export default function NodeSidebar({
               {node.data.label}
             </h2>
             <p className="text-[11px] text-muted/60 font-medium">
-              {isPreconfigured ? `${values.appSlug} → ${values.actionName}` : tool.name}
+              {isPreconfigured ? `${values.platformName || values.appSlug} → ${values.actionName}` : tool.name}
             </p>
           </div>
           <button
@@ -288,6 +289,7 @@ export default function NodeSidebar({
               {isPipedreamNode && isPreconfigured ? (
                 <PipedreamNodeSettings
                   appSlug={values.appSlug}
+                  platformName={values.platformName}
                   actionName={values.actionName}
                   credentialId={values.credentialId}
                   onCredentialSelect={(credentialId) => {
