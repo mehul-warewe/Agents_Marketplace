@@ -298,27 +298,7 @@ export default function NodeSidebar({
                 />
               ) : null}
 
-              {/* Node Information */}
-              <div className="space-y-3 pt-4 border-t border-border/50">
-                <div className="text-[10px] font-bold uppercase text-muted/60">Node Information</div>
 
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-muted/60">Display Label</label>
-                    <input
-                      type="text"
-                      value={values.label || ''}
-                      onChange={(e) => handleUpdate({ label: e.target.value })}
-                      className="w-full px-3 py-2 bg-foreground/[0.03] border border-border/40 rounded-lg text-xs font-medium outline-none focus:border-foreground/40"
-                    />
-                  </div>
-
-                  <div className="p-3 bg-foreground/[0.02] border border-border/40 rounded-lg text-[9px] font-mono text-muted/60">
-                    <div><strong>Type:</strong> {tool.name}</div>
-                    <div><strong>ID:</strong> {node.id}</div>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
         </div>

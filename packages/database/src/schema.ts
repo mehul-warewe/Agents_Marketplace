@@ -31,6 +31,7 @@ export const agents = pgTable('agents', {
   isPublished: boolean('is_published').default(false).notNull(),
   originalId: uuid('original_id'), // Reference to the marketplace agent it was cloned from
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 export const tools = pgTable('tools', {

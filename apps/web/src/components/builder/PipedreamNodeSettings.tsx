@@ -10,8 +10,9 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { LogIn, CheckCircle, AlertCircle, Loader2, RefreshCw, ExternalLink } from 'lucide-react';
+import { LogIn, CheckCircle, AlertCircle, Loader2, RefreshCw, ExternalLink, ChevronDown } from 'lucide-react';
 import api from '@/lib/api';
+import CustomSelect from './CustomSelect';
 
 interface PipedreamAccount {
   id: string;
@@ -70,6 +71,7 @@ export default function PipedreamNodeSettings({
 
   // On mount (or when appSlug changes), fetch existing accounts
   useEffect(() => {
+    setAccounts([]); // Clear stale accounts immediately
     if (appSlug) fetchAccounts(appSlug);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appSlug]);
@@ -115,7 +117,25 @@ export default function PipedreamNodeSettings({
           setIsConnecting(false);
           // Give Pipedream a moment to persist the account
           await new Promise(r => setTimeout(r, 1500));
-          await fetchAccounts(resolvedAppSlug || appSlug);
+          const updatedSlug = resolvedAppSlug || appSlug;
+          
+          setIsFetchingAccounts(true);
+          try {
+            const res = await api.get('/credentials/pipedream/accounts', {
+              params: { appSlug: updatedSlug },
+            });
+            const newAccounts = res.data?.accounts ?? [];
+            setAccounts(newAccounts);
+            
+            // Auto-select if nothing was selected yet
+            if (!credentialId && newAccounts.length > 0) {
+              onCredentialSelect(newAccounts[0].id);
+            }
+          } catch (e) {
+            console.error('[pipedream] Auto-refresh failed:', e);
+          } finally {
+            setIsFetchingAccounts(false);
+          }
         }
       }, 500);
     } catch (err: any) {
@@ -133,112 +153,50 @@ export default function PipedreamNodeSettings({
   }, []);
 
   return (
-    <div className="space-y-4">
-      {/* Platform Info */}
-      <div className="space-y-2">
-        <label className="block text-xs font-bold uppercase text-muted/80">
-          Platform Connection
-        </label>
-        <div className="p-3 bg-foreground/[0.03] border border-border/20 rounded-lg">
-          <div className="text-[12px] font-bold text-foreground">
-            {platformName}
-            {actionName ? ` — ${actionName.replace(/_/g, ' ')}` : ''}
-          </div>
-          <div className="text-[10px] text-muted/40 font-mono mt-0.5">{appSlug}</div>
-        </div>
-      </div>
-
+    <div className="space-y-4 pt-2">
       {/* Error */}
       {error && (
-        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-2">
+        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
           <AlertCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
-          <p className="text-[10px] text-red-500 font-medium">{error}</p>
+          <p className="text-[10px] text-red-500 font-bold">{error}</p>
         </div>
       )}
 
       {/* Connected Accounts */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="block text-xs font-bold uppercase text-muted/80">Authentication</label>
-          <button
-            onClick={() => fetchAccounts(appSlug)}
-            disabled={isFetchingAccounts}
-            className="p-1 hover:bg-foreground/10 rounded transition-colors"
-            title="Refresh accounts"
-          >
-            <RefreshCw size={11} className={`text-muted/50 ${isFetchingAccounts ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
+      <div className="space-y-3">
+        <label className="block text-[10px] font-black uppercase text-muted/60 tracking-widest pl-1">
+          Select {platformName} Account
+        </label>
 
-        {isFetchingAccounts ? (
-          <div className="flex items-center gap-2 p-3 bg-foreground/[0.03] border border-border/20 rounded-lg">
-            <Loader2 size={12} className="animate-spin text-muted/60" />
-            <span className="text-[10px] text-muted/60">Loading connected accounts...</span>
-          </div>
-        ) : accounts.length > 0 ? (
-          <div className="space-y-2">
-            {accounts.map((account) => (
-              <button
-                key={account.id}
-                onClick={() => onCredentialSelect(account.id)}
-                className={`w-full p-3 rounded-lg border text-left transition-all flex items-center gap-3 ${
-                  credentialId === account.id
-                    ? 'border-indigo-500/50 bg-indigo-500/10'
-                    : 'border-border/30 bg-foreground/[0.03] hover:border-border/60'
-                }`}
-              >
-                <CheckCircle
-                  size={14}
-                  className={credentialId === account.id ? 'text-indigo-500' : 'text-muted/20'}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="text-[11px] font-bold text-foreground truncate">
-                    {account.name || account.app?.name || account.id}
-                  </div>
-                  <div className="text-[9px] text-muted/50 font-mono truncate">{account.id}</div>
-                </div>
-              </button>
-            ))}
-          </div>
-        ) : null}
+        <CustomSelect
+          value={credentialId || ''}
+          onChange={onCredentialSelect}
+          options={accounts.map(a => ({
+            id: a.id,
+            label: `${a.name || a.app?.name || a.id} (${a.id.slice(0, 8)})`
+          }))}
+          placeholder={isFetchingAccounts ? "Searching..." : "Select account..."}
+          isLoading={isFetchingAccounts}
+        />
 
         {/* Connect Button */}
         <button
           onClick={handleConnect}
           disabled={isConnecting || !appSlug}
-          className="w-full px-4 py-3 bg-indigo-500 text-white border border-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-sm"
+          className="w-full px-4 py-3.5 bg-indigo-600 text-white rounded-xl text-[11px] font-black uppercase tracking-wider hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2.5"
         >
           {isConnecting ? (
             <>
               <Loader2 size={14} className="animate-spin" />
-              Waiting for connection...
+              Connecting...
             </>
           ) : (
             <>
-              <LogIn size={14} />
-              {accounts.length > 0 ? `Add Another ${platformName} Account` : `Connect ${platformName}`}
+              <LogIn size={15} strokeWidth={3} />
+              Connect {platformName}
             </>
           )}
         </button>
-
-        <div className="p-3 bg-blue-500/5 border border-blue-500/10 rounded-xl flex gap-3">
-          <AlertCircle size={13} className="text-blue-500 shrink-0 mt-0.5" />
-          <p className="text-[10px] text-blue-500/80 font-medium leading-relaxed">
-            In development mode, you must be signed into{' '}
-            <a href="https://pipedream.com" target="_blank" rel="noreferrer" className="underline inline-flex items-center gap-0.5">
-              pipedream.com <ExternalLink size={9} />
-            </a>{' '}
-            in your browser before connecting.
-          </p>
-        </div>
-      </div>
-
-      <div className="pt-4 border-t border-border/10">
-        <div className="p-3 bg-foreground/[0.03] border border-border/10 rounded-lg text-center">
-          <p className="text-[9px] text-muted/60 font-medium uppercase tracking-widest">
-            Security Powered by Pipedream Connect
-          </p>
-        </div>
       </div>
     </div>
   );

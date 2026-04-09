@@ -111,6 +111,8 @@ export const agentsService = {
       agentId: agent.id, userId, status: 'pending',
     }).returning();
     
+    if (!run) throw new Error('Failed to initiate agent run');
+
     await executionQueue.add('execute-workflow', { 
       runId: run.id, 
       agentId: agent.id, 

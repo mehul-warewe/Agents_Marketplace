@@ -71,7 +71,7 @@ export const searchPipedreamAppsTool = new DynamicTool({
       // Use the live in-memory cache — no DB required
       const results = await pipedreamAppsService.searchApps(q, 20, 0);
 
-      return JSON.stringify(results.map((r: any) => ({
+      return JSON.stringify(results.results.map((r: any) => ({
         appSlug: r.slug,
         name: r.name,
         description: 'Pipedream Integration (Dynamic). Use get_pipedream_app_tools with this appSlug to see available actions.'
