@@ -2,8 +2,16 @@ import crypto from 'crypto';
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 
-if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 64) {
-  throw new Error('ENCRYPTION_KEY must be a 64-character hex string');
+if (!ENCRYPTION_KEY) {
+  throw new Error(
+    'ENCRYPTION_KEY is missing from environment variables. ' +
+    'Please add a 64-character hex string to your .env file. ' +
+    'You can generate one using: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+  );
+}
+
+if (ENCRYPTION_KEY.length !== 64) {
+  throw new Error(`ENCRYPTION_KEY must be exactly 64 characters (current length: ${ENCRYPTION_KEY.length})`);
 }
 
 const key = Buffer.from(ENCRYPTION_KEY, 'hex');

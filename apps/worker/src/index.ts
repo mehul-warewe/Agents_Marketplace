@@ -1,5 +1,4 @@
-import * as dotenv from 'dotenv';
-dotenv.config({ path: '../../.env' });
+import './loadenv.js';
 
 import { Worker } from 'bullmq';
 import { getRedisConnection, AGENT_EXECUTION_QUEUE } from '@repo/queue';
