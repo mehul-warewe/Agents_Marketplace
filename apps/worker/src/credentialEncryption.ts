@@ -5,9 +5,15 @@
 import { createDecipheriv } from 'crypto';
 
 function getKey(): Buffer {
-  const hex = process.env.ENCRYPTION_KEY ?? '';
-  if (!hex || hex.length !== 64) {
-    throw new Error('ENCRYPTION_KEY env var must be a 64-char hex string (32 bytes).');
+  const hex = process.env.ENCRYPTION_KEY;
+  if (!hex) {
+    throw new Error(
+      'ENCRYPTION_KEY is missing from environment variables. ' +
+      'Please add a 64-character hex string to your .env file.'
+    );
+  }
+  if (hex.length !== 64) {
+    throw new Error(`ENCRYPTION_KEY must be exactly 64 characters (current length: ${hex.length})`);
   }
   return Buffer.from(hex, 'hex');
 }

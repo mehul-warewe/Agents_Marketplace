@@ -1,25 +1,33 @@
 import crypto from 'crypto';
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+let encryptionKey: Buffer | null = null;
 
-if (!ENCRYPTION_KEY) {
-  throw new Error(
-    'ENCRYPTION_KEY is missing from environment variables. ' +
-    'Please add a 64-character hex string to your .env file. ' +
-    'You can generate one using: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
-  );
+function getKey(): Buffer {
+  if (encryptionKey) return encryptionKey;
+
+  const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+
+  if (!ENCRYPTION_KEY) {
+    throw new Error(
+      'ENCRYPTION_KEY is missing from environment variables. ' +
+      'Please add a 64-character hex string to your .env file. ' +
+      'You can generate one using: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+    );
+  }
+
+  if (ENCRYPTION_KEY.length !== 64) {
+    throw new Error(`ENCRYPTION_KEY must be exactly 64 characters (current length: ${ENCRYPTION_KEY.length})`);
+  }
+
+  encryptionKey = Buffer.from(ENCRYPTION_KEY, 'hex');
+  return encryptionKey;
 }
-
-if (ENCRYPTION_KEY.length !== 64) {
-  throw new Error(`ENCRYPTION_KEY must be exactly 64 characters (current length: ${ENCRYPTION_KEY.length})`);
-}
-
-const key = Buffer.from(ENCRYPTION_KEY, 'hex');
 
 /**
  * Encrypts a string into IV:TAG:CONTENT format
  */
 export function encryptCredential(data: Record<string, any>): string {
+  const key = getKey();
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
   
@@ -35,6 +43,7 @@ export function encryptCredential(data: Record<string, any>): string {
  * Decrypts an IV:TAG:CONTENT string
  */
 export function decryptCredential(encryptedData: string): Record<string, any> {
+  const key = getKey();
   try {
     const [ivStr, tagStr, content] = encryptedData.split(':');
     if (!ivStr || !tagStr || !content) throw new Error('Invalid format');
