@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 
 export function useAgents() {
@@ -157,6 +157,41 @@ export function usePublishAgent() {
   });
 }
 
+export function usePublishAsWorker() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, isWorker, workerDescription, workerInputSchema }: { id: string, isWorker?: boolean, workerDescription?: string, workerInputSchema?: any }) => {
+      const { data } = await api.post(`/agents/${id}/publish-as-worker`, { isWorker, workerDescription, workerInputSchema });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-agents'] });
+      queryClient.invalidateQueries({ queryKey: ['workers'] });
+      queryClient.invalidateQueries({ queryKey: ['worker-directory'] });
+    },
+  });
+}
+
+export function useWorkers() {
+  return useQuery({
+    queryKey: ['workers'],
+    queryFn: async () => {
+      const { data } = await api.get('/workers');
+      return data;
+    },
+  });
+}
+
+export function useWorkerDirectory() {
+  return useQuery({
+    queryKey: ['worker-directory'],
+    queryFn: async () => {
+      const { data } = await api.get('/workers/directory');
+      return data;
+    },
+  });
+}
+
 
 // ─── Credentials Hooks ───────────────────────────────────────────────────────
 
@@ -177,6 +212,33 @@ export function useCredentials() {
       const { data } = await api.get('/credentials');
       return data;
     },
+  });
+}
+
+export function usePipedreamAccounts(appSlug?: string) {
+  return useQuery({
+    queryKey: ['pipedream-accounts', appSlug],
+    queryFn: async () => {
+      const { data } = await api.get('/credentials/pipedream/accounts', {
+        params: { appSlug }
+      });
+      return data.accounts || [];
+    },
+    refetchInterval: 30000,
+  });
+}
+
+export function usePipedreamTriggers(appSlug?: string) {
+  return useQuery({
+    queryKey: ['pipedream-triggers', appSlug],
+    queryFn: async () => {
+      if (!appSlug) return [];
+      const { data } = await api.get('/credentials/pipedream/triggers', {
+        params: { appSlug }
+      });
+      return data || [];
+    },
+    enabled: !!appSlug,
   });
 }
 
@@ -226,6 +288,35 @@ export function useAgentRun(runId: string | null) {
     refetchInterval: (data) => {
       const status = (data as any)?.status;
       return (status === 'completed' || status === 'failed') ? false : 1000;
+    },
+  });
+}
+
+export function useInfinitePipedreamApps(search: string = '', limit: number = 40) {
+  return useInfiniteQuery({
+    queryKey: ['pipedream-apps-infinite', search, limit],
+    queryFn: async ({ pageParam = 0 }) => {
+      const { data } = await api.get('/credentials/pipedream/apps', {
+        params: { search, limit, offset: pageParam }
+      });
+      return data;
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      const currentOffset = allPages.length * limit;
+      if (lastPage.results.length < limit || currentOffset >= lastPage.total) {
+        return undefined;
+      }
+      return currentOffset;
+    },
+  });
+}
+
+export function usePipedreamToken() {
+  return useMutation({
+    mutationFn: async (appSlug: string) => {
+      const { data } = await api.post('/credentials/pipedream/token', { appSlug });
+      return data;
     },
   });
 }

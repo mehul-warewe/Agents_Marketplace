@@ -10,7 +10,9 @@
       "Bash(pnpm install:*)",
       "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
       "Bash(find C:UserssysteDesktophubappsweb -type f -name *canvas*)",
-      "Bash(pnpm --filter @repo/worker dev)"
+      "Bash(pnpm --filter @repo/worker dev)",
+      "WebFetch(domain:app.relevanceai.com)",
+      "WebFetch(domain:relevanceai.com)"
     ]
   }
 }

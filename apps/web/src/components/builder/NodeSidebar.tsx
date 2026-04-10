@@ -26,6 +26,7 @@ interface NodeSidebarProps {
   onUpdate: (data: any) => void;
   onDelete: () => void;
   onTrigger?: (nodeId: string) => void;
+  inline?: boolean; // When true, use inline positioning (for split layout); when false/undefined, use fixed positioning
 }
 
 type TabType = 'input' | 'parameters' | 'output' | 'settings';
@@ -37,7 +38,8 @@ export default function NodeSidebar({
   onClose,
   onUpdate,
   onDelete,
-  onTrigger
+  onTrigger,
+  inline = false
 }: NodeSidebarProps) {
   const [activeTab, setActiveTab] = useState<TabType>('parameters');
   const tool = getToolById(node.data.toolId);
@@ -103,7 +105,10 @@ export default function NodeSidebar({
   ];
 
   return (
-    <div className="fixed right-0 top-14 h-[calc(100vh-3.5rem)] w-96 bg-card border-l border-border shadow-2xl z-30 flex flex-col animate-in slide-in-from-right duration-300">
+    <div className={inline
+      ? "relative w-full h-full bg-card border-t border-border flex flex-col overflow-y-auto"
+      : "fixed right-0 top-14 h-[calc(100vh-3.5rem)] w-96 bg-card border-l border-border shadow-2xl z-30 flex flex-col animate-in slide-in-from-right duration-300"
+    }>
       {/* HEADER */}
       <div className="p-6 border-b border-border/50 bg-background/50 backdrop-blur-sm">
         <div className="flex items-start justify-between mb-4">

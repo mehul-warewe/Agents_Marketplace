@@ -9,7 +9,7 @@ import {
   Home, ShoppingBag, PlusCircle, LogOut,
   User as UserIcon, Bot, Share2, Terminal,
   Moon, Sun, Monitor, ChevronUp, Settings,
-  Menu, X, Sparkles, LayoutGrid, Layers, Link2, Bell, ChevronRight, User, Mail, ArrowRight, ShieldCheck, Zap
+  Menu, X, Sparkles, LayoutGrid, Layers, Link2, Bell, ChevronRight, User, Users, Mail, ArrowRight, ShieldCheck, Zap
 } from 'lucide-react';
 import SettingsModal from './modals/SettingsModal';
 import UpgradeModal from './modals/UpgradeModal';
@@ -21,14 +21,12 @@ interface SidebarLayoutProps {
 }
 
 const navItems = [
-  { name: 'Dashboard',   icon: Home,       href: '/dashboard' },
-  { name: 'Agents',      icon: Bot,        href: '/agents' },
-  { name: 'Workflows',   icon: Share2,     href: '/workflows' },
-  { name: 'Connections', icon: Link2,      href: '/connections' },
-  { name: 'Tools',       icon: Terminal,   href: '/tools' },
-  { name: 'Templates',   icon: LayoutGrid, href: '/templates' },
-  { name: 'Marketplace', icon: ShoppingBag, href: '/marketplace' },
-  { name: 'Builder',     icon: PlusCircle, href: '/builder' },
+  { name: 'Dashboard',     icon: Home,         href: '/dashboard' },
+  { name: 'Managers',      icon: Users,        href: '/manager' },
+  { name: 'Employees',     icon: Bot,          href: '/agents' },
+  { name: 'Integrations',  icon: Link2,        href: '/connections' },
+  { name: 'Marketplace',   icon: ShoppingBag,  href: '/marketplace' },
+  { name: 'Build Employee',icon: Sparkles,     href: '/builder?mode=employee' },
 ];
 
 function ThemeIcon({ theme }: { theme: string | undefined }) {
@@ -71,15 +69,15 @@ export default function SidebarLayout({ children, title }: SidebarLayoutProps) {
       >
         {/* Logo Section */}
         <div
-          className="flex items-center gap-4 px-10 h-20 cursor-pointer shrink-0"
+          className="flex items-center gap-4 px-10 h-24 cursor-pointer shrink-0"
           onClick={() => router.push('/dashboard')}
         >
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-primary-foreground shadow-2xl shadow-primary/20">
-            <Bot size={22} strokeWidth={2.5} />
+          <div className="w-12 h-12 bg-foreground text-background rounded-2xl flex items-center justify-center shadow-2xl shadow-foreground/10">
+            <Sparkles size={24} strokeWidth={2.5} />
           </div>
           <div className="flex flex-col text-left">
-            <span className="font-black text-xl tracking-tighter leading-none mb-1 text-foreground italic">warewe</span>
-            <span className="text-[9px] font-black text-primary uppercase tracking-[0.3em] italic">PROTOCOL_ROOT</span>
+            <span className="font-black text-2xl tracking-tighter leading-none mb-1 text-foreground italic uppercase">Agent Hub</span>
+            <span className="text-[9px] font-black text-primary uppercase tracking-[0.4em] italic">Workspace</span>
           </div>
         </div>
 
@@ -135,14 +133,14 @@ export default function SidebarLayout({ children, title }: SidebarLayoutProps) {
                       className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-primary/10 rounded-2xl transition-all text-sm font-bold text-primary italic"
                     >
                        <Zap size={18} strokeWidth={3} />
-                       Upgrade Protocol
+                       Upgrade Plan
                     </button>
                     <button 
                       onClick={() => setIsSettingsOpen(true)}
                       className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-foreground/5 rounded-2xl transition-all text-sm font-bold text-muted hover:text-foreground italic"
                     >
                        <Settings size={18} />
-                       Core Settings
+                       Settings
                     </button>
                     <div className="h-px bg-border my-2 mx-2" />
                     <button 
@@ -168,7 +166,7 @@ export default function SidebarLayout({ children, title }: SidebarLayoutProps) {
                 </div>
                 <div className="flex flex-col text-left min-w-0 flex-1">
                    <span className="text-xs font-black truncate uppercase tracking-tighter">{user?.name}</span>
-                   <span className="text-[9px] font-black text-muted uppercase tracking-[0.2em] opacity-40 italic">{user?.tier}_ENTITY</span>
+                   <span className="text-[9px] font-black text-muted uppercase tracking-[0.2em] opacity-40 italic">{user?.tier} tier</span>
                 </div>
                 <ChevronUp size={16} strokeWidth={3} className={`text-muted transition-transform duration-500 ${showSettings ? '' : 'rotate-180'}`} />
              </button>
@@ -192,19 +190,19 @@ export default function SidebarLayout({ children, title }: SidebarLayoutProps) {
               <Bot className="text-foreground" size={28} strokeWidth={3} />
            </div>
 
-           <div className="hidden lg:flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.4em] opacity-40 italic">
+            <div className="hidden lg:flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.4em] opacity-40 italic">
               <Home size={16} strokeWidth={3} />
               <ChevronRight size={14} strokeWidth={3} className="text-muted/30" />
               <span className="text-foreground md:max-w-[400px] truncate">
-                {title?.toUpperCase().replace(/\s+/g, '_') || 'DASHBOARD_ROOT'}
+                {title || 'Dashboard'}
               </span>
-           </div>
+            </div>
 
             <div className="flex items-center gap-6">
                 <div className="flex items-center gap-4">
                    <div className="hidden sm:flex items-center gap-3 px-6 py-2 rounded-xl bg-foreground/[0.03] border border-border/40 shadow-xl shadow-foreground/5 transition-all hover:bg-foreground/[0.05]">
-                      <span className="text-[9px] font-black text-muted uppercase tracking-[0.3em] opacity-40 italic">Credits::</span>
-                      <span className="text-sm font-black italic tracking-tighter text-primary">{user?.credits?.toLocaleString() || 0}_CR</span>
+                      <span className="text-[9px] font-black text-muted uppercase tracking-[0.3em] opacity-40 italic">Credits</span>
+                      <span className="text-sm font-black italic tracking-tighter text-primary">{user?.credits?.toLocaleString() || 0}</span>
                    </div>
                    <div className="hidden sm:block">
                       <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-black text-xs shadow-2xl shadow-primary/20 border border-primary/10">

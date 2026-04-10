@@ -108,6 +108,24 @@ router.get('/pipedream/tools', async (req: any, res, next) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * GET /credentials/pipedream/triggers?appSlug=<id-or-slug>
+ * Lists available event triggers (sources) for a platform.
+ */
+router.get('/pipedream/triggers', async (req: any, res, next) => {
+  try {
+    const rawSlug = req.query.appSlug as string;
+    const resolvedSlug = await pipedreamService.resolveAppSlug(rawSlug);
+    const accessToken = await pipedreamService.getOAuthToken();
+    
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    res.json(await pipedreamMcpService.listTriggersForApp(resolvedSlug, req.user.id, accessToken));
+  } catch (err) { next(err); }
+});
+
 // OAuth Fallbacks (Google / Slack native)
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 

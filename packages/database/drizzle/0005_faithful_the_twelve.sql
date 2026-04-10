@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS "memories_user_key_idx" ON "memories" ("user_id","key");

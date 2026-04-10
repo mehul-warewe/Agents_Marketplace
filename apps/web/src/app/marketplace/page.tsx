@@ -3,7 +3,7 @@ import AgentMarketplace from '@/components/AgentMarketplace';
 
 export default function MarketplacePage() {
   return (
-    <SidebarLayout title="EXTERNAL_REGISTRY // MARKETPLACE">
+    <SidebarLayout title="Marketplace">
       <AgentMarketplace />
     </SidebarLayout>
   );

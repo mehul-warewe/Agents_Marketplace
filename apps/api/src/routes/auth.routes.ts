@@ -8,7 +8,7 @@ router.get('/google', passport.authenticate('google', { scope: ['profile', 'emai
 
 router.get('/google/callback', passport.authenticate('google', { session: false }), (req: any, res) => {
   const token = generateToken(req.user);
-  res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
+  res.redirect(`${process.env.FRONTEND_URL}/login/callback?token=${token}`);
 });
 
 router.post('/send-otp', async (req, res, next) => {

@@ -44,6 +44,10 @@ router.post('/:id/publish', async (req: any, res, next) => {
   try { res.json(await agentsService.publishAgent(req.params.id, req.user.id, req.body)); } catch (err) { next(err); }
 });
 
+router.post('/:id/publish-as-worker', async (req: any, res, next) => {
+  try { res.json(await agentsService.publishAsWorker(req.params.id, req.user.id, req.body)); } catch (err) { next(err); }
+});
+
 router.post('/:id/acquire', async (req: any, res, next) => {
   try { res.json(await agentsService.acquireAgent(req.params.id, req.user.id)); } catch (err) { next(err); }
 });

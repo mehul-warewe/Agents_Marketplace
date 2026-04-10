@@ -13,6 +13,8 @@ import credentialRoutes from './routes/credentials.routes.js';
 import agentRoutes from './routes/agents.routes.js';
 import billingRoutes from './routes/billing.routes.js';
 import templatesRoutes from './routes/templates.routes.js';
+import workerRoutes from './routes/workers.routes.js';
+import managerRoutes from './routes/manager.routes.js';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -38,6 +40,8 @@ app.use('/credentials', credentialRoutes);
 app.use('/agents', agentRoutes);
 app.use('/billing', billingRoutes);
 app.use('/templates', templatesRoutes);
+app.use('/workers', workerRoutes);
+app.use('/managers', managerRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'api', timestamp: new Date().toISOString() });

@@ -1,10 +1,11 @@
 'use client';
 
 import SidebarLayout from '@/components/SidebarLayout';
-import { useMyAgents, useRunAgent, usePublishAgent, useDeleteAgent } from '@/hooks/useApi';
-import { Bot, Plus, Clock, Globe, Lock, Play, ChevronRight, Edit3, Share2, X, DollarSign, Tag, Trash2, Shield, Activity } from 'lucide-react';
+import { useMyAgents, useRunAgent, usePublishAgent, useDeleteAgent, usePublishAsWorker } from '@/hooks/useApi';
+import { Bot, Plus, Clock, Globe, Lock, Play, ChevronRight, Edit3, Share2, X, DollarSign, Tag, Trash2, Shield, Activity, Zap, FileJson } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useToast } from '@/components/ui/Toast';
 
 const CATEGORIES = ['Automation', 'Intelligence', 'Deep Research', 'Complex Ops', 'Creative', 'Discovery'];
 
@@ -13,11 +14,20 @@ export default function MyAgentsPage() {
   const { mutate: runAgent } = useRunAgent();
   const { mutate: deleteAgent } = useDeleteAgent();
   const { mutate: publishAgent, isPending: isPublishing } = usePublishAgent();
+  const { mutate: publishAsWorker, isPending: isPublishingWorker } = usePublishAsWorker();
   const router = useRouter();
+  const toast = useToast();
 
   const [publishingAgent, setPublishingAgent] = useState<any>(null);
   const [publishPrice, setPublishPrice] = useState('0');
   const [publishCategory, setPublishCategory] = useState(CATEGORIES[0]);
+
+  const [publishingWorkerAgent, setPublishingWorkerAgent] = useState<any>(null);
+  const [workerDescription, setWorkerDescription] = useState('');
+  const [workerInputSchema, setWorkerInputSchema] = useState('{}');
+
+  const [runningAgent, setRunningAgent] = useState<any>(null);
+  const [runInput, setRunInput] = useState('');
 
   const handleOpenPublish = (agent: any) => {
     setPublishingAgent(agent);
@@ -37,8 +47,31 @@ export default function MyAgentsPage() {
     });
   };
 
+  const handleOpenWorkerPublish = (agent: any) => {
+    setPublishingWorkerAgent(agent);
+    setWorkerDescription(agent.workerDescription || '');
+    setWorkerInputSchema(JSON.stringify(agent.workerInputSchema || {}, null, 2));
+  };
+
+  const handleConfirmWorkerPublish = () => {
+    if (!publishingWorkerAgent) return;
+    try {
+      const schema = JSON.parse(workerInputSchema);
+      publishAsWorker({
+        id: publishingWorkerAgent.id,
+        isWorker: true,
+        workerDescription,
+        workerInputSchema: schema
+      }, {
+        onSuccess: () => setPublishingWorkerAgent(null)
+      });
+    } catch (e) {
+      alert('Invalid JSON schema');
+    }
+  };
+
   return (
-    <SidebarLayout title="ENTITY_GRID // MY_FLEET">
+    <SidebarLayout title="Employees">
       <div className="flex-1 bg-background min-h-full text-foreground p-6 sm:p-10 lg:p-14 overflow-y-auto w-full no-scrollbar font-inter">
         <div className="max-w-[1400px] mx-auto space-y-16">
           
@@ -46,18 +79,18 @@ export default function MyAgentsPage() {
           <header className="flex flex-col md:flex-row md:items-end justify-between gap-10 border-b border-border/60 pb-16">
             <div className="space-y-6">
               <div className="flex flex-col gap-4">
-                <h1 className="text-6xl font-black tracking-tighter uppercase italic leading-none">Autonomous_Fleet</h1>
+                <h1 className="text-6xl font-black tracking-tighter uppercase italic leading-none">Employees</h1>
                 <div className="w-fit bg-foreground/5 text-foreground text-[10px] font-black px-5 py-2 uppercase tracking-[0.3em] border border-border/50 rounded-full">
-                  Node_Capacity: {agents?.length || 0}/Unlimited
+                  Count: {agents?.length || 0}/Unlimited
                 </div>
               </div>
-              <p className="text-muted font-bold text-lg leading-tight uppercase opacity-40 max-w-xl">Manage and synthesize your private entity grid with high-fidelity control.</p>
+              <p className="text-muted font-bold text-lg leading-tight uppercase opacity-40 max-w-xl">Manage and delegate to your specialized employees with autonomous precision.</p>
             </div>
             <button
-              onClick={() => router.push('/builder')}
+              onClick={() => router.push('/builder?mode=employee')}
               className="bg-foreground text-background hover:scale-[1.02] px-14 py-5 rounded-[1.75rem] font-black text-xs uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-4 shadow-2xl shadow-foreground/10 active:scale-[0.98]"
             >
-              <Plus size={18} strokeWidth={3} /> New Entity
+              <Plus size={18} strokeWidth={3} /> Build Employee
             </button>
           </header>
 
@@ -65,7 +98,7 @@ export default function MyAgentsPage() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-40 text-muted">
               <div className="w-10 h-10 border border-accent border-t-transparent animate-spin mb-6"></div>
-              <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">Polling_Private_Net</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">Loading...</p>
             </div>
           ) : !agents || agents.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-40 text-center border border-border/60 bg-card rounded-[3rem] shadow-2xl shadow-foreground/5 overflow-hidden relative">
@@ -73,13 +106,13 @@ export default function MyAgentsPage() {
               <div className="w-24 h-24 bg-foreground/5 rounded-[2.5rem] flex items-center justify-center text-muted mb-12 border border-border/50 relative z-10">
                 <Bot size={40} strokeWidth={1} />
               </div>
-              <h3 className="text-3xl font-black mb-4 uppercase tracking-tighter italic relative z-10">Fleet_Offline</h3>
-              <p className="text-muted font-bold mb-12 max-w-sm mx-auto leading-tight uppercase opacity-40 relative z-10">Synthesize your first autonomous agent to initialize the grid.</p>
+              <h3 className="text-3xl font-black mb-4 uppercase tracking-tighter italic relative z-10">No employees</h3>
+              <p className="text-muted font-bold mb-12 max-w-sm mx-auto leading-tight uppercase opacity-40 relative z-10">Build your first employee to expand your workforce.</p>
               <button
-                onClick={() => router.push('/builder')}
+                onClick={() => router.push('/builder?mode=employee')}
                 className="bg-foreground text-background px-14 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:scale-[1.05] transition-all relative z-10 shadow-xl"
               >
-                Initialize Node
+                Build Employee
               </button>
             </div>
           ) : (
@@ -93,41 +126,86 @@ export default function MyAgentsPage() {
                     <div className="flex items-center gap-4">
                       <div className={`flex items-center gap-2.5 px-5 py-2 rounded-full border text-[9px] font-black uppercase tracking-[0.2em] shadow-inner ${agent.isPublished ? 'bg-foreground text-background border-foreground' : 'bg-foreground/5 border-border/60 text-muted'}`}>
                         {agent.isPublished ? <Globe size={12} strokeWidth={3} /> : <Shield size={12} strokeWidth={3} />}
-                        {agent.isPublished ? 'PUBLIC_LNK' : 'SECURE_NODE'}
+                        {agent.isPublished ? 'Public' : 'Private'}
                       </div>
-                      <div className="flex items-center gap-2.5 px-5 py-2 rounded-full border border-border/60 bg-foreground/[0.03] text-muted text-[9px] font-black uppercase tracking-[0.2em] shadow-inner">
-                        <Activity size={12} strokeWidth={3} className="animate-pulse" />
-                        UPLINK_LIVE
-                      </div>
+                      {agent.isWorker && (
+                        <div className="flex items-center gap-2.5 px-5 py-2 rounded-full border border-yellow-500/50 bg-yellow-500/10 text-yellow-500 text-[9px] font-black uppercase tracking-[0.2em] shadow-inner animate-pulse">
+                          <Zap size={12} fill="currentColor" />
+                          EMPLOYEE
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-500">
+                      <button
+                        onClick={() => handleOpenWorkerPublish(agent)}
+                        className={`w-12 h-12 rounded-2xl border transition-all flex items-center justify-center shadow-lg ${agent.isWorker ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500 hover:bg-yellow-500 hover:text-white' : 'bg-foreground/5 border-border/40 text-muted hover:bg-foreground hover:text-background'}`}
+                        title={agent.isWorker ? 'Update Employee Settings' : 'Promote to Employee'}
+                      >
+                        <Zap size={18} strokeWidth={2.5} fill={agent.isWorker ? "currentColor" : "none"} />
+                      </button>
                       <button 
-                        onClick={() => { if(confirm('Purge this entity permanently?')) deleteAgent(agent.id); }}
+                        onClick={() => { if(confirm('Delete this employee permanently?')) deleteAgent(agent.id); }}
                         className="w-12 h-12 bg-red-500/5 rounded-2xl border border-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center shadow-lg shadow-red-500/5"
-                        title="Purge node"
+                        title="Delete employee"
                       >
                         <Trash2 size={18} strokeWidth={2.5} />
                       </button>
                     </div>
                   </div>
 
-                  {/* Header */}
+                  {/* Header - Identity Card Style */}
                   <div className="flex items-start gap-10 mb-12 relative z-10">
-                    <div className="w-20 h-20 rounded-[1.75rem] border border-border/60 bg-foreground/[0.03] flex items-center justify-center text-foreground shrink-0 group-hover:bg-foreground group-hover:text-background transition-all duration-700 shadow-inner group-hover:shadow-2xl group-hover:scale-105">
-                      <Bot size={36} strokeWidth={2.5} />
+                    <div className="w-24 h-24 rounded-[2rem] border border-border/60 bg-foreground/[0.03] flex items-center justify-center text-foreground shrink-0 group-hover:bg-foreground group-hover:text-background transition-all duration-700 shadow-inner group-hover:shadow-2xl group-hover:scale-105">
+                      <Bot size={42} strokeWidth={2.5} />
                     </div>
-                    <div className="min-w-0 pt-2">
-                       <span className="text-[9px] font-black text-muted uppercase tracking-[0.4em] mb-2 block opacity-30 italic">Logical_Core_ID</span>
-                      <h3 className="text-3xl font-black tracking-tighter uppercase italic leading-none truncate mb-4">{agent.name}</h3>
-                      <p className="text-[12px] text-muted font-bold uppercase tracking-tight opacity-50 leading-tight line-clamp-2 italic">
-                        {agent.description || "No customized technical instruction matrix detected for this operational unit."}
+                    <div className="min-w-0 pt-2 flex-1">
+                       <div className="flex items-center gap-3 mb-2">
+                        <span className="text-[9px] font-black text-muted uppercase tracking-[0.4em] opacity-30 italic">Active unit</span>
+                        <div className="h-[1px] flex-1 bg-border/40" />
+                       </div>
+                      <h3 className="text-4xl font-black tracking-tighter uppercase italic leading-none truncate mb-4">{agent.name}</h3>
+                      <p className="text-[13px] text-muted font-bold uppercase tracking-tight opacity-50 leading-tight line-clamp-2 italic">
+                        {agent.description || "No customized instructions found for this unit."}
                       </p>
+                      
+                      {agent.isWorker && agent.workerDescription && (
+                        <div className="mt-6 p-6 bg-yellow-500/[0.03] border border-yellow-500/10 rounded-[2rem] space-y-2">
+                          <p className="text-[9px] text-yellow-600 font-black uppercase tracking-[0.3em] italic opacity-60 flex items-center gap-2">
+                            <Activity size={12} /> Specialization
+                          </p>
+                          <p className="text-sm text-foreground font-black italic opacity-80 leading-snug">{agent.workerDescription}</p>
+                        </div>
+                      )}
+
+                      {agent.isWorker && agent.workerInputSchema && Object.keys(agent.workerInputSchema).length > 0 && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {Object.keys(agent.workerInputSchema).map((key: string) => (
+                            <span key={key} className="px-3 py-1 bg-foreground/5 border border-border/40 rounded-full text-[9px] font-black text-muted uppercase tracking-widest">
+                              {key}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 
+                  {/* Operational Stats */}
+                  <div className="grid grid-cols-2 gap-4 mb-12 relative z-10 px-2">
+                      <div className="p-4 bg-foreground/[0.02] border border-border/40 rounded-2xl">
+                        <p className="text-[8px] font-black text-muted uppercase tracking-widest opacity-40 mb-1">Status</p>
+                        <div className="text-[10px] font-black text-foreground uppercase tracking-wider flex items-center gap-2">
+                           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Online
+                        </div>
+                     </div>
+                     <div className="p-4 bg-foreground/[0.02] border border-border/40 rounded-2xl">
+                        <p className="text-[8px] font-black text-muted uppercase tracking-widest opacity-40 mb-1">Architecture</p>
+                        <p className="text-[10px] font-black text-foreground uppercase tracking-wider">Secure</p>
+                     </div>
+                  </div>
+
                   {/* Actions Matrix */}
-                  <div className="grid grid-cols-3 gap-6 mt-auto pt-12 relative z-10 border-t border-border/40">
+                  <div className="grid grid-cols-3 gap-6 mt-auto pt-10 relative z-10 border-t border-border/40">
                     <button 
                       onClick={() => handleOpenPublish(agent)}
                       className="flex flex-col items-center justify-center gap-4 py-8 bg-foreground/[0.03] hover:bg-foreground hover:text-background transition-all duration-500 rounded-3xl group/opt border border-border/40 shadow-xl shadow-foreground/5 hover:translate-y-[-4px]"
@@ -145,25 +223,12 @@ export default function MyAgentsPage() {
                     </button>
 
                     <button 
-                      onClick={() => runAgent({ agentId: agent.id })}
-                      className="flex flex-col items-center justify-center gap-4 py-8 bg-foreground/[0.03] hover:bg-foreground hover:text-background transition-all duration-500 rounded-3xl group/opt border border-border/40 shadow-xl shadow-foreground/5 hover:translate-y-[-4px]"
+                      onClick={() => setRunningAgent(agent)}
+                      className="flex flex-col items-center justify-center gap-4 py-8 bg-foreground text-background hover:bg-primary transition-all duration-500 rounded-3xl group/opt shadow-2xl shadow-foreground/20 hover:translate-y-[-4px]"
                     >
                       <Play size={24} fill="currentColor" strokeWidth={0} />
-                      <span className="text-[9px] font-black uppercase tracking-[0.3em] opacity-60 group-hover/opt:opacity-100">TRIGGER</span>
+                      <span className="text-[9px] font-black uppercase tracking-[0.3em]">Run</span>
                     </button>
-                  </div>
-
-                  {/* Footer Metadata */}
-                  <div className="mt-10 flex items-center justify-between text-[10px] font-black text-muted uppercase tracking-[0.2em] opacity-30 italic">
-                    <div className="flex items-center gap-3">
-                      <Clock size={16} strokeWidth={3} />
-                      REF::{new Date(agent.createdAt).toLocaleDateString().replace(/\//g, '-')}
-                    </div>
-                    {agent.isPublished && (
-                      <div className="text-foreground font-black bg-foreground/10 px-4 py-1.5 rounded-full not-italic tracking-[0.1em]">
-                        VAL::{agent.price === 0 ? 'FREE' : `${agent.price}Cr`}
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}
@@ -171,6 +236,88 @@ export default function MyAgentsPage() {
           )}
         </div>
       </div>
+
+      {/* ── Run Modal (Empower Independence) ─────────────────────────── */}
+      {runningAgent && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-background/60 backdrop-blur-md" onClick={() => setRunningAgent(null)} />
+          <div className="relative bg-card border border-border/60 w-full max-w-2xl rounded-[4rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)] overflow-hidden animate-in fade-in zoom-in-95 duration-500">
+            <div className="p-16 space-y-16">
+              <header className="flex justify-between items-start border-b border-border/40 pb-12">
+                <div className="space-y-6">
+                   <div className="flex items-center gap-4">
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-[10px] font-black text-muted uppercase tracking-[0.4em] opacity-40">Execution Protocol</span>
+                   </div>
+                  <h2 className="text-4xl font-black tracking-tighter uppercase italic leading-none truncate max-w-md">Run {runningAgent.name}</h2>
+                </div>
+                <button onClick={() => setRunningAgent(null)} className="w-12 h-12 bg-foreground/5 rounded-2xl hover:bg-foreground hover:text-background transition-all border border-border/40 flex items-center justify-center">
+                  <X size={20} strokeWidth={3} />
+                </button>
+              </header>
+
+              <div className="space-y-12">
+                {runningAgent.isWorker ? (
+                  <div className="space-y-10">
+                    <div className="p-8 bg-yellow-500/[0.03] border border-yellow-500/10 rounded-3xl space-y-4">
+                       <h4 className="text-[10px] font-black text-yellow-600 uppercase tracking-widest italic flex items-center gap-3">
+                          <Zap size={14} fill="currentColor" /> EMPLOYEE_CAPABILITY
+                       </h4>
+                       <p className="text-sm font-bold text-foreground opacity-70 italic leading-relaxed">{runningAgent.workerDescription}</p>
+                    </div>
+
+                    <div className="space-y-6">
+                      <label className="text-[10px] font-black text-muted uppercase tracking-[0.3em] px-4 opacity-50 italic flex items-center gap-3">
+                        <FileJson size={14} /> Mission Parameters (JSON)
+                      </label>
+                      <textarea 
+                        value={runInput}
+                        onChange={e => setRunInput(e.target.value)}
+                        className="w-full bg-foreground/[0.03] border border-border/60 rounded-[2.5rem] px-12 py-10 outline-none focus:bg-background focus:border-foreground transition-all font-mono text-sm shadow-inner min-h-[200px] resize-none"
+                        placeholder={JSON.stringify(runningAgent.workerInputSchema || {}, null, 2)}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-20 text-center space-y-8">
+                     <div className="w-24 h-24 bg-foreground/5 rounded-[2.5rem] flex items-center justify-center text-foreground border border-border/60">
+                        <Bot size={48} strokeWidth={1} />
+                     </div>
+                     <div className="space-y-2">
+                        <h4 className="text-xl font-black uppercase tracking-tight italic">Global_Execution_Sequence</h4>
+                        <p className="text-xs text-muted font-bold uppercase tracking-widest opacity-40 max-w-xs mx-auto">This entity will execute its complete logic-tree under standard operating parameters.</p>
+                     </div>
+                  </div>
+                )}
+              </div>
+
+              <footer className="pt-12 border-t border-border/40">
+                <button
+                  onClick={() => {
+                    let inputData = {};
+                    try {
+                      if (runningAgent.isWorker && runInput) {
+                        inputData = JSON.parse(runInput);
+                      }
+                    } catch (e) {
+                      alert('Invalid JSON input data');
+                      return;
+                    }
+                    
+                    runAgent({ agentId: runningAgent.id, inputData });
+                    toast.success('Mission initiated successfully.');
+                    setRunningAgent(null);
+                  }}
+                  className="w-full bg-foreground text-background py-10 rounded-[2.5rem] font-black text-[12px] uppercase tracking-[0.4em] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-6 shadow-2xl shadow-foreground/20"
+                >
+                   Launch
+                  <Play size={20} fill="currentColor" strokeWidth={0} />
+                </button>
+              </footer>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Publish Modal (warewe Style) ─────────────────────────────────── */}
       {publishingAgent && (
@@ -182,9 +329,9 @@ export default function MyAgentsPage() {
                 <div className="space-y-6">
                    <div className="flex items-center gap-4">
                       <div className="w-2.5 h-2.5 rounded-full bg-foreground" />
-                      <span className="text-[10px] font-black text-muted uppercase tracking-[0.4em] opacity-40">UPLINK_DISTRIBUTION</span>
+                      <span className="text-[10px] font-black text-muted uppercase tracking-[0.4em] opacity-40">Marketplace</span>
                    </div>
-                  <h2 className="text-4xl font-black tracking-tighter uppercase italic leading-none">{publishingAgent.isPublished ? 'REGISTRY_SYNC' : 'INITIAL_MARKET_LINK'}</h2>
+                  <h2 className="text-4xl font-black tracking-tighter uppercase italic leading-none">{publishingAgent.isPublished ? 'Update Listing' : 'Publish to Market'}</h2>
                 </div>
                 <button onClick={() => setPublishingAgent(null)} className="w-12 h-12 bg-foreground/5 rounded-2xl hover:bg-foreground hover:text-background transition-all border border-border/40 flex items-center justify-center">
                   <X size={20} strokeWidth={3} />
@@ -193,8 +340,8 @@ export default function MyAgentsPage() {
 
               <div className="space-y-12">
                 <div className="space-y-6">
-                  <label className="text-[10px] font-black text-muted uppercase tracking-[0.3em] px-4 opacity-50 italic">
-                    Marketplace_Valuation (Cr)
+                   <label className="text-[10px] font-black text-muted uppercase tracking-[0.3em] px-4 opacity-50 italic">
+                    Credits per run
                   </label>
                   <div className="relative group">
                     <DollarSign size={24} strokeWidth={3} className="absolute left-8 top-1/2 -translate-y-1/2 text-muted opacity-40 group-focus-within:text-foreground group-focus-within:opacity-100 transition-all" />
@@ -209,8 +356,8 @@ export default function MyAgentsPage() {
                 </div>
 
                 <div className="space-y-6">
-                  <label className="text-[10px] font-black text-muted uppercase tracking-[0.3em] px-4 opacity-50 italic">
-                    Logical_Categorization
+                   <label className="text-[10px] font-black text-muted uppercase tracking-[0.3em] px-4 opacity-50 italic">
+                    Category
                   </label>
                   <div className="relative group">
                     <Tag size={18} strokeWidth={3} className="absolute left-8 top-1/2 -translate-y-1/2 text-muted opacity-40 group-hover:text-foreground transition-all" />
@@ -227,12 +374,12 @@ export default function MyAgentsPage() {
               </div>
 
               <footer className="pt-12 flex flex-col gap-6 border-t border-border/40">
-                <button
+                 <button
                   onClick={handleConfirmPublish}
                   disabled={isPublishing}
                   className="w-full bg-foreground text-background py-10 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.4em] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-6 shadow-2xl shadow-foreground/20"
                 >
-                  {isPublishing ? 'SYNCHRONIZING_CORE...' : publishingAgent.isPublished ? 'PUSH_UPDATE_TO_RECORDS' : 'INITIATE_PUBLIC_BRIDGE'}
+                  {isPublishing ? 'Saving...' : publishingAgent.isPublished ? 'Save changes' : 'Publish'}
                   <ChevronRight size={20} strokeWidth={3} />
                 </button>
 
@@ -243,9 +390,71 @@ export default function MyAgentsPage() {
                     }}
                     className="w-full py-4 text-[10px] font-black text-red-500 uppercase tracking-[0.4em] hover:opacity-50 transition-all mt-4 italic underline underline-offset-8"
                   >
-                    Withdraw_Protocol_From_Registry
+                     Withdraw Listing
                   </button>
                 )}
+              </footer>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Employee Protocol Modal (warewe Style) ─────────────────────────── */}
+      {publishingWorkerAgent && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-background/60 backdrop-blur-md" onClick={() => setPublishingWorkerAgent(null)} />
+          <div className="relative bg-card border border-border/60 w-full max-w-2xl rounded-[4rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)] overflow-hidden animate-in fade-in zoom-in-95 duration-500">
+            <div className="p-16 space-y-16">
+              <header className="flex justify-between items-start border-b border-border/40 pb-12">
+                <div className="space-y-6">
+                   <div className="flex items-center gap-4">
+                      <Zap size={16} fill="currentColor" className="text-yellow-500" />
+                      <span className="text-[10px] font-black text-muted uppercase tracking-[0.4em] opacity-40">Employee Settings</span>
+                   </div>
+                  <h2 className="text-4xl font-black tracking-tighter uppercase italic leading-none">Promote to Employee</h2>
+                </div>
+                <button onClick={() => setPublishingWorkerAgent(null)} className="w-12 h-12 bg-foreground/5 rounded-2xl hover:bg-foreground hover:text-background transition-all border border-border/40 flex items-center justify-center">
+                  <X size={20} strokeWidth={3} />
+                </button>
+              </header>
+
+              <div className="space-y-12">
+                <div className="space-y-6">
+                   <label className="text-[10px] font-black text-muted uppercase tracking-[0.3em] px-4 opacity-50 italic flex items-center gap-3">
+                    <Activity size={14} /> Description (For Manager)
+                  </label>
+                  <textarea
+                    value={workerDescription}
+                    onChange={e => setWorkerDescription(e.target.value)}
+                    className="w-full bg-foreground/[0.03] border border-border/60 rounded-[2.5rem] px-12 py-10 outline-none focus:bg-background focus:border-foreground transition-all font-bold text-lg tracking-tight italic shadow-inner min-h-[120px] resize-none"
+                    placeholder="Describe exactly what this employee can do so the Manager Agent knows when to call them..."
+                  />
+                </div>
+
+                <div className="space-y-6">
+                   <label className="text-[10px] font-black text-muted uppercase tracking-[0.3em] px-4 opacity-50 italic flex items-center gap-3">
+                    <FileJson size={14} /> Input Schema (JSON)
+                  </label>
+                  <div className="relative group">
+                    <textarea 
+                      value={workerInputSchema}
+                      onChange={e => setWorkerInputSchema(e.target.value)}
+                      className="w-full bg-foreground/[0.03] border border-border/60 rounded-[2.5rem] px-12 py-10 outline-none focus:bg-background focus:border-foreground transition-all font-mono text-xs shadow-inner min-h-[150px] resize-none"
+                      placeholder='{ "topic": "string" }'
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <footer className="pt-12 flex flex-col gap-6 border-t border-border/40">
+                <button
+                  onClick={handleConfirmWorkerPublish}
+                  disabled={isPublishingWorker}
+                  className="w-full bg-yellow-500 text-black py-10 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.4em] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-6 shadow-2xl shadow-yellow-500/20"
+                >
+                   {isPublishingWorker ? 'Proccessing...' : publishingWorkerAgent.isWorker ? 'Update Employee' : 'Promote to Employee'}
+                  <Zap size={20} fill="currentColor" />
+                </button>
               </footer>
             </div>
           </div>

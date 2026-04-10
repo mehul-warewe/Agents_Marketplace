@@ -161,5 +161,38 @@ export const agentsService = {
       aiUsage: "2.4K", 
       toolsConnected: 4
     };
+  },
+
+  async publishAsWorker(agentId: string, userId: string, data: any) {
+    const { workerDescription, workerInputSchema, isWorker } = data;
+    const existing = await this.getAgent(agentId);
+    
+    if (!existing || existing.creatorId !== userId) {
+      throw new Error('Unauthorized or not found');
+    }
+
+    const [updated] = await db.update(agents)
+      .set({ 
+        isWorker: isWorker === undefined ? true : !!isWorker,
+        workerDescription: workerDescription || existing.workerDescription,
+        workerInputSchema: workerInputSchema || existing.workerInputSchema,
+        updatedAt: new Date()
+      })
+      .where(eq(agents.id, agentId))
+      .returning();
+    
+    return updated;
+  },
+
+  async listWorkers(userId: string) {
+    return await db.select().from(agents)
+      .where(and(eq(agents.creatorId, userId), eq(agents.isWorker, true)))
+      .orderBy(desc(agents.updatedAt));
+  },
+
+  async listWorkerDirectory() {
+    return await db.select().from(agents)
+      .where(eq(agents.isWorker, true))
+      .orderBy(desc(agents.updatedAt));
   }
 };

@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, jsonb, pgEnum, integer, doublePrecision, boolean, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, jsonb, pgEnum, integer, doublePrecision, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const agentStatusEnum = pgEnum('agent_status', ['running', 'completed', 'failed', 'pending']);
 export const userTierEnum = pgEnum('user_tier', ['free', 'pro', 'ultra']);
@@ -29,9 +29,41 @@ export const agents = pgTable('agents', {
   price: doublePrecision('price').default(0),
   category: text('category'),
   isPublished: boolean('is_published').default(false).notNull(),
+  isWorker: boolean('is_worker').default(false).notNull(), // Flag for Manager discovery
+  workerDescription: text('worker_description'),          // AI-readable capability description
+  workerInputSchema: jsonb('worker_input_schema'),        // Expected inputs for the Manager
   originalId: uuid('original_id'), // Reference to the marketplace agent it was cloned from
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// NEW: managers table (The CEO agents)
+export const managers = pgTable('managers', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  goal: text('goal'),                      // Standing objective
+  systemPrompt: text('system_prompt'),     // Custom boss instructions
+  model: text('model').default('google/gemini-2.0-flash-001'),
+  creatorId: uuid('creator_id').references(() => users.id).notNull(),
+  workerIds: jsonb('worker_ids').$type<string[]>().default([]), // Pinned workers for this manager
+  isPublished: boolean('is_published').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// NEW: manager_runs table (Manager execution history)
+export const managerRuns = pgTable('manager_runs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  managerId: uuid('manager_id').references(() => managers.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  input: text('input').notNull(),           // User task
+  status: agentStatusEnum('status').default('pending').notNull(),
+  steps: jsonb('steps').$type<any[]>().default([]), // Reasoning trace (streamed)
+  output: jsonb('output'),                   // Final result
+  childRunIds: jsonb('child_run_ids').$type<string[]>().default([]), // Sub-agent executions
+  startTime: timestamp('start_time').defaultNow().notNull(),
+  endTime: timestamp('end_time'),
 });
 
 export const tools = pgTable('tools', {
@@ -110,6 +142,10 @@ export const memories = pgTable('memories', {
   key: text('key').notNull(),
   value: jsonb('value').notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => {
+  return {
+    userKeyIdx: uniqueIndex('memories_user_key_idx').on(table.userId, table.key),
+  };
 });
 
 export const pipedreamApps = pgTable('pipedream_apps', {

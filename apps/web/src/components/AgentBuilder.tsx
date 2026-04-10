@@ -24,7 +24,7 @@ import 'reactflow/dist/style.css';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useTheme } from 'next-themes';
-import { useCreateAgent, useUpdateAgent, useArchitect, useAgent, useRunAgent, useAgentRun } from '@/hooks/useApi';
+import { useCreateAgent, useUpdateAgent, useArchitect, useAgent, useRunAgent, useAgentRun, usePublishAsWorker } from '@/hooks/useApi';
 import { useToast } from '@/components/ui/Toast';
 
 import FlowNode from './builder/FlowNode';
@@ -32,6 +32,7 @@ import ToolSidebar from './builder/ToolSidebar';
 import NodeSidebar from './builder/NodeSidebar';
 import BuilderTopbar from './builder/BuilderTopbar';
 import ArchitectBar from './builder/ArchitectBar';
+import EmployeeMetadataPanel from './builder/EmployeeMetadataPanel';
 import { makeNode, getToolById, getToolByExecutionKey, INITIAL_NODES, INITIAL_EDGES, MODEL_TYPES, TOOL_REGISTRY } from './builder/toolRegistry';
 
 import { EDGE_DEFAULTS } from './builder/toolRegistry';
@@ -197,6 +198,14 @@ function normaliseArchitectNodes(rawNodes: any[], rawEdges: any[]) {
 function AgentBuilderInner() {
   const searchParams = useSearchParams();
   const agentId = searchParams.get('id');
+  const mode = searchParams.get('mode');
+
+  // Debug: Log mode detection
+  useEffect(() => {
+    if (mode) {
+      console.log('[AgentBuilder] Employee mode activated:', { mode, isEmployeeMode: mode === 'employee' });
+    }
+  }, [mode]);
 
   const { data: existingAgent, isLoading: isAgentLoading } = useAgent(agentId);
   const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES as any);
@@ -213,6 +222,11 @@ function AgentBuilderInner() {
   const [pickerSearch, setPickerSearch] = useState('');
   const [ctrlPressed, setCtrlPressed] = useState(false);
 
+  // Employee mode state
+  const [employeeDescription, setEmployeeDescription] = useState('');
+  const [employeeInputSchema, setEmployeeInputSchema] = useState('{}');
+  const isEmployeeMode = mode === 'employee' || (existingAgent?.isWorker === true);
+
   useEffect(() => {
     const handleDown = (e: KeyboardEvent) => { if (e.key === 'Control' || e.metaKey) setCtrlPressed(true); };
     const handleUp = (e: KeyboardEvent) => { if (e.key === 'Control' || e.metaKey) setCtrlPressed(false); };
@@ -226,6 +240,7 @@ function AgentBuilderInner() {
   const { mutateAsync: updateAgent, isPending: isUpdating } = useUpdateAgent();
   const { mutate: architect,   isPending: isArchitecting } = useArchitect();
   const { mutate: runAgent,    isPending: isStartingRun }  = useRunAgent();
+  const { mutate: publishAsWorker, isPending: isPublishingWorker } = usePublishAsWorker();
 
   const { data: runData } = useAgentRun(activeRunId);
   const { theme } = useTheme();
@@ -234,13 +249,19 @@ function AgentBuilderInner() {
 
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = useCallback(async (options: { silent?: boolean, nodesOverride?: any[] } = {}) => {
+    // Validate employee mode: description is required
+    if (isEmployeeMode && !options.silent && !employeeDescription.trim()) {
+      toast.error('Capability Description is required. Managers use it to discover and call this employee.');
+      return;
+    }
+
     // Priority: 1. override, 2. current state
     const nodesToSave = options.nodesOverride || nodes;
 
     // Strip out injected handlers AND execution statuses before saving
-    const cleanNodes = nodesToSave.map(({ data: { onTrigger, onAddConnect, status, result, ...rest }, ...n }: any) => ({ 
-      ...n, 
-      data: rest 
+    const cleanNodes = nodesToSave.map(({ data: { onTrigger, onAddConnect, onDelete, onUpdate, status, result, isEmployeeMode: _, ...rest }, ...n }: any) => ({
+      ...n,
+      data: rest
     }));
     const payload = {
       name,
@@ -250,24 +271,45 @@ function AgentBuilderInner() {
     };
 
     try {
+      let savedAgent: any;
       if (agentId) {
-        const result = await (updateAgent as any)({ id: agentId, agentData: payload });
-        if (!options.silent) {
-          router.push('/agents');
-        }
-        return result;
+        savedAgent = await (updateAgent as any)({ id: agentId, agentData: payload });
       } else {
-        const result = await (createAgent as any)(payload);
-        if (!options.silent) {
-          router.push('/agents');
-        }
-        return result;
+        savedAgent = await (createAgent as any)(payload);
       }
+
+      // If in employee mode and not silent save, also promote/update as worker
+      if (isEmployeeMode && !options.silent && savedAgent?.id) {
+        try {
+          const schemaObj = employeeInputSchema.trim() ? JSON.parse(employeeInputSchema) : {};
+          publishAsWorker({
+            id: savedAgent.id,
+            isWorker: true,
+            workerDescription: employeeDescription,
+            workerInputSchema: schemaObj
+          }, {
+            onSuccess: () => {
+              router.push('/agents');
+            },
+            onError: (err: any) => {
+              toast.error('Failed to promote to employee: ' + (err?.message || 'Unknown error'));
+              router.push('/agents');
+            }
+          });
+        } catch (parseErr) {
+          toast.error('Invalid JSON schema');
+          return savedAgent;
+        }
+      } else if (!options.silent) {
+        router.push('/agents');
+      }
+
+      return savedAgent;
     } catch (err) {
       console.error("Save failed:", err);
       throw err;
     }
-  }, [nodes, edges, name, description, model, agentId, updateAgent, createAgent, router]);
+  }, [nodes, edges, name, description, model, agentId, updateAgent, createAgent, router, isEmployeeMode, employeeDescription, employeeInputSchema, publishAsWorker, toast]);
 
   const handleTrigger = useCallback(async (nodeId?: string, inputDataOverride?: any) => {
     if (isRunning) return;
@@ -468,6 +510,13 @@ function AgentBuilderInner() {
     if (!existingAgent) return;
     setName(existingAgent.name ?? 'Untitled Workflow');
     setDescription(existingAgent.description ?? '');
+
+    // Load employee metadata if this is a worker/employee
+    if (existingAgent.isWorker) {
+      setEmployeeDescription(existingAgent.workerDescription ?? '');
+      setEmployeeInputSchema(JSON.stringify(existingAgent.workerInputSchema ?? {}, null, 2));
+    }
+
     const wf = existingAgent.workflow;
     if (wf?.nodes?.length) {
       setNodes(wf.nodes.map((n: any) => ({
@@ -492,11 +541,20 @@ function AgentBuilderInner() {
     if (!connection.source || !connection.target || connection.source === connection.target) return false;
 
     // 2. LINEAR ENFORCEMENT: Each handle (Source or Target) can have only ONE connection.
-    const sourceHasEdge = edges.some(e => e.source === connection.source && e.sourceHandle === connection.sourceHandle);
-    const targetHasEdge = edges.some(e => e.target === connection.target && e.targetHandle === connection.targetHandle);
+    // In Employee Mode, we define linearity more strictly: no branching from the NODE itself.
+    if (isEmployeeMode) {
+      const nodeHasSourceEdge = edges.some(e => e.source === connection.source);
+      const nodeHasTargetEdge = edges.some(e => e.target === connection.target);
+      if (nodeHasSourceEdge || nodeHasTargetEdge) {
+        return false; // Strictly linear: one in, one out for the whole node
+      }
+    } else {
+      const sourceHasEdge = edges.some(e => e.source === connection.source && e.sourceHandle === connection.sourceHandle);
+      const targetHasEdge = edges.some(e => e.target === connection.target && e.targetHandle === connection.targetHandle);
 
-    if (sourceHasEdge || targetHasEdge) {
-      return false; // Already connected in the linear chain
+      if (sourceHasEdge || targetHasEdge) {
+        return false; // Already connected in the linear chain
+      }
     }
 
     // 3. Resolve Tool Definitions
@@ -555,6 +613,29 @@ function AgentBuilderInner() {
     if (newNode) {
       setNodes(ns => ns.concat(newNode));
       setSelectedNode(newNode);
+
+      // ─── AUTO-CONNECT (Employee Mode) ───
+      // If we're in employee mode and there's a previous node, connect them automatically
+      if (isEmployeeMode && last && !last.data?.executionKey.includes('sticky_note')) {
+        const lastTool = getToolById(last.data.toolId);
+        const newTool = getToolById(newNode.data.toolId);
+        
+        if (lastTool && newTool) {
+          const sourceHandle = lastTool.outputs[0]?.name || 'output';
+          const targetHandle = newTool.inputs[0]?.name || 'input';
+          
+          const newEdge = {
+            id: `e_${last.id}_${newNode.id}_${Date.now()}`,
+            source: last.id,
+            sourceHandle: sourceHandle,
+            target: newNode.id,
+            targetHandle: targetHandle,
+            ...EDGE_DEFAULTS,
+          };
+          
+          setEdges(es => addEdge(newEdge, es));
+        }
+      }
     }
     setSidebarOpen(false); // Auto-close sidebar after adding
   };
@@ -584,6 +665,7 @@ function AgentBuilderInner() {
         onTrigger: handleTrigger,
         onAddConnect: handleAddConnect,
         onDelete: deleteSelectedNode,
+        isEmployeeMode,
         onUpdate: (nid: string, newData: any) => {
           setNodes(ns => ns.map(n => n.id === nid ? { ...n, data: { ...n.data, ...newData } } : n));
         }
@@ -649,10 +731,11 @@ function AgentBuilderInner() {
         onSave={handleSave}
         onRun={handleTrigger}
         isRunning={isRunning}
-        isSaving={isSaving}
+        isSaving={isSaving || isPublishingWorker}
         isEditMode={!!agentId}
         userName={user.name}
         userAvatar={user.avatarUrl}
+        isEmployeeMode={isEmployeeMode}
       />
 
       {/* ── Body */}
@@ -782,8 +865,31 @@ function AgentBuilderInner() {
 
         {/* Floating Tool Picker removed in favor of Sidebar integration */}
 
-        {/* Right: Node Sidebar */}
-        {selectedNode && selectedNode.data?.executionKey !== 'sticky_note' && (
+        {/* Right Panel: Split layout in employee mode (metadata always visible + optional node config below) */}
+        {isEmployeeMode ? (
+          <div className="flex flex-col h-full" style={{ width: '420px' }}>
+            <EmployeeMetadataPanel
+              description={employeeDescription}
+              onDescriptionChange={setEmployeeDescription}
+              inputSchema={employeeInputSchema}
+              onInputSchemaChange={setEmployeeInputSchema}
+            />
+            {selectedNode && selectedNode.data?.executionKey !== 'sticky_note' && (
+              <div className="flex-1 overflow-hidden border-t border-border/40">
+                <NodeSidebar
+                  node={selectedNode}
+                  nodes={nodes}
+                  edges={edges}
+                  onClose={() => setSelectedNode(null)}
+                  onUpdate={updateSelectedNode}
+                  onDelete={deleteSelectedNode}
+                  onTrigger={handleTrigger}
+                  inline={true}
+                />
+              </div>
+            )}
+          </div>
+        ) : selectedNode && selectedNode.data?.executionKey !== 'sticky_note' ? (
           <NodeSidebar
             node={selectedNode}
             nodes={nodes}
@@ -793,7 +899,7 @@ function AgentBuilderInner() {
             onDelete={deleteSelectedNode}
             onTrigger={handleTrigger}
           />
-        )}
+        ) : null}
       </div>
     </div>
   );

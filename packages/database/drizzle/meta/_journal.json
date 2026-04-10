@@ -29,6 +29,20 @@
       "when": 1773392313608,
       "tag": "0003_naive_colonel_america",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1775728673817,
+      "tag": "0004_conscious_captain_universe",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1775729625508,
+      "tag": "0005_faithful_the_twelve",
+      "breakpoints": true
     }
   ]
 }

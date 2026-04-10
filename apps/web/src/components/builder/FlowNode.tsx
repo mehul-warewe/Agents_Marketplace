@@ -221,7 +221,10 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
       )}
       
       {tool.outputs.map((socket: any) => {
-        const isConnected = edges.some(e => e.source === id && (e.sourceHandle === socket.name || tool.outputs.length === 1));
+        const isConnected = data.isEmployeeMode 
+          ? edges.some(e => e.source === id) // In employee mode, ANY outgoing edge makes it "connected"
+          : edges.some(e => e.source === id && (e.sourceHandle === socket.name || tool.outputs.length === 1));
+
         return (
           <React.Fragment key={socket.name}>
             <Handle
