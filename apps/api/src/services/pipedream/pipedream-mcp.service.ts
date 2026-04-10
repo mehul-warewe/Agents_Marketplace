@@ -7,7 +7,7 @@ import { log } from '../../shared/logger.js';
  * which powers the same component discovery as Relevance AI and other platforms.
  */
 export const pipedreamMcpService = {
-  async fetchComponents(pd: PipedreamClient, type: 'action' | 'source', params: Record<string, any>): Promise<any[]> {
+  async fetchComponents(pd: PipedreamClient, type: 'action' | 'trigger', params: Record<string, any>): Promise<any[]> {
     let all: any[] = [];
     let cursor: string | undefined;
     while (true) {
@@ -86,8 +86,8 @@ export const pipedreamMcpService = {
         projectId: process.env.PIPEDREAM_PROJECT_ID!,
       });
 
-      let allComponents = await this.fetchComponents(pd, 'source', { app: cleanSlug });
-      if (allComponents.length === 0) allComponents = await this.fetchComponents(pd, 'source', { q: cleanSlug });
+      let allComponents = await this.fetchComponents(pd, 'trigger', { app: cleanSlug });
+      if (allComponents.length === 0) allComponents = await this.fetchComponents(pd, 'trigger', { q: cleanSlug });
 
       return allComponents.map((c: any) => ({
         name: c.name || c.key,

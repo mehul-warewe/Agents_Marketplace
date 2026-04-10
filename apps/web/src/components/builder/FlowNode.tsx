@@ -31,6 +31,7 @@ interface FlowNodeProps {
     onAddConnect?: (params: any) => void;
     onUpdate?: (id: string, newData: any) => void;
     config?: Record<string, any>;
+    isEmployeeMode?: boolean;
   };
   selected?: boolean;
 }
