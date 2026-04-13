@@ -35,7 +35,7 @@ export const managerEngine = {
 
     wrappedOnStep({ type: 'init', runId: run.id });
 
-    const tools = createManagerTools(userId, manager.workerIds || [], run.id, wrappedOnStep);
+    const tools = createManagerTools(userId, manager.employeeIds || [], run.id, wrappedOnStep);
     const model = new ChatOpenAI({
       modelName: manager.model || 'google/gemini-2.0-flash-001',
       apiKey: process.env.OPENROUTER_API_KEY,

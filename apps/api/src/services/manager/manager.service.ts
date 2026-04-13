@@ -12,7 +12,7 @@ export const managerService = {
   },
 
   async createManager(userId: string, data: any) {
-    const { name, description, goal, systemPrompt, model, workerIds } = data;
+    const { name, description, goal, systemPrompt, model, employeeIds } = data;
     const [newManager] = await db.insert(managers).values({
       name,
       description,
@@ -20,7 +20,7 @@ export const managerService = {
       systemPrompt,
       model: model || 'google/gemini-2.0-flash-001',
       creatorId: userId,
-      workerIds: workerIds || [],
+      employeeIds: employeeIds || [],
     }).returning();
     return newManager;
   },
@@ -31,14 +31,14 @@ export const managerService = {
       throw new Error('Unauthorized or not found');
     }
 
-    const { name, description, goal, systemPrompt, model, workerIds, isPublished } = data;
+    const { name, description, goal, systemPrompt, model, employeeIds, isPublished } = data;
     const [updated] = await db.update(managers).set({
       name: name ?? existing.name,
       description: description ?? existing.description,
       goal: goal ?? existing.goal,
       systemPrompt: systemPrompt ?? existing.systemPrompt,
       model: model ?? existing.model,
-      workerIds: workerIds ?? existing.workerIds,
+      employeeIds: employeeIds ?? existing.employeeIds,
       isPublished: isPublished ?? existing.isPublished,
       updatedAt: new Date()
     }).where(eq(managers.id, managerId)).returning();

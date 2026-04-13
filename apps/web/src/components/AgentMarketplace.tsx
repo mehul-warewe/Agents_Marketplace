@@ -13,7 +13,7 @@ export default function AgentMarketplace() {
   const handleAcquireAgent = async (agentId: string) => {
     acquireAgent(agentId, {
       onSuccess: () => {
-        router.push('/agents');
+        router.push('/employees');
       },
       onError: (err: any) => {
         alert(err.response?.data?.error || "Failed to acquire agent");
@@ -33,7 +33,7 @@ export default function AgentMarketplace() {
                <p className="text-muted font-bold text-lg max-w-xl px-4 opacity-50 uppercase tracking-tight">Discover and deploy high-performance agents into your workspace.</p>
             </div>
             <button 
-              onClick={() => router.push('/builder')}
+              onClick={() => router.push('/skills/builder')}
               className="bg-foreground text-background px-12 py-5 rounded-[1.75rem] font-black text-xs uppercase tracking-[0.3em] hover:scale-[1.02] shadow-2xl shadow-foreground/10 transition-all flex items-center justify-center gap-4 active:scale-[0.98]"
             >
               <Zap size={18} strokeWidth={3} /> Build Agent

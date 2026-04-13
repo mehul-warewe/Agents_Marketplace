@@ -1,45 +1,45 @@
 import { DynamicStructuredTool } from "@langchain/core/tools";
 import { z } from "zod";
-import { agentsService } from "../agents/agents.service.js";
+import { employeesService } from "../employees/employees.service.js";
 import { db } from "../../shared/db.js";
 import { memories, eq, and, managerRuns, sql } from "@repo/database";
 
 export const createManagerTools = (
   userId: string,
-  workerIds: string[],
+  employeeIds: string[],
   managerRunId?: string,
   onProgress?: (step: any) => void
 ) => {
   return [
     new DynamicStructuredTool({
-      name: "list_available_workers",
-      description: "Lists all specialized worker agents you have access to. Use this to understand their capabilities.",
+      name: "list_available_employees",
+      description: "Lists all specialized employees (AI personas) you have access to. Use this to understand their specialized roles and assigned skills.",
       schema: z.object({}),
       func: async () => {
-        const workers = await agentsService.listWorkers(userId);
-        const filtered = workers.filter(w => workerIds.includes(w.id));
-        return JSON.stringify(filtered.map(w => ({
-          id: w.id,
-          name: w.name,
-          capability: w.workerDescription,
-          input_schema: w.workerInputSchema
+        const employees = await employeesService.listEmployees(userId);
+        const filtered = employees.filter(e => employeeIds.includes(e.id));
+        return JSON.stringify(filtered.map(e => ({
+          id: e.id,
+          name: e.name,
+          role: e.description,
+          assigned_skills: e.skillIds?.length || 0
         })));
       }
     }),
     
     new DynamicStructuredTool({
-        name: "call_worker",
-        description: "Invokes a specific worker agent with a structured mission input. Returns the final result from the worker.",
+        name: "call_employee",
+        description: "Assigns a task to a specialized employee. The employee will use their assigned skills to complete the request.",
         schema: z.object({
-           worker_id: z.string().describe("The ID of the worker to call"),
-           task_input: z.any().describe("The JSON object to pass as input to the worker")
+           employee_id: z.string().describe("The ID of the employee to call"),
+           task_input: z.string().describe("The natural language description of the task for the employee")
         }),
-        func: async ({ worker_id, task_input }) => {
-           const res = await agentsService.runAgent(worker_id, userId, { inputData: task_input });
+        func: async ({ employee_id, task_input }) => {
+           const res = await employeesService.runEmployee(employee_id, userId, task_input);
 
-           // Emit progress event for worker dispatch
+           // Emit progress event for employee dispatch
            if (onProgress) {
-              onProgress({ type: 'worker_called', workerId: worker_id, runId: res.runId });
+              onProgress({ type: 'employee_called', employeeId: employee_id, runId: res.runId });
            }
 
            // Track the child run in the manager run's childRunIds
@@ -49,12 +49,14 @@ export const createManagerTools = (
               }).where(eq(managerRuns.id, managerRunId));
            }
 
-           // We need to poll for the result since runAgent is async via BullMQ
-           // For a more robust version, we'd use a synchronous worker execution mode
+           // Poll for results (employee runs map to skill runs)
            let attempts = 0;
-           let result = "Worker timed out.";
+           let result = "Employee timed out.";
            while (attempts < 60) {
-              const run = await agentsService.getAgentRun(res.runId);
+              // We reuse the employee run tracking
+              const runs = await employeesService.getRuns(employee_id, userId);
+              const run = runs.find(r => r.id === res.runId);
+              
               if (!run) {
                  attempts++;
                  await new Promise(resolve => setTimeout(resolve, 2000));
@@ -65,16 +67,16 @@ export const createManagerTools = (
                  break;
               }
               if (run.status === 'failed') {
-                 result = "Worker execution failed.";
+                 result = "Employee execution failed.";
                  break;
               }
               attempts++;
               await new Promise(resolve => setTimeout(resolve, 2000));
            }
 
-           // Emit progress event for worker completion
+           // Emit progress event for employee completion
            if (onProgress) {
-              onProgress({ type: 'worker_done', workerId: worker_id, result });
+              onProgress({ type: 'employee_done', employeeId: employee_id, result });
            }
 
            return result;

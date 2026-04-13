@@ -37,6 +37,51 @@ export const agents = pgTable('agents', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+
+// NEW 3-TIER ARCHITECTURE TABLES
+
+export const skills = pgTable('skills', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  creatorId: uuid('creator_id').references(() => users.id).notNull(),
+  workflow: jsonb('workflow').notNull(),  // The ReactFlow nodes + edges JSON
+  isPublished: boolean('is_published').default(false).notNull(),
+  category: text('category'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const employees = pgTable('employees', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),                       // e.g. "Sarah, Marketing Lead"
+  description: text('description'),                   // What this employee specialises in
+  avatar: text('avatar'),                             // Emoji or URL
+  systemPrompt: text('system_prompt'),                // Custom personality/instructions
+  model: text('model').default('google/gemini-2.0-flash-001'),
+  skillIds: jsonb('skill_ids').$type<string[]>().default([]),  // Assigned skills
+  skillInstructions: jsonb('skill_instructions').$type<Record<string, string>>().default({}),
+  // ^ Maps skillId → "Use this skill when the user asks for X"
+  creatorId: uuid('creator_id').references(() => users.id).notNull(),
+  isPublished: boolean('is_published').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const employeeRuns = pgTable('employee_runs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  employeeId: uuid('employee_id').references(() => employees.id, { onDelete: 'cascade' }),
+  skillId: uuid('skill_id'),                          // Which skill was invoked
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  status: agentStatusEnum('status').default('pending').notNull(),
+  inputData: jsonb('input_data'),
+  output: jsonb('output'),
+  logs: jsonb('logs'),
+  startTime: timestamp('start_time').defaultNow().notNull(),
+  endTime: timestamp('end_time'),
+  duration: integer('duration'),
+});
+
 // NEW: managers table (The CEO agents)
 export const managers = pgTable('managers', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -46,7 +91,7 @@ export const managers = pgTable('managers', {
   systemPrompt: text('system_prompt'),     // Custom boss instructions
   model: text('model').default('google/gemini-2.0-flash-001'),
   creatorId: uuid('creator_id').references(() => users.id).notNull(),
-  workerIds: jsonb('worker_ids').$type<string[]>().default([]), // Pinned workers for this manager
+  employeeIds: jsonb('employee_ids').$type<string[]>().default([]), // Pinned employees for this manager
   isPublished: boolean('is_published').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

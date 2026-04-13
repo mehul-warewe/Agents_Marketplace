@@ -42,7 +42,7 @@ export const EmployeeNode = memo(({ data }: any) => {
             <h3 className={`text-xs font-black italic tracking-tight uppercase truncate ${data.isPlaceholder ? 'text-muted/40 font-bold' : 'text-foreground'}`}>
               {data.name}
             </h3>
-            <span className="text-[7px] font-black text-blue-400 uppercase tracking-widest opacity-60">Agent unit</span>
+            <span className="text-[7px] font-black text-blue-400 uppercase tracking-widest opacity-60">Operative Unit</span>
           </div>
         </header>
 

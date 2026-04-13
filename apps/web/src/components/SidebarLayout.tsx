@@ -23,10 +23,11 @@ interface SidebarLayoutProps {
 const navItems = [
   { name: 'Dashboard',     icon: Home,         href: '/dashboard' },
   { name: 'Managers',      icon: Users,        href: '/manager' },
-  { name: 'Employees',     icon: Bot,          href: '/agents' },
+  { name: 'Employees',     icon: Bot,          href: '/employees' },
+  { name: 'Skills',        icon: Zap,          href: '/skills' },
   { name: 'Integrations',  icon: Link2,        href: '/connections' },
   { name: 'Marketplace',   icon: ShoppingBag,  href: '/marketplace' },
-  { name: 'Build Employee',icon: Sparkles,     href: '/builder?mode=employee' },
+  { name: 'Build Skill',   icon: Sparkles,     href: '/skills/builder' },
 ];
 
 function ThemeIcon({ theme }: { theme: string | undefined }) {

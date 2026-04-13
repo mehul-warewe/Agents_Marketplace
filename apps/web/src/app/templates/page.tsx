@@ -24,7 +24,7 @@ export default function TemplatesPage() {
     useTemplate(templateId, {
       onSuccess: (data: any) => {
         toast.success('Template initialized! Redirecting to builder...');
-        router.push(`/builder?id=${data.id}`);
+        router.push(`/skills/builder?id=${data.id}`);
       },
       onError: (err: any) => {
         toast.error('Failed to initialize template: ' + (err?.response?.data?.error || err.message));

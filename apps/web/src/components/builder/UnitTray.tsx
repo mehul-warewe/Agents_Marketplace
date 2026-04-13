@@ -9,7 +9,7 @@ interface UnitTrayProps {
 
 export default function UnitTray({ onDragStart }: UnitTrayProps) {
   const categories = [
-    { id: 'agent', label: 'Agent', icon: Cpu, color: 'text-blue-400 bg-blue-400/10 border-blue-400/20' },
+    { id: 'agent', label: 'Employee', icon: Cpu, color: 'text-blue-400 bg-blue-400/10 border-blue-400/20' },
     { id: 'tool', label: 'Tool', icon: Zap, color: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' },
     { id: 'trigger', label: 'Trigger', icon: Activity, color: 'text-orange-400 bg-orange-400/10 border-orange-400/20' },
     { id: 'condition', label: 'Condition', icon: Shield, color: 'text-purple-400 bg-purple-400/10 border-purple-400/20' },

@@ -37,6 +37,7 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType }:
 
   // State for drill-down into Pipedream platform actions
   const [selectedPlatformName, setSelectedPlatformName] = useState<string>('');
+  const [selectedPlatformIcon, setSelectedPlatformIcon] = useState<string>('');
   
   const { data: platformToolsData, isLoading: isLoadingTools } = usePipedreamTools(activePlatform, !!activePlatform);
   const platformTools = platformToolsData || [];
@@ -205,7 +206,8 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType }:
                     onClick={() => {
                       if (tool.isGroup) {
                         setActivePlatform(tool.id);
-                        setSelectedPlatformName(tool.name);
+                        setSelectedPlatformName(tool.label || tool.name);
+                        setSelectedPlatformIcon((tool as any).icon || '');
                         setQuery(''); // Clear search on selection
                       } else {
                         onAddTool(toolId, { label: toolLabel, icon: tool.icon });
@@ -273,6 +275,7 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType }:
                         onClick={() => {
                           setActivePlatform(app.id);
                           setSelectedPlatformName(app.name);
+                          setSelectedPlatformIcon(app.icon);
                         }}
                         className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-foreground/[0.04] transition-all text-left group"
                       >
@@ -316,18 +319,17 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType }:
                 ) : (
                   <div className="space-y-1">
                     {platformTools.map((tool) => {
-                      const platform = pipedreamApps.find(a => a.id === activePlatform);
                       return (
                         <button
                           key={tool.name}
                           onClick={() => {
-                            const toolId = `pd:${activePlatform}:${tool.name.toLowerCase().replace(/\s+/g, '_')}`;
+                            const toolId = `pd:${activePlatform}:${tool.key}`;
                             onAddTool(toolId, {
-                              label: `${platform?.name} - ${tool.name}`,
-                              icon: platform?.icon,
-                              appSlug: activePlatform,
+                              label: `${selectedPlatformName} - ${tool.name}`,
+                              icon: selectedPlatformIcon,
+                              appSlug: activePlatform as string,
                               actionName: tool.key,
-                              platformName: platform?.name
+                              platformName: selectedPlatformName
                             });
                           }}
                           className="w-full flex items-start gap-3 p-3 rounded-xl hover:bg-foreground/[0.04] transition-all text-left group border border-transparent hover:border-border/20"
@@ -384,11 +386,12 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType }:
                             return (
                               <button
                                 key={tool.id}
-                                onClick={() => {
-                                  if (tool.isGroup) {
-                                    setActivePlatform(tool.id);
-                                    setSelectedPlatformName(toolLabel);
-                                  } else {
+                                  onClick={() => {
+                                    if (tool.isGroup) {
+                                      setActivePlatform(tool.id);
+                                      setSelectedPlatformName(toolLabel);
+                                      setSelectedPlatformIcon((tool as any).icon || '');
+                                    } else {
                                     onAddTool(tool.id, { label: toolLabel, icon: tool.icon });
                                   }
                                 }}

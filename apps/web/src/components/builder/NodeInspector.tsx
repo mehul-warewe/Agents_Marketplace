@@ -266,7 +266,7 @@ export default function NodeInspector({
                                  </div>
                                  <div className="min-w-0 flex-1">
                                     <h4 className="text-[10px] font-black uppercase tracking-tight text-foreground truncate">{worker.name}</h4>
-                                    <p className="text-[8px] font-bold text-muted line-clamp-1 italic mt-1">{worker.workerDescription || 'No description provided.'}</p>
+                                    <p className="text-[8px] font-bold text-muted line-clamp-1 italic mt-1">{worker.description || 'No description provided.'}</p>
                                  </div>
                                  <ArrowRight size={14} className="text-muted opacity-0 group-hover:opacity-100 transition-all" />
                               </button>
@@ -318,11 +318,11 @@ export default function NodeInspector({
                 ) : (
                   <div className="space-y-3">
                      <label className="text-[9px] font-black text-accent uppercase tracking-widest italic">Strategic Role:</label>
-                     <textarea 
-                       value={isManager ? selectedNode?.data.goal : selectedNode?.data.workerDescription}
-                       onChange={(e) => isManager ? onUpdateNode(selectedNode.id, { ...selectedNode.data, goal: e.target.value }) : null}
-                       className="w-full bg-foreground/[0.03] border border-border/20 rounded-2xl px-6 py-4 outline-none focus:border-accent transition-all font-bold text-[10px] italic resize-none h-64 text-foreground/80 leading-relaxed"
-                     />
+                      <textarea 
+                        value={isManager ? selectedNode?.data.goal : selectedNode?.data.description}
+                        onChange={(e) => isManager ? onUpdateNode(selectedNode.id, { ...selectedNode.data, goal: e.target.value }) : null}
+                        className="w-full bg-foreground/[0.03] border border-border/20 rounded-2xl px-6 py-4 outline-none focus:border-accent transition-all font-bold text-[10px] italic resize-none h-64 text-foreground/80 leading-relaxed"
+                      />
                   </div>
                 )}
              </div>

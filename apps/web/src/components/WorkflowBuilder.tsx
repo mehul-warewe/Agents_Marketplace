@@ -23,10 +23,12 @@ import ReactFlow, {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, X, SendHorizonal, ShieldCheck, Loader2 } from 'lucide-react';
 import 'reactflow/dist/style.css';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useTheme } from 'next-themes';
-import { useCreateAgent, useUpdateAgent, useArchitect, useAgent, useRunAgent, useAgentRun, usePublishAsWorker } from '@/hooks/useApi';
+import { useCreateAgent, useUpdateAgent, useArchitect, useAgent, useRunAgent, useAgentRun } from '@/hooks/useApi';
+import { useCreateSkill, useUpdateSkill, useSkill, useRunSkill, useSkillArchitect } from '@/hooks/useSkills';
+import { usePublishAsWorker } from '@/hooks/useApi'; // Legacy
 import { useToast } from '@/components/ui/Toast';
 
 import FlowNode from './builder/FlowNode';
@@ -203,19 +205,31 @@ function normaliseArchitectNodes(rawNodes: any[], rawEdges: any[]) {
 }
 
 // ─── Inner builder (needs ReactFlowProvider context) ──────────────────────────
-function AgentBuilderInner() {
+function WorkflowBuilderInner() {
   const searchParams = useSearchParams();
-  const agentId = searchParams.get('id');
-  const mode = searchParams.get('mode');
+  const pathname = usePathname();
+  const itemId = searchParams.get('id');
+  const mode = searchParams.get('mode'); // 'skill' or 'employee' (legacy)
+  const isSkillMode = mode === 'skill' || pathname.includes('/skills');
 
-  // Debug: Log mode detection
-  useEffect(() => {
-    if (mode) {
-      console.log('[AgentBuilder] Employee mode activated:', { mode, isEmployeeMode: mode === 'employee' });
-    }
-  }, [mode]);
+  // Switchable Hooks
+  const { data: existingItem, isLoading: isItemLoading } = isSkillMode ? useSkill(itemId) : useAgent(itemId);
+  
+  const { mutateAsync: createAgent, isPending: isCreatingAgent } = useCreateAgent();
+  const { mutateAsync: updateAgent, isPending: isUpdatingAgent } = useUpdateAgent();
+  const { mutateAsync: createSkill, isPending: isCreatingSkill } = useCreateSkill();
+  const { mutateAsync: updateSkill, isPending: isUpdatingSkill } = useUpdateSkill();
+  
+  const isCreating = isCreatingAgent || isCreatingSkill;
+  const isUpdating = isUpdatingAgent || isUpdatingSkill;
+  
+  const { mutate: architectAgent, isPending: isArchitectingAgent } = useArchitect();
+  const { mutate: architectSkill, isPending: isArchitectingSkill } = useSkillArchitect();
+  const isArchitecting = isArchitectingAgent || isArchitectingSkill;
+  
+  const { mutate: runAgent } = useRunAgent();
+  const { mutate: runSkill } = useRunSkill();
 
-  const { data: existingAgent, isLoading: isAgentLoading } = useAgent(agentId);
   const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES as any);
   const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES as any);
   const [name, setName]               = useState('Untitled Workflow');
@@ -230,11 +244,11 @@ function AgentBuilderInner() {
   const [pickerSearch, setPickerSearch] = useState('');
   const [ctrlPressed, setCtrlPressed] = useState(false);
 
-  // Employee mode state
+  // Employee mode state (Legacy/Hybrid)
   const [employeeDescription, setEmployeeDescription] = useState('');
   const [employeeInputSchema, setEmployeeInputSchema] = useState('{}');
   const [isPublishing, setIsPublishing] = useState(false);
-  const isEmployeeMode = mode === 'employee' || (existingAgent?.isWorker === true);
+  const isEmployeeMode = mode === 'employee' || (existingItem?.isWorker === true);
 
   useEffect(() => {
     const handleDown = (e: KeyboardEvent) => { if (e.key === 'Control' || e.metaKey) setCtrlPressed(true); };
@@ -245,11 +259,7 @@ function AgentBuilderInner() {
   }, []);
 
   const { user, isLoading: authLoading } = useAuthStore();
-  const { mutateAsync: createAgent, isPending: isCreating } = useCreateAgent();
-  const { mutateAsync: updateAgent, isPending: isUpdating } = useUpdateAgent();
-  const { mutate: architect,   isPending: isArchitecting } = useArchitect();
-  const { mutate: runAgent,    isPending: isStartingRun }  = useRunAgent();
-  const { mutate: publishAsWorker, isPending: isPublishingWorker } = usePublishAsWorker();
+  const { mutateAsync: publishAsWorker, isPending: isPublishingWorker } = usePublishAsWorker();
 
   const { data: runData } = useAgentRun(activeRunId);
   const { theme } = useTheme();
@@ -280,19 +290,27 @@ function AgentBuilderInner() {
     };
 
     try {
-      let savedAgent: any;
-      if (agentId) {
-        savedAgent = await (updateAgent as any)({ id: agentId, agentData: payload });
+      let savedItem: any;
+      if (itemId) {
+        if (isSkillMode) {
+          savedItem = await updateSkill({ id: itemId, skillData: payload });
+        } else {
+          savedItem = await updateAgent({ id: itemId, agentData: payload });
+        }
       } else {
-        savedAgent = await (createAgent as any)(payload);
+        if (isSkillMode) {
+          savedItem = await createSkill(payload);
+        } else {
+          savedItem = await createAgent(payload);
+        }
       }
 
       // If in employee mode and not silent save, also promote/update as worker
-      if (isEmployeeMode && !options.silent && savedAgent?.id) {
+      if (isEmployeeMode && !options.silent && savedItem?.id) {
         try {
           const schemaObj = employeeInputSchema.trim() ? JSON.parse(employeeInputSchema) : {};
           publishAsWorker({
-            id: savedAgent.id,
+            id: savedItem.id,
             isWorker: true,
             workerDescription: employeeDescription,
             workerInputSchema: schemaObj
@@ -308,18 +326,18 @@ function AgentBuilderInner() {
           });
         } catch (parseErr) {
           toast.error('Invalid JSON schema');
-          return savedAgent;
+          return savedItem;
         }
       } else if (!options.silent) {
         router.push('/agents');
       }
 
-      return savedAgent;
+      return savedItem;
     } catch (err) {
       console.error("Save failed:", err);
       throw err;
     }
-  }, [nodes, edges, name, description, model, agentId, updateAgent, createAgent, router, isEmployeeMode, employeeDescription, employeeInputSchema, publishAsWorker, toast]);
+  }, [nodes, edges, name, description, model, itemId, updateAgent, createAgent, router, isEmployeeMode, employeeDescription, employeeInputSchema, publishAsWorker, toast]);
 
   const handleTrigger = useCallback(async (nodeId?: string, inputDataOverride?: any) => {
     if (isRunning) return;
@@ -331,16 +349,16 @@ function AgentBuilderInner() {
     setEdges(es => es.map(e => ({ ...e, animated: false, style: { ...e.style, stroke: (e.targetHandle || '').toLowerCase().includes('tool') ? '#bbb' : '#777', strokeWidth: 1.5 } })));
 
     // 1. Auto-save current state before running (and get the ID if it's new)
-    let currentAgentId = agentId;
+    let currentItemId = itemId;
     try {
-      const savedAgent = await handleSave({ silent: true, nodesOverride: freshNodes }) as any;
-      if (savedAgent?.id) currentAgentId = savedAgent.id;
+      const savedItem = await handleSave({ silent: true, nodesOverride: freshNodes }) as any;
+      if (savedItem?.id) currentItemId = savedItem.id;
     } catch (err) {
       toast.error('Failed to save workflow before running.');
       return;
     }
 
-    if (!currentAgentId || currentAgentId === 'undefined') {
+    if (!currentItemId || currentItemId === 'undefined') {
       toast.error('Please save your workflow at least once before running it.');
       return;
     }
@@ -368,13 +386,9 @@ function AgentBuilderInner() {
       }
     }
 
-    console.log("[Builder] Triggering run for Agent:", currentAgentId, "Start Node:", targetId, "Input:", inputData);
-    runAgent({ 
-      agentId: currentAgentId as string, 
-      triggerNodeId: targetId, 
-      inputData,
-      runMode: isSingleMode ? 'single' : 'full' 
-    }, {
+    console.log("[Builder] Triggering run:", currentItemId, "Start Node:", targetId, "Input:", inputData);
+    
+    const runOptions = {
       onSuccess: (res: any) => {
         setActiveRunId(res.runId);
         setIsRunning(true);
@@ -382,8 +396,14 @@ function AgentBuilderInner() {
       onError: (err: any) => {
         toast.error('Failed to start the run: ' + (err?.response?.data?.error || err.message || 'Unknown error'));
       }
-    });
-  }, [agentId, isRunning, runAgent, setNodes, nodes, edges, name, description, model, handleSave]);
+    };
+
+    if (isSkillMode) {
+      runSkill({ skillId: currentItemId as string, triggerNodeId: targetId, inputData, runMode: isSingleMode ? 'single' : 'full' }, runOptions);
+    } else {
+      runAgent({ agentId: currentItemId as string, triggerNodeId: targetId, inputData, runMode: isSingleMode ? 'single' : 'full' }, runOptions);
+    }
+  }, [itemId, isRunning, runAgent, runSkill, setNodes, nodes, edges, name, description, model, handleSave, isSkillMode]);
 
   // Sync Node Statuses from Polling Run Data
   useEffect(() => {
@@ -567,19 +587,19 @@ function AgentBuilderInner() {
   const nodeTypes = useMemo(() => ({ wareweNode: FlowNode }), []);
   const edgeTypes = useMemo(() => ({ deletableEdge: DeletableEdge }), []);
 
-  // ── Load existing agent ────────────────────────────────────────────────────
+  // ── Load existing item ────────────────────────────────────────────────────
   useEffect(() => {
-    if (!existingAgent) return;
-    setName(existingAgent.name ?? 'Untitled Workflow');
-    setDescription(existingAgent.description ?? '');
+    if (!existingItem) return;
+    setName(existingItem.name ?? 'Untitled Workflow');
+    setDescription(existingItem.description ?? '');
 
     // Load employee metadata if this is a worker/employee
-    if (existingAgent.isWorker) {
-      setEmployeeDescription(existingAgent.workerDescription ?? '');
-      setEmployeeInputSchema(JSON.stringify(existingAgent.workerInputSchema ?? {}, null, 2));
+    if (existingItem.isWorker) {
+      setEmployeeDescription(existingItem.workerDescription ?? '');
+      setEmployeeInputSchema(JSON.stringify(existingItem.workerInputSchema ?? {}, null, 2));
     }
 
-    const wf = existingAgent.workflow;
+    const wf = existingItem.workflow;
     if (wf?.nodes?.length) {
       setNodes(wf.nodes.map((n: any) => ({
         ...n,
@@ -593,7 +613,7 @@ function AgentBuilderInner() {
       })));
     }
     if (wf?.model) setModel(wf.model);
-  }, [existingAgent, setNodes, setEdges]);
+  }, [existingItem, setNodes, setEdges]);
 
   useEffect(() => { if (!authLoading && !user) router.push('/'); }, [user, authLoading, router]);
 
@@ -779,8 +799,9 @@ function AgentBuilderInner() {
 
   // ── AI Architect ──────────────────────────────────────────────────────────
   const handleArchitect = (prompt: string, history: {role: string; content: string}[]) => {
-    if (!prompt.trim() || isArchitecting) return;
-    architect({ prompt, history }, {
+    if (!prompt.trim()) return;
+    
+    const archOptions = {
       onSuccess: (data: any) => {
         if (data?.nodes?.length) {
           const { nodes: ns, edges: es } = normaliseArchitectNodes(data.nodes, data.edges ?? []);
@@ -797,18 +818,23 @@ function AgentBuilderInner() {
             return fresh || null;
           });
         }
-        // Push explanation back into the chat
         const explanation = data?.explanation || `Workflow "${data?.name || 'Unnamed'}" has been placed on the canvas. Connect your credentials to each node before running.`;
         setTimeout(() => (window as any).__architectAddMsg?.(explanation, 'explanation'), 100);
       },
       onError: (err: any) => {
-        setTimeout(() => (window as any).__architectAddMsg?.('Failed to generate workflow. Please try rephrasing.', 'error'), 100);
+        toast.error('Architect failed: ' + (err?.response?.data?.error || err.message));
       }
-    });
+    };
+    
+    if (isSkillMode) {
+      architectSkill({ prompt, history }, archOptions);
+    } else {
+      architectAgent({ prompt, history }, archOptions);
+    }
   };
 
   // ── Loading state ──────────────────────────────────────────────────────────
-  if (authLoading || !user || (agentId && isAgentLoading)) {
+  if (authLoading || !user || (itemId && isItemLoading)) {
     return (
       <div className="h-screen w-full bg-background flex flex-col items-center justify-center">
         <div className="w-12 h-12 border-4 border-foreground border-t-transparent animate-spin rounded-full mb-8" />
@@ -834,7 +860,7 @@ function AgentBuilderInner() {
         onRun={handleTrigger}
         isRunning={isRunning}
         isSaving={isSaving || isPublishingWorker}
-        isEditMode={!!agentId}
+        isEditMode={!!itemId}
         userName={user.name}
         userAvatar={user.avatarUrl}
         isEmployeeMode={isEmployeeMode}
@@ -1082,10 +1108,10 @@ function AgentBuilderInner() {
 }
 
 // ─── Wrap in ReactFlowProvider so DeletableEdge can call useReactFlow ─────────
-export default function AgentBuilder() {
+export default function WorkflowBuilder() {
   return (
     <ReactFlowProvider>
-      <AgentBuilderInner />
+      <WorkflowBuilderInner />
     </ReactFlowProvider>
   );
 }

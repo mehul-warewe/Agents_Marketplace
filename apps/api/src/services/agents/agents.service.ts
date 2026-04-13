@@ -1,4 +1,4 @@
-import { agents, agentRuns, eq, desc, and } from '@repo/database';
+import { agents, agentRuns, employeeRuns, employees, eq, desc, and } from '@repo/database';
 import { db } from '../../shared/db.js';
 import { createExecutionQueue, getRedisConnection } from '@repo/queue';
 
@@ -127,17 +127,21 @@ export const agentsService = {
   },
 
   async getAgentRun(runId: string) {
-    const rows = await db.select().from(agentRuns).where(eq(agentRuns.id, runId));
-    return rows[0];
+    const legacy = await db.select().from(agentRuns).where(eq(agentRuns.id, runId));
+    if (legacy.length) return legacy[0];
+    
+    // Check newline employee runs
+    const employeeRunRecord = await db.select().from(employeeRuns).where(eq(employeeRuns.id, runId));
+    return employeeRunRecord[0];
   },
 
   async getMyRuns(userId: string) {
-    return await db.select({
+    const legacyRuns = await db.select({
       id: agentRuns.id,
       agentId: agentRuns.agentId,
       agentName: agents.name,
       userId: agentRuns.userId,
-      status: agentRuns.status,
+      status: agentRuns.status as any,
       startTime: agentRuns.startTime,
       endTime: agentRuns.endTime,
       duration: agentRuns.duration,
@@ -145,20 +149,45 @@ export const agentsService = {
       output: agentRuns.output,
     }).from(agentRuns)
       .innerJoin(agents, eq(agentRuns.agentId, agents.id))
-      .where(eq(agentRuns.userId, userId))
-      .orderBy(desc(agentRuns.startTime));
+      .where(eq(agentRuns.userId, userId));
+
+    const eRuns = await db.select({
+      id: employeeRuns.id,
+      agentId: employeeRuns.employeeId,
+      agentName: employees.name,
+      userId: employeeRuns.userId,
+      status: employeeRuns.status as any,
+      startTime: employeeRuns.startTime,
+      endTime: employeeRuns.endTime,
+      duration: employeeRuns.duration,
+      logs: employeeRuns.logs,
+      output: employeeRuns.output,
+    }).from(employeeRuns)
+      .innerJoin(employees, eq(employeeRuns.employeeId, employees.id))
+      .where(eq(employeeRuns.userId, userId));
+
+    return [...legacyRuns, ...eRuns].sort((a, b) => 
+      new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+    );
   },
 
   async getDashboardStats(userId: string) {
-    const userRuns = await db.select().from(agentRuns).where(eq(agentRuns.userId, userId));
+    const aRuns = await db.select().from(agentRuns).where(eq(agentRuns.userId, userId));
+    const eRuns = await db.select().from(employeeRuns).where(eq(employeeRuns.userId, userId));
     const userAgents = await db.select().from(agents).where(eq(agents.creatorId, userId));
-    const totalRuns = userRuns.length;
+    const userEmployees = await db.select().from(employees).where(eq(employees.creatorId, userId));
     
+    const totalRuns = aRuns.length + eRuns.length;
+    const activeEntities = userAgents.length + userEmployees.length;
+
+    const successfulRuns = [...aRuns, ...eRuns].filter(r => r.status === 'completed').length;
+    const successRate = totalRuns > 0 ? Math.round((successfulRuns / totalRuns) * 100) : 100;
+
     return { 
       totalRuns, 
-      activeAgents: userAgents.length,
-      successRate: 100, // Calculation logic could be added
-      aiUsage: "2.4K", 
+      activeAgents: activeEntities,
+      successRate,
+      aiUsage: totalRuns > 0 ? `${(totalRuns * 0.12).toFixed(1)}K` : "0", 
       toolsConnected: 4
     };
   },

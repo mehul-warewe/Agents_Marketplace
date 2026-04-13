@@ -67,7 +67,7 @@ export default function AgentDashboard() {
               </div>
               <div className="flex flex-col justify-between items-end gap-4 text-right">
                  <button 
-                    onClick={() => router.push('/builder')}
+                    onClick={() => router.push('/skills/builder')}
                     className="bg-primary text-primary-foreground px-10 py-4.5 rounded-[1.75rem] font-black text-[11px] uppercase tracking-[0.4em] hover:scale-[1.05] active:scale-[0.95] transition-all flex items-center justify-center gap-3 shadow-2xl shadow-primary/20"
                  >
                     <Plus size={18} strokeWidth={3} /> INITIALISE_AGENT
@@ -118,7 +118,7 @@ export default function AgentDashboard() {
             <div className="flex items-center justify-between px-2">
                <h2 className="text-2xl font-black tracking-tighter uppercase italic">Registry_Logs</h2>
                <button 
-                onClick={() => router.push('/agents')}
+                onClick={() => router.push('/employees')}
                 className="text-[10px] font-black text-muted hover:text-primary transition-colors uppercase tracking-[0.2em] flex items-center gap-2"
               >
                 Full Fleet <ArrowUpRight size={14} strokeWidth={3} />
@@ -223,7 +223,7 @@ export default function AgentDashboard() {
                       <p className="text-background/40 font-bold text-[10px] uppercase leading-tight tracking-tight">Deploy new specialized logic units into the cluster.</p>
                    </div>
                    <button 
-                     onClick={() => router.push('/builder')} 
+                     onClick={() => router.push('/skills/builder')} 
                      className="w-full py-4.5 bg-primary text-primary-foreground rounded-2xl font-black text-[9px] uppercase tracking-[0.4em] hover:scale-[1.05] transition-all shadow-xl shadow-primary/20"
                    >
                      DEPLOY_NOW

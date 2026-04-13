@@ -1,4 +1,4 @@
-import { agentRuns, eq, createClient } from '@repo/database';
+import { agentRuns, employeeRuns, eq, createClient } from '@repo/database';
 import { resolveCredential, resolveGoogleToken, resolveDefaultCredential } from '../credentialResolver.js';
 import { deductCredits } from '../credit-manager.js';
 import { WORKER_NODES } from '../nodes/index.js';
@@ -20,12 +20,14 @@ function sanitize(input: any): any {
 }
 
 export async function executeRun(job: any) {
-  const { runId, workflow } = job.data;
-  console.log(`[Worker] Starting Agent Run: ${runId}`);
+  const { runId, workflow, runTable = 'agent_runs' } = job.data;
+  console.log(`[Worker] Starting Run (${runTable}): ${runId}`);
+
+  const table = runTable === 'employee_runs' ? employeeRuns : agentRuns;
 
   const logs: any[] = [];
   try {
-    await db.update(agentRuns).set({ status: 'running', startTime: new Date() }).where(eq(agentRuns.id, runId));
+    await db.update(table).set({ status: 'running', startTime: new Date() }).where(eq(table.id, runId));
 
     const { nodes = [], edges = [], model = 'google/gemini-2.0-flash-001' } = workflow;
 
@@ -33,10 +35,10 @@ export async function executeRun(job: any) {
     const COST_PER_RUN = 5;
     const creditResult = await deductCredits(job.data.userId, COST_PER_RUN, `Agent Run: ${workflow.name || 'Untitled'}`);
     if (!creditResult.success) {
-      await db.update(agentRuns).set({ 
+      await db.update(table).set({ 
         status: 'failed', endTime: new Date(),
         logs: [{ nodeId: 'billing', label: 'Billing Check', status: 'failed', error: creditResult.error, time: new Date() }] 
-      }).where(eq(agentRuns.id, runId));
+      }).where(eq(table.id, runId));
       return;
     }
 
@@ -86,7 +88,7 @@ export async function executeRun(job: any) {
         } else {
           logs.push({ nodeId: id, label: nodeMap.get(id)?.data?.label || 'Node', status: st, result, time: new Date() });
         }
-        await db.update(agentRuns).set({ logs }).where(eq(agentRuns.id, runId));
+        await db.update(table).set({ logs }).where(eq(table.id, runId));
       };
 
       await logStatus(nodeId, 'executing');
@@ -186,14 +188,14 @@ export async function executeRun(job: any) {
       }
     }
 
-    await db.update(agentRuns).set({
+    await db.update(table).set({
       status: hasFailed ? 'failed' : 'completed',
       endTime: new Date(),
       output: hasFailed ? { error: failureReason } : { result: ctx.report || ctx.result || 'Success' }
-    }).where(eq(agentRuns.id, runId));
+    }).where(eq(table.id, runId));
 
   } catch (err: any) {
-    await db.update(agentRuns).set({ status: 'failed', endTime: new Date() }).where(eq(agentRuns.id, runId));
+    await db.update(table).set({ status: 'failed', endTime: new Date() }).where(eq(table.id, runId));
     throw err;
   }
 }

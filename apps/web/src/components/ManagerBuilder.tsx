@@ -18,7 +18,7 @@ import 'reactflow/dist/style.css';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useCreateManager, useUpdateManager, useManager } from '@/hooks/useManager';
-import { useWorkers } from '@/hooks/useApi';
+import { useEmployees } from '@/hooks/useEmployees';
 import { useToast } from '@/components/ui/Toast';
 import { Save, ChevronLeft, Target, Cpu, Sparkles, Loader2, Bot, Info, Shield, Zap, X } from 'lucide-react';
 
@@ -57,7 +57,7 @@ function ManagerBuilderInner() {
   const searchParams = useSearchParams();
   const managerId = searchParams.get('id');
   const toast = useToast();
-  const { data: workerFleet, isLoading: isFleetLoading } = useWorkers();
+  const { data: employeeFleet, isLoading: isFleetLoading } = useEmployees();
   const { data: existingManager, isLoading: isManagerLoading } = useManager(managerId);
   const { mutateAsync: createManager, isPending: isCreating } = useCreateManager();
   const { mutateAsync: updateManager, isPending: isUpdating } = useUpdateManager();
@@ -72,29 +72,29 @@ function ManagerBuilderInner() {
 
   // Sync with existing manager data
   useEffect(() => {
-    if (existingManager && !isInitialized && workerFleet) {
+    if (existingManager && !isInitialized && employeeFleet) {
       const hubNode = {
         ...INITIAL_NODES[0],
         data: { name: existingManager.name, goal: existingManager.goal },
         dragHandle: '.drag-handle',
       };
 
-      const employeeNodes = (existingManager.workerIds || []).map((id: string, idx: number) => {
-        const worker = workerFleet.find((w: any) => w.id === id);
-        if (!worker) return null;
+      const employeeNodes = (existingManager.employeeIds || []).map((id: string, idx: number) => {
+        const employee = employeeFleet.find((w: any) => w.id === id);
+        if (!employee) return null;
         return {
-          id: `worker-${id}`,
+          id: `employee-${id}`,
           type: 'employee',
           position: { x: 800, y: 150 + idx * 250 },
-          data: { ...worker },
+          data: { ...employee },
           dragHandle: '.drag-handle',
         };
       }).filter(Boolean);
 
-      const assignmentEdges = (existingManager.workerIds || []).map((id: string) => ({
+      const assignmentEdges = (existingManager.employeeIds || []).map((id: string) => ({
         id: `edge-hub-${id}`,
         source: 'manager_hub',
-        target: `worker-${id}`,
+        target: `employee-${id}`,
         type: 'assignment',
         animated: true,
       }));
@@ -103,7 +103,7 @@ function ManagerBuilderInner() {
       setEdges(assignmentEdges);
       setIsInitialized(true);
     }
-  }, [existingManager, workerFleet, isInitialized, setNodes, setEdges]);
+  }, [existingManager, employeeFleet, isInitialized, setNodes, setEdges]);
 
   const onConnect = useCallback((params: Connection) => {
     const newEdge = {
@@ -134,9 +134,9 @@ function ManagerBuilderInner() {
         type: type === 'agent' ? 'employee' : type,
         position,
         data: { 
-          name: `Unconfigured ${type}`, 
+          name: `Unconfigured Employee`, 
           isPlaceholder: true,
-          workerDescription: 'Select a specialized unit from the sidebar to configure execution parameters.'
+          workerDescription: 'Select a specialized operative from the fleet to configure strategy.'
         },
         dragHandle: '.drag-handle',
       };
@@ -194,9 +194,9 @@ function ManagerBuilderInner() {
       return;
     }
 
-    const connectedWorkerIds = edges
+    const connectedEmployeeIds = edges
       .filter((e) => e.source === 'manager_hub')
-      .map((e) => e.target.replace('worker-', ''));
+      .map((e) => e.target.replace('employee-', ''));
 
     const payload = {
       name: hub.data.name,
@@ -204,7 +204,7 @@ function ManagerBuilderInner() {
       goal: hub.data.goal,
       systemPrompt: 'You are a strategic manager. Use your employees effectively.',
       model: 'google/gemini-2.0-flash-001',
-      workerIds: connectedWorkerIds,
+      employeeIds: connectedEmployeeIds,
       isPublished: true,
     };
 
@@ -311,7 +311,7 @@ function ManagerBuilderInner() {
             onUpdateNode={handleUpdateNode}
             onUpdateEdge={handleUpdateEdge}
             onDelete={handleDeleteItem}
-            workerFleet={workerFleet || []}
+            workerFleet={employeeFleet || []}
             isFleetLoading={isFleetLoading}
           />
         </ReactFlow>

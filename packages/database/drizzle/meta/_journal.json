@@ -43,6 +43,13 @@
       "when": 1775729625508,
       "tag": "0005_faithful_the_twelve",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1775731510000,
+      "tag": "0006_skills_employees",
+      "breakpoints": true
     }
   ]
 }
