@@ -180,7 +180,7 @@ export const INITIAL_NODES = [
   {
     id: 'trigger_1',
     type: 'wareweNode',
-    position: { x: 100, y: 300 },
+    position: { x: 400, y: 50 },
     data: {
       label: 'Manual Trigger',
       toolId: 'trigger.manual',

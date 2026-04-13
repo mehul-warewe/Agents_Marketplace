@@ -63,6 +63,7 @@ export const pipedreamMcpService = {
         name: `Custom API Call`,
         description: `Make an authorized custom request to the ${cleanSlug} API.`,
         key: `__custom_api_call`,
+        version: '1.0.0',
         inputSchema: {
           type: 'object',
           properties: {

@@ -94,12 +94,10 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
           handleStyle={{ width: 32, height: 32, background: 'transparent', border: 'none', borderRadius: '50%' }}
         />
 
-        {/* Note Toolbar (Mirroring standard node toolbar style) */}
-        <div className="absolute -top-12 left-1/2 -translate-x-1/2 hidden group-hover:flex items-center gap-3 px-3 py-1.5 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-[100] animate-in fade-in zoom-in-95 duration-200 before:content-[''] before:absolute before:top-full before:left-0 before:right-0 before:h-4 before:bg-transparent">
+        {/* Note Toolbar - Moved to the left and vertical */}
+        <div className="absolute -left-12 top-1/2 -translate-y-1/2 hidden group-hover:flex flex-col items-center gap-3 px-1.5 py-3 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-[100] animate-in fade-in zoom-in-95 duration-200 before:content-[''] before:absolute before:left-full before:top-0 before:bottom-0 before:w-4 before:bg-transparent">
           <div className="relative group/color p-1.5 cursor-pointer">
-            <Palette size={14} className="t
-
-  if (!tool) return null;ext-white/50 hover:text-white transition-colors" />
+            <Palette size={14} className="text-white/50 hover:text-white transition-colors" />
             <input 
               type="color" 
               className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
@@ -149,6 +147,8 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
     );
   }
 
+  if (!tool) return null;
+
   // ─── Standard Normalized Action Card ───────────────────────────────────────
   const Icon = tool.icon as any;
   const isTrigger = data.isTrigger || tool.isTrigger;
@@ -164,8 +164,8 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   return (
     <div className={`group relative transition-all duration-300 ${selected ? 'scale-[1.02]' : ''}`}>
       
-      {/* Node Toolbar - With hit-bridge to prevent flickering */}
-      <div className="absolute -top-12 left-1/2 -translate-x-1/2 hidden group-hover:flex items-center gap-3 px-3 py-1.5 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-[100] animate-in fade-in zoom-in-95 duration-200 before:content-[''] before:absolute before:top-full before:left-0 before:right-0 before:h-4 before:bg-transparent">
+      {/* Node Toolbar - Moved to the left and vertical */}
+      <div className="absolute -left-12 top-1/2 -translate-y-1/2 hidden group-hover:flex flex-col items-center gap-3 px-1.5 py-3 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-[100] animate-in fade-in zoom-in-95 duration-200 before:content-[''] before:absolute before:left-full before:top-0 before:bottom-0 before:w-4 before:bg-transparent">
         <button onClick={onPlayClick} className="p-1.5 text-white/50 hover:text-white transition-colors relative z-[101]"><Play size={14} fill="currentColor" /></button>
         <button onClick={onDeleteClick} className="p-1.5 text-white/50 hover:text-red-400 transition-colors relative z-[101]"><Trash2 size={14} /></button>
       </div>
@@ -173,7 +173,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
       {/* Main Body */}
       <div 
         className={`
-          w-[200px] min-h-[70px] rounded-[1.75rem] border p-3 flex items-center gap-3 transition-all duration-500
+          w-[240px] min-h-[85px] rounded-[2rem] border p-4 flex items-center gap-3 transition-all duration-500
           ${statusStyles[status]}
           ${selected ? 'border-blue-500 shadow-2xl' : 'hover:border-white/10 shadow-lg'}
         `}
@@ -184,7 +184,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
         )}
 
         {/* Icon Section */}
-        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 ${tool.bg} shadow-inner overflow-hidden`}>
+        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 ${tool.bg} shadow-inner overflow-hidden`}>
           {typeof tool.icon === 'string' && (tool.icon.startsWith('http') || tool.icon.startsWith('/')) ? (
             <img src={tool.icon} alt={tool.label} className="w-full h-full object-contain p-2" />
           ) : (
@@ -215,9 +215,9 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
       {!isTrigger && (
         <Handle
           type="target"
-          position={Position.Left}
+          position={Position.Top}
           className="!opacity-0 !pointer-events-none"
-          style={{ left: -4 }}
+          style={{ top: -4 }}
         />
       )}
       
@@ -230,17 +230,17 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
           <React.Fragment key={socket.name}>
             <Handle
               type="source"
-              position={Position.Right}
+              position={Position.Bottom}
               id={socket.name}
               className="!opacity-0 !pointer-events-none"
-              style={{ right: -4 }}
+              style={{ bottom: -4 }}
             />
             
             {/* Contextual + trigger always visible IF NOT connected */}
             {!isConnected && (
-              <div className="absolute left-[100%] top-1/2 -translate-y-1/2 flex items-center">
-                {/* Short dashed line extension */}
-                <div className="w-4 h-[1px] border-t border-dashed border-white/20 transition-opacity" />
+              <div className="absolute top-[100%] left-1/2 -translate-x-1/2 flex flex-col items-center">
+                {/* Short dashed line extension (vertical) */}
+                <div className="w-[1px] h-4 border-l border-dashed border-white/20 transition-opacity" />
                 
                 <div 
                   onClick={(e) => {
@@ -254,7 +254,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                       clientY: e.clientY
                     });
                   }}
-                  className="w-5 h-5 bg-[#1a1a1a] border border-white/10 rounded-lg flex items-center justify-center text-white/40 hover:bg-white hover:text-black transition-all cursor-pointer shadow-xl scale-90 hover:scale-110 z-50 ml-0"
+                  className="w-5 h-5 bg-[#1a1a1a] border border-white/10 rounded-lg flex items-center justify-center text-white/40 hover:bg-white hover:text-black transition-all cursor-pointer shadow-xl scale-90 hover:scale-110 z-50 mt-0"
                 >
                   <Plus size={10} strokeWidth={3} />
                 </div>

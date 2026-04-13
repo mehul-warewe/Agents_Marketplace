@@ -163,7 +163,7 @@ function normaliseArchitectNodes(rawNodes: any[], rawEdges: any[]) {
     return {
       id: newId,
       type: 'wareweNode',
-      position: n.position || { x: 100 + i * 480, y: 200 },
+      position: n.position || { x: 400, y: 50 + i * 200 },
       data: {
         label: n.data?.label || n.label || resolvedTool.label,
         toolId: resolvedTool.id,
@@ -226,7 +226,7 @@ function AgentBuilderInner() {
   const [activeRunId, setActiveRunId]   = useState<string | null>(null);
   const [isRunning,   setIsRunning]     = useState(false);
   const [pickerState, setPickerState]   = useState<any>(null);
-  const [sidebarOpen, setSidebarOpen]   = useState(true);
+  const [sidebarOpen, setSidebarOpen]   = useState(false);
   const [pickerSearch, setPickerSearch] = useState('');
   const [ctrlPressed, setCtrlPressed] = useState(false);
 
@@ -471,8 +471,8 @@ function AgentBuilderInner() {
     // --- CASE A: INSERTION BETWEEN NODES ---
     if (pickerState.insertion) {
       const { sourceId, targetId, edgeId, sourceHandle, targetHandle, position } = pickerState;
-      const newTool = getToolById(toolId);
-      const newNode = makeNode(toolId, position, nodes, (newTool as any).override) as any;
+      // Insert node in the middle (vertical)
+      const newNode = makeNode(toolId, { x: position.x, y: position.y }, nodes, override || (getToolById(toolId) as any).override) as any;
       if (!newNode) return;
 
       const sourceNode = nodes.find(n => n.id === sourceId);
@@ -509,14 +509,14 @@ function AgentBuilderInner() {
     const baseNode = nodes.find(n => n.id === nodeId);
     if (!baseNode) return;
 
-    // Create new node offset from base
+    // Create new node offset from base (Top-Down)
     const isTarget = handleType === 'target';
     const newPos = {
-      x: isTarget ? baseNode.position.x - 300 : baseNode.position.x + 300,
-      y: baseNode.position.y
+      x: baseNode.position.x,
+      y: isTarget ? baseNode.position.y - 150 : baseNode.position.y + 150
     };
     const newTool = getToolById(toolId);
-    const newNode = makeNode(toolId, newPos, nodes, (newTool as any).override || pickerState.override) as any;
+    const newNode = makeNode(toolId, newPos, nodes, override || (newTool as any).override || pickerState.override) as any;
 
     if (!newNode) {
       setPickerState(null);
@@ -669,8 +669,8 @@ function AgentBuilderInner() {
     }
     const last = nodes[nodes.length - 1];
     const pos = last
-      ? { x: last.position.x + 420, y: last.position.y }
-      : { x: 200, y: 200 };
+      ? { x: last.position.x, y: last.position.y + 150 }
+      : { x: 400, y: 50 };
     const newNode = makeNode(toolId, pos, nodes, override) as any;
     if (newNode) {
       setNodes(ns => ns.concat(newNode));
@@ -888,7 +888,7 @@ function AgentBuilderInner() {
             maxZoom={4}
             fitView
             proOptions={{ hideAttribution: true }}
-            fitViewOptions={{ padding: 1.2 }}
+            fitViewOptions={{ padding: 0.8, maxZoom: 0.7 }}
             defaultEdgeOptions={{
               ...EDGE_DEFAULTS,
               style: { strokeWidth: 1.5, stroke: 'rgba(255,255,255,0.1)', transition: 'stroke 0.5s' }
