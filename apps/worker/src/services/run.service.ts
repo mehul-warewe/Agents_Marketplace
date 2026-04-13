@@ -111,11 +111,18 @@ export async function executeRun(job: any) {
           const handler = WORKER_NODES[execKey];
           if (handler) {
             let creds: any = null;
+            const isPipedream = execKey === 'pipedream_action' || execKey.includes('pipedream');
+
             if (config.credentialId) {
-              const res = await resolveCredential(config.credentialId, job.data.userId);
-              creds = res.data;
-              if (execKey.startsWith('google_')) {
-                creds.accessToken = await resolveGoogleToken(config.credentialId, job.data.userId);
+              if (isPipedream) {
+                // Pipedream credentials are managed externally; skip DB UUID lookup
+                creds = { accountId: config.credentialId };
+              } else {
+                const res = await resolveCredential(config.credentialId, job.data.userId);
+                creds = res.data;
+                if (execKey.startsWith('google_')) {
+                  creds.accessToken = await resolveGoogleToken(config.credentialId, job.data.userId);
+                }
               }
             } else {
                const nodeDef = NODE_REGISTRY.find(n => n.executionKey === execKey);

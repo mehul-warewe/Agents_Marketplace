@@ -108,22 +108,28 @@ function FormField({
   else if (type === 'boolean') fieldType = 'checkbox';
   else if (type === 'number' || type === 'integer') fieldType = 'number';
   else if (type === 'array') fieldType = 'textarea';
+  else if (property.title?.toLowerCase().includes('date') || property.title?.toLowerCase().includes('time') || fieldKey.toLowerCase().includes('date')) fieldType = 'datetime-local';
   else if (description.toLowerCase().includes('email')) fieldType = 'email';
   else if (description.toLowerCase().includes('url')) fieldType = 'url';
   else if (description.toLowerCase().includes('password')) fieldType = 'password';
   else if (type === 'string' && (property.minLength ?? 0) > 100) fieldType = 'textarea';
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
       <label className="flex items-center gap-2">
-        <span className="text-xs font-semibold capitalize text-foreground">
+        <span className="text-[11px] font-black uppercase tracking-tight text-foreground/80">
           {label}
         </span>
-        {isRequired && <span className="text-red-500">*</span>}
+        {isRequired && (
+          <span className="flex items-center gap-1">
+             <span className="text-red-500 font-bold">*</span>
+             <span className="text-[8px] font-black uppercase text-red-500/60 tracking-widest bg-red-500/5 px-1 rounded">Required</span>
+          </span>
+        )}
       </label>
 
       {description && (
-        <p className="text-xs text-muted/60">{description}</p>
+        <p className="text-[10px] text-muted/50 leading-relaxed italic mb-1">{description}</p>
       )}
 
       {fieldType === 'select' && property.enum ? (

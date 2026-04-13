@@ -216,14 +216,14 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
         <Handle
           type="target"
           position={Position.Left}
-          className="!w-2 !h-2 !bg-[#252525] !border !border-gray-600 hover:!bg-white hover:!scale-125 !shadow-none transition-all"
+          className="!opacity-0 !pointer-events-none"
           style={{ left: -4 }}
         />
       )}
       
       {tool.outputs.map((socket: any) => {
         const isConnected = data.isEmployeeMode 
-          ? edges.some(e => e.source === id) // In employee mode, ANY outgoing edge makes it "connected"
+          ? edges.some(e => e.source === id) 
           : edges.some(e => e.source === id && (e.sourceHandle === socket.name || tool.outputs.length === 1));
 
         return (
@@ -232,27 +232,32 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
               type="source"
               position={Position.Right}
               id={socket.name}
-              className="!w-2 !h-2 !bg-[#252525] !border !border-gray-600 hover:!bg-white hover:!scale-125 !shadow-none transition-all"
+              className="!opacity-0 !pointer-events-none"
               style={{ right: -4 }}
             />
             
-            {/* Contextual + trigger */}
+            {/* Contextual + trigger always visible IF NOT connected */}
             {!isConnected && (
-              <div 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  data.onAddConnect?.({
-                    nodeId: id,
-                    handleId: socket.name,
-                    handleType: 'source',
-                    socketType: socket.type,
-                    clientX: e.clientX,
-                    clientY: e.clientY
-                  });
-                }}
-                className="absolute left-[100%] top-1/2 -translate-y-1/2 ml-4 w-5 h-5 bg-[#1a1a1a] border border-white/10 rounded-lg flex items-center justify-center text-white/40 opacity-0 group-hover:opacity-100 hover:bg-white hover:text-black transition-all cursor-pointer shadow-xl scale-90 hover:scale-100 z-50"
-              >
-                <Plus size={10} strokeWidth={3} />
+              <div className="absolute left-[100%] top-1/2 -translate-y-1/2 flex items-center">
+                {/* Short dashed line extension */}
+                <div className="w-4 h-[1px] border-t border-dashed border-white/20 transition-opacity" />
+                
+                <div 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    data.onAddConnect?.({
+                      nodeId: id,
+                      handleId: socket.name,
+                      handleType: 'source',
+                      socketType: socket.type,
+                      clientX: e.clientX,
+                      clientY: e.clientY
+                    });
+                  }}
+                  className="w-5 h-5 bg-[#1a1a1a] border border-white/10 rounded-lg flex items-center justify-center text-white/40 hover:bg-white hover:text-black transition-all cursor-pointer shadow-xl scale-90 hover:scale-110 z-50 ml-0"
+                >
+                  <Plus size={10} strokeWidth={3} />
+                </div>
               </div>
             )}
           </React.Fragment>

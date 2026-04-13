@@ -125,6 +125,7 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType }:
     if (activePlatform && !q) {
       return platformTools.map(tool => ({
         name: tool.name,
+        key: tool.key,
         description: tool.description,
       }));
     }
@@ -282,7 +283,7 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType }:
                         label: `${platform?.name} - ${tool.name}`,
                         icon: platform?.icon,
                         appSlug: activePlatform,
-                        actionName: tool.name,
+                        actionName: tool.key, // Use the technical key for exact MCP tool identification
                         platformName: platform?.name
                       });
                     }}

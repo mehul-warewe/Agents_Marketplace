@@ -101,13 +101,24 @@ export const pipedreamService = {
     const projectId = process.env.PIPEDREAM_PROJECT_ID;
     const environment = process.env.PIPEDREAM_ENVIRONMENT || 'development';
 
-    let url = `https://api.pipedream.com/v1/connect/${projectId}/accounts?external_user_id=${externalUserId}`;
-    if (resolvedAppSlug) url += `&app_slug=${resolvedAppSlug}`;
-
+    const url = `https://api.pipedream.com/v1/connect/${projectId}/accounts?external_user_id=${externalUserId}`;
+    
     const res = await axios.get(url, {
-      headers: { Authorization: `Bearer ${accessToken}`, 'x-pd-environment': environment },
+      headers: { 
+        Authorization: `Bearer ${accessToken}`, 
+        'x-pd-environment': environment 
+      },
     });
 
-    return res.data?.data ?? [];
+    const accounts = res.data?.data ?? [];
+    
+    // Map Pipedream's 'name_slug' to 'slug' for downstream consistency
+    return accounts.map((acc: any) => ({
+      ...acc,
+      app: acc.app ? {
+        ...acc.app,
+        slug: acc.app.name_slug || acc.app.slug || '',
+      } : null
+    }));
   },
 };

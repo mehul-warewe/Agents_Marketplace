@@ -51,7 +51,7 @@ export default function PipedreamNodeSettings({
   const platformName = injectedPlatformName || 
     (resolvedSlug ? resolvedSlug.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Platform');
 
-  /** Fetch connected accounts from the backend */
+  /** Fetch connected accounts from the backend and filter for safety */
   const fetchAccounts = async (slug: string) => {
     if (!slug) return;
     setIsFetchingAccounts(true);
@@ -60,8 +60,28 @@ export default function PipedreamNodeSettings({
       const res = await api.get('/credentials/pipedream/accounts', {
         params: { appSlug: slug },
       });
-      // Backend returns { accounts: [...] }
-      setAccounts(res.data?.accounts ?? []);
+      
+      const allAccounts: PipedreamAccount[] = res.data?.accounts ?? [];
+      
+      // Strict client-side filter: Ensure accounts belong to this app or platform
+      // Pipedream sometimes returns all active accounts if the slug filter isn't precise
+      const filtered = allAccounts.filter(a => {
+        if (!a.app) return true;
+        const accountSlug = a.app.slug;
+        const accountName = (a.app.name || '').toLowerCase();
+        const targetSlug = slug || '';
+        const targetName = (platformName || '').toLowerCase();
+        
+        if (!accountSlug) return a.app.id === targetSlug || accountName.includes(targetName);
+        
+        return accountSlug === targetSlug || 
+               a.app.id === targetSlug || 
+               targetSlug.includes(accountSlug) || 
+               accountSlug.includes(targetSlug) ||
+               (targetName.length > 3 && accountName.includes(targetName));
+      });
+
+      setAccounts(filtered);
     } catch (err: any) {
       console.error('[pipedream] Failed to fetch accounts:', err);
     } finally {
@@ -119,23 +139,7 @@ export default function PipedreamNodeSettings({
           await new Promise(r => setTimeout(r, 1500));
           const updatedSlug = resolvedAppSlug || appSlug;
           
-          setIsFetchingAccounts(true);
-          try {
-            const res = await api.get('/credentials/pipedream/accounts', {
-              params: { appSlug: updatedSlug },
-            });
-            const newAccounts = res.data?.accounts ?? [];
-            setAccounts(newAccounts);
-            
-            // Auto-select if nothing was selected yet
-            if (!credentialId && newAccounts.length > 0) {
-              onCredentialSelect(newAccounts[0].id);
-            }
-          } catch (e) {
-            console.error('[pipedream] Auto-refresh failed:', e);
-          } finally {
-            setIsFetchingAccounts(false);
-          }
+          await fetchAccounts(updatedSlug);
         }
       }, 500);
     } catch (err: any) {
@@ -173,7 +177,7 @@ export default function PipedreamNodeSettings({
           onChange={onCredentialSelect}
           options={accounts.map(a => ({
             id: a.id,
-            label: `${a.name || a.app?.name || a.id} (${a.id.slice(0, 8)})`
+            label: `${a.app?.name || platformName}: ${a.name || a.id.split('_')[1] || a.id.slice(0, 10)}`
           }))}
           placeholder={isFetchingAccounts ? "Searching..." : "Select account..."}
           isLoading={isFetchingAccounts}

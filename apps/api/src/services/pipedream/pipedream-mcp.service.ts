@@ -29,8 +29,16 @@ export const pipedreamMcpService = {
   async listToolsForApp(appSlug: string, externalUserId: string, accessToken: string): Promise<any[]> {
     if (!appSlug || appSlug === '__integrations_view__') return [];
     const cleanSlug = appSlug.startsWith('app_') ? appSlug.replace('app_', '') : appSlug;
+    const REDIS_TOOLS_KEY = `pipedream:tools:v1:granular:${cleanSlug}`;
 
     try {
+      // 1. Check Redis Cache
+      const redis = (await import('@repo/queue')).getRedisConnection();
+      const cached = await redis.get(REDIS_TOOLS_KEY);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+
       const pd = new PipedreamClient({
         projectEnvironment: (process.env.PIPEDREAM_ENVIRONMENT || 'development') as 'development' | 'production',
         clientId: process.env.PIPEDREAM_CLIENT_ID!,
@@ -38,6 +46,7 @@ export const pipedreamMcpService = {
         projectId: process.env.PIPEDREAM_PROJECT_ID!,
       });
 
+      // We use the Component API here to get FULL granular control (Summary, Start Time, etc.)
       let allComponents = await this.fetchComponents(pd, 'action', { app: cleanSlug });
       if (allComponents.length === 0) allComponents = await this.fetchComponents(pd, 'action', { q: cleanSlug });
 
@@ -54,19 +63,22 @@ export const pipedreamMcpService = {
         name: `Custom API Call`,
         description: `Make an authorized custom request to the ${cleanSlug} API.`,
         key: `__custom_api_call`,
-        version: '1.0.0',
         inputSchema: {
           type: 'object',
           properties: {
             method: { type: 'string', enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] },
-            path: { type: 'string' },
-            body: { type: 'string' },
-            headers: { type: 'string' }
+            path: { type: 'string', description: 'API path (e.g. /me)' },
+            body: { type: 'string', description: 'JSON body string' },
+            headers: { type: 'string', description: 'JSON headers string' }
           },
           required: ['method', 'path']
         }
       });
 
+      // 2. Save to Redis (Cache for 24 hours)
+      if (tools.length > 0) {
+        await redis.setex(REDIS_TOOLS_KEY, 60 * 60 * 24, JSON.stringify(tools));
+      }
       return tools;
     } catch (err: any) {
       log.error(`[pipedream-mcp] Error fetching actions: ${err.message}`);
@@ -108,13 +120,26 @@ export const pipedreamMcpService = {
       properties: Object.fromEntries(
         (props || [])
           .filter((prop: any) => prop.type !== 'app' && !prop.type?.startsWith('$.'))
-          .map((prop: any) => [
-            prop.name,
-            {
-              type: prop.type === 'string' || prop.type === 'integer' || prop.type === 'boolean' ? prop.type : 'string',
-              description: prop.label || prop.description || prop.name,
-            },
-          ])
+          .map((prop: any) => {
+            const schema: any = {
+              type: prop.type === 'string' || prop.type === 'integer' || prop.type === 'boolean' || prop.type === 'number' ? prop.type : 'string',
+              title: prop.label || prop.name,
+              description: prop.description || '',
+            };
+
+            if (prop.default !== undefined) {
+              schema.default = prop.default;
+            }
+
+            // Handle enums/options
+            if (Array.isArray(prop.options)) {
+              schema.enum = prop.options.map((opt: any) => 
+                typeof opt === 'object' ? (opt.value ?? opt.label) : opt
+              );
+            }
+
+            return [prop.name, schema];
+          })
       ),
       required: (props || [])
         .filter((prop: any) => prop.type !== 'app' && !prop.type?.startsWith('$.'))

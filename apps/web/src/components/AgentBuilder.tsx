@@ -14,12 +14,14 @@ import ReactFlow, {
   Edge,
   Connection,
   EdgeProps,
-  getBezierPath,
+  getSmoothStepPath,
   useReactFlow,
   ReactFlowProvider,
   BaseEdge,
   PanOnScrollMode,
 } from 'reactflow';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Bot, X, SendHorizonal, ShieldCheck, Loader2 } from 'lucide-react';
 import 'reactflow/dist/style.css';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
@@ -39,69 +41,75 @@ import { EDGE_DEFAULTS } from './builder/toolRegistry';
 
 // ─── Deletable edge with ✕ button ──────────────────────────────────────────────
 function DeletableEdge({
-  id, sourceX, sourceY, targetX, targetY,
+  id, source, target, sourceX, sourceY, targetX, targetY,
   sourcePosition, targetPosition,
   sourceHandleId, targetHandleId,
   style, markerEnd, selected, animated,
 }: EdgeProps) {
-  const { setEdges } = useReactFlow();
+  const { setEdges, setNodes, project } = useReactFlow();
 
-  const [edgePath, labelX, labelY] = getBezierPath({
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX, sourceY, sourcePosition,
     targetX, targetY, targetPosition,
+    borderRadius: 16,
   });
 
-  const onDelete = useCallback((e: React.MouseEvent) => {
+  // This will be handled by the parent AgentBuilder to show the picker
+  const onInsert = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    setEdges(eds => eds.filter(edge => edge.id !== id));
-  }, [id, setEdges]);
-
-  const isAgentic = targetHandleId?.toLowerCase().includes('tool') || 
-                    targetHandleId?.toLowerCase().includes('model') || 
-                    targetHandleId?.toLowerCase().includes('memory') || 
-                    targetHandleId?.toLowerCase().includes('parser');
+    const event = new CustomEvent('warewe:insert-node', {
+      detail: {
+        edgeId: id,
+        sourceId: source,
+        targetId: target,
+        sourceHandle: sourceHandleId,
+        targetHandle: targetHandleId,
+        position: { x: labelX, y: labelY }
+      }
+    });
+    window.dispatchEvent(event);
+  }, [id, source, target, sourceHandleId, targetHandleId, labelX, labelY]);
 
   return (
     <g className="group">
-      {/* Invisible wider hit area for easier interaction */}
       <BaseEdge
         path={edgePath}
         style={{ strokeWidth: 20, stroke: 'transparent' }}
       />
       
-      {/* Visible edge */}
       <BaseEdge
         path={edgePath}
-        markerEnd={isAgentic ? undefined : markerEnd}
+        markerEnd={markerEnd}
         style={{
           ...style,
-          stroke: animated ? '#10b981' : (selected ? 'var(--foreground)' : (isAgentic ? '#bbb' : '#777')),
-          strokeWidth: animated ? 3.5 : (selected ? 2.5 : (isAgentic ? 2.5 : 1.5)),
-          strokeDasharray: isAgentic ? '7,4' : 'none',
-          opacity: (selected || animated) ? 1 : (isAgentic ? 0.6 : 0.9),
-          transition: 'stroke 0.4s, stroke-width 0.4s, opacity 0.4s, stroke-dashoffset 0.1s linear',
+          stroke: animated ? '#10b981' : (selected ? 'var(--foreground)' : '#444'),
+          strokeWidth: animated ? 3 : (selected ? 2 : 1.5),
+          strokeDasharray: '6,6',
+          opacity: 1,
+          transition: 'stroke 0.4s, stroke-width 0.4s',
         }}
       />
       
-      {/* Delete button — only visible on hover/select */}
       <foreignObject
-        width={20}
-        height={20}
-        x={labelX - 10}
-        y={labelY - 10}
+        width={40}
+        height={40}
+        x={labelX - 20}
+        y={labelY - 20}
         className="overflow-visible pointer-events-none"
-        requiredExtensions="http://www.w3.org/1999/xhtml"
       >
-        <div
-          className={`
-            w-5 h-5 bg-card border border-border/60 text-foreground 
-            flex items-center justify-center cursor-pointer pointer-events-auto 
-            opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-full shadow-lg
-            ${selected ? 'opacity-100 scale-110 !border-foreground/40' : 'hover:scale-110'}
-          `}
-          onClick={onDelete}
-        >
-          <span className="text-[8px] font-black leading-none">✕</span>
+        <div className="w-full h-full flex items-center justify-center">
+          <div
+            className={`
+              w-7 h-7 bg-[#232329] border border-white/20 text-white
+              flex items-center justify-center cursor-pointer pointer-events-auto 
+              opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-full shadow-2xl
+              hover:scale-125 hover:border-accent hover:bg-black/40
+              ${selected ? 'opacity-100 scale-110 !border-accent' : ''}
+            `}
+            onClick={onInsert}
+          >
+            <span className="text-sm font-bold leading-none select-none pointer-events-none">+</span>
+          </div>
         </div>
       </foreignObject>
     </g>
@@ -155,7 +163,7 @@ function normaliseArchitectNodes(rawNodes: any[], rawEdges: any[]) {
     return {
       id: newId,
       type: 'wareweNode',
-      position: n.position || { x: 100 + i * 320, y: 200 },
+      position: n.position || { x: 100 + i * 480, y: 200 },
       data: {
         label: n.data?.label || n.label || resolvedTool.label,
         toolId: resolvedTool.id,
@@ -218,13 +226,14 @@ function AgentBuilderInner() {
   const [activeRunId, setActiveRunId]   = useState<string | null>(null);
   const [isRunning,   setIsRunning]     = useState(false);
   const [pickerState, setPickerState]   = useState<any>(null);
-  const [sidebarOpen, setSidebarOpen]   = useState(false);
+  const [sidebarOpen, setSidebarOpen]   = useState(true);
   const [pickerSearch, setPickerSearch] = useState('');
   const [ctrlPressed, setCtrlPressed] = useState(false);
 
   // Employee mode state
   const [employeeDescription, setEmployeeDescription] = useState('');
   const [employeeInputSchema, setEmployeeInputSchema] = useState('{}');
+  const [isPublishing, setIsPublishing] = useState(false);
   const isEmployeeMode = mode === 'employee' || (existingAgent?.isWorker === true);
 
   useEffect(() => {
@@ -289,11 +298,12 @@ function AgentBuilderInner() {
             workerInputSchema: schemaObj
           }, {
             onSuccess: () => {
+              setIsPublishing(false); // Close modal on success
+              toast.success('Employee Unit Initialized!');
               router.push('/agents');
             },
             onError: (err: any) => {
               toast.error('Failed to promote to employee: ' + (err?.message || 'Unknown error'));
-              router.push('/agents');
             }
           });
         } catch (parseErr) {
@@ -437,13 +447,64 @@ function AgentBuilderInner() {
     }
   }, [runData, setNodes, setEdges]);
 
-  const handleAddConnect = useCallback((params: any) => {
-    setPickerState(params);
-    setSidebarOpen(true); // Open sidebar instead of floating picker
+  // ── Handle Node Insertion (from Edge + button) ──
+  useEffect(() => {
+    const handleInsert = (e: any) => {
+      setPickerState({ 
+        insertion: true, 
+        ...e.detail 
+      });
+      setSidebarOpen(true);
+    };
+    window.addEventListener('warewe:insert-node', handleInsert);
+    return () => window.removeEventListener('warewe:insert-node', handleInsert);
   }, []);
 
-  const handlePickerSelect = useCallback((toolId: string) => {
+  const handleAddConnect = useCallback((params: any) => {
+    setPickerState(params);
+    setSidebarOpen(true);
+  }, []);
+
+  const handlePickerSelect = useCallback((toolId: string, override?: any) => {
     if (!pickerState) return;
+
+    // --- CASE A: INSERTION BETWEEN NODES ---
+    if (pickerState.insertion) {
+      const { sourceId, targetId, edgeId, sourceHandle, targetHandle, position } = pickerState;
+      const newTool = getToolById(toolId);
+      const newNode = makeNode(toolId, position, nodes, (newTool as any).override) as any;
+      if (!newNode) return;
+
+      const sourceNode = nodes.find(n => n.id === sourceId);
+      const targetNode = nodes.find(n => n.id === targetId);
+
+      // Create new edges
+      const edgeToNew = {
+        id: `e_${sourceId}_${newNode.id}_${Date.now()}`,
+        source: sourceId,
+        sourceHandle: sourceHandle || 'output',
+        target: newNode.id,
+        targetHandle: 'input',
+        ...EDGE_DEFAULTS,
+      };
+
+      const edgeFromNew = {
+        id: `e_${newNode.id}_${targetId}_${Date.now()}`,
+        source: newNode.id,
+        sourceHandle: 'output',
+        target: targetId,
+        targetHandle: targetHandle || 'input',
+        ...EDGE_DEFAULTS,
+      };
+
+      setNodes(ns => ns.concat(newNode));
+      setEdges(es => es.filter(e => e.id !== edgeId).concat(edgeToNew, edgeFromNew));
+      setSelectedNode(newNode);
+      setPickerState(null);
+      return;
+    }
+
+    // --- CASE B: STANDARD APPEND ---
     const { nodeId, handleId, handleType, socketType } = pickerState;
     const baseNode = nodes.find(n => n.id === nodeId);
     if (!baseNode) return;
@@ -498,6 +559,7 @@ function AgentBuilderInner() {
     }
 
     setEdges(es => addEdge(newEdge, es));
+    setSelectedNode(newNode);
     setPickerState(null);
   }, [pickerState, nodes, setNodes, setEdges]);
 
@@ -599,15 +661,15 @@ function AgentBuilderInner() {
   }, [setEdges]);
 
   // ── Tool actions ─────────────────────────────────────────────────────────────
-  const addToolNode = (toolId: string, override?: { label?: string, icon?: string, appSlug?: string, actionName?: string }) => {
+  const addToolNode = (toolId: string, override?: { label?: string, icon?: string, appSlug?: string, actionName?: string, platformName?: string }) => {
     if (pickerState) {
-      handlePickerSelect(toolId);
-      setSidebarOpen(false);
+      handlePickerSelect(toolId, override);
+      setPickerState(null);
       return;
     }
     const last = nodes[nodes.length - 1];
     const pos = last
-      ? { x: last.position.x + 280, y: last.position.y }
+      ? { x: last.position.x + 420, y: last.position.y }
       : { x: 200, y: 200 };
     const newNode = makeNode(toolId, pos, nodes, override) as any;
     if (newNode) {
@@ -640,19 +702,59 @@ function AgentBuilderInner() {
     setSidebarOpen(false); // Auto-close sidebar after adding
   };
 
-  const updateSelectedNode = useCallback((newData: any) => {
+  const updateSelectedNode = useCallback((updates: any) => {
     if (!selectedNode) return;
-    setNodes(ns => ns.map(n => n.id === selectedNode.id ? { ...n, data: { ...n.data, ...newData } } : n));
-    setSelectedNode((p: any) => p ? { ...p, data: { ...p.data, ...newData } } : null);
+    setNodes(ns => ns.map(n => n.id === selectedNode.id ? { 
+      ...n, 
+      data: { 
+        ...n.data, 
+        config: { ...n.data.config, ...updates } 
+      } 
+    } : n));
+    
+    // Sync local selectedNode so children (like sidebars) see the update
+    setSelectedNode((p: any) => {
+      if (!p) return null;
+      return {
+        ...p,
+        data: {
+          ...p.data,
+          config: { ...p.data.config, ...updates }
+        }
+      };
+    });
   }, [selectedNode, setNodes]);
 
   const deleteSelectedNode = useCallback((nodeId?: string) => {
     const idToDelete = nodeId || selectedNode?.id;
     if (!idToDelete) return;
+
     setNodes(ns => ns.filter(n => n.id !== idToDelete));
-    setEdges(es => es.filter(e => e.source !== idToDelete && e.target !== idToDelete));
+    
+    setEdges(es => {
+      const incoming = es.filter(e => e.target === idToDelete);
+      const outgoing = es.filter(e => e.source === idToDelete);
+      let nextEdges = es.filter(e => e.source !== idToDelete && e.target !== idToDelete);
+      
+      if (incoming.length === 1 && outgoing.length > 0) {
+        const sourceEdge = incoming[0];
+        if (sourceEdge) {
+          const newEdges = outgoing.map(targetEdge => ({
+            id: `e_heal_${sourceEdge.source}_${targetEdge.target}_${Date.now()}`,
+            source: sourceEdge.source,
+            sourceHandle: sourceEdge.sourceHandle,
+            target: targetEdge.target,
+            targetHandle: targetEdge.targetHandle,
+            ...EDGE_DEFAULTS,
+          }));
+          nextEdges = [...nextEdges, ...newEdges];
+        }
+      }
+      return nextEdges;
+    });
+
     if (selectedNode?.id === idToDelete) setSelectedNode(null);
-  }, [selectedNode, setNodes, setEdges]);
+  }, [selectedNode, setNodes, setEdges, edges]);
 
   // Inject handlers into every node's data
   const nodesWithHandlers = useMemo(
@@ -728,7 +830,7 @@ function AgentBuilderInner() {
         onModelChange={setModel}
         onBack={() => router.back()}
         onReset={() => { setNodes(INITIAL_NODES as any); setEdges(INITIAL_EDGES as any); setSelectedNode(null); }}
-        onSave={handleSave}
+        onSave={() => isEmployeeMode ? setIsPublishing(true) : handleSave()}
         onRun={handleTrigger}
         isRunning={isRunning}
         isSaving={isSaving || isPublishingWorker}
@@ -843,7 +945,7 @@ function AgentBuilderInner() {
           {/* Generation overlay */}
           {isArchitecting && (
             <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center animate-in fade-in duration-700">
-              <div className="flex flex-col items-center gap-6">
+               <div className="flex flex-col items-center gap-6">
                 <div className="w-16 h-16 border-2 border-foreground border-t-transparent animate-spin rounded-full" />
                 <div className="text-center">
                   <p className="text-[12px] font-black uppercase tracking-[0.4em] text-foreground">Architecting_Flow</p>
@@ -865,32 +967,10 @@ function AgentBuilderInner() {
 
         {/* Floating Tool Picker removed in favor of Sidebar integration */}
 
-        {/* Right Panel: Split layout in employee mode (metadata always visible + optional node config below) */}
-        {isEmployeeMode ? (
-          <div className="flex flex-col h-full" style={{ width: '420px' }}>
-            <EmployeeMetadataPanel
-              description={employeeDescription}
-              onDescriptionChange={setEmployeeDescription}
-              inputSchema={employeeInputSchema}
-              onInputSchemaChange={setEmployeeInputSchema}
-            />
-            {selectedNode && selectedNode.data?.executionKey !== 'sticky_note' && (
-              <div className="flex-1 overflow-hidden border-t border-border/40">
-                <NodeSidebar
-                  node={selectedNode}
-                  nodes={nodes}
-                  edges={edges}
-                  onClose={() => setSelectedNode(null)}
-                  onUpdate={updateSelectedNode}
-                  onDelete={deleteSelectedNode}
-                  onTrigger={handleTrigger}
-                  inline={true}
-                />
-              </div>
-            )}
-          </div>
-        ) : selectedNode && selectedNode.data?.executionKey !== 'sticky_note' ? (
+        {/* Right Panel: Clean Sidebar in building phase */}
+        {selectedNode && selectedNode.data?.executionKey !== 'sticky_note' ? (
           <NodeSidebar
+            key={selectedNode.id}
             node={selectedNode}
             nodes={nodes}
             edges={edges}
@@ -901,6 +981,102 @@ function AgentBuilderInner() {
           />
         ) : null}
       </div>
+
+      {/* ── Employee Finalize Modal ────────────────────────────────────────── */}
+      <AnimatePresence>
+        {isPublishing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-20"
+          >
+            {/* Backdrop Blur */}
+            <div 
+              className="absolute inset-0 bg-[#070708]/80 backdrop-blur-3xl"
+              onClick={() => setIsPublishing(false)} 
+            />
+            
+            <motion.div
+              initial={{ scale: 0.95, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 20, opacity: 0 }}
+              className="relative w-full max-w-4xl bg-[#111114] border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row h-[600px]"
+            >
+              {/* Left: Branding & Status */}
+              <div className="md:w-1/3 bg-accent/5 p-10 flex flex-col justify-between border-r border-white/5 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-accent/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2" />
+                
+                <div className="relative z-10">
+                  <div className="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center text-white shadow-2xl shadow-accent/20 mb-8 animate-pulse">
+                    <ShieldCheck size={32} />
+                  </div>
+                  <h2 className="text-3xl font-black uppercase text-white tracking-tighter italic leading-none mb-4">
+                    Initialize <br /> Specialized <br /> Unit
+                  </h2>
+                  <p className="text-[10px] uppercase font-black tracking-widest text-accent/60">Deployment Matrix Ready</p>
+                </div>
+
+                <div className="relative z-10 space-y-4">
+                   <div className="flex items-center gap-3 text-white/40">
+                      <div className="w-1.5 h-1.5 rounded-full bg-accent" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Logic Encoded</span>
+                   </div>
+                   <div className="flex items-center gap-3 text-white/40">
+                      <div className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Waiting for Identity</span>
+                   </div>
+                </div>
+              </div>
+
+              {/* Right: Interaction */}
+              <div className="flex-1 flex flex-col bg-[#0c0c0e] overflow-hidden">
+                <div className="flex items-center justify-between p-8 shrink-0">
+                   <div className="flex items-center gap-3">
+                      <Bot size={20} className="text-accent" />
+                      <span className="text-xs font-black uppercase tracking-widest text-white/80">Protocol Configuration</span>
+                   </div>
+                   <button 
+                     onClick={() => setIsPublishing(false)}
+                     className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all"
+                   >
+                     <X size={18} />
+                   </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-10 pb-10 custom-scrollbar">
+                   <EmployeeMetadataPanel
+                      description={employeeDescription}
+                      onDescriptionChange={setEmployeeDescription}
+                      inputSchema={employeeInputSchema}
+                      onInputSchemaChange={setEmployeeInputSchema}
+                   />
+                </div>
+
+                <div className="p-10 bg-black/40 border-t border-white/5 flex items-center justify-between shrink-0">
+                   <div className="hidden sm:block">
+                      <p className="text-[9px] text-white/20 font-black uppercase tracking-widest">Final Phase: Promotion to Worker Status</p>
+                   </div>
+                   <button
+                     onClick={() => handleSave()}
+                     disabled={isSaving || isPublishingWorker}
+                     className="h-14 px-10 bg-white text-black font-black uppercase tracking-widest text-xs rounded-2xl flex items-center gap-3 hover:bg-accent hover:text-white transition-all shadow-xl active:scale-95 disabled:opacity-50"
+                   >
+                     {isSaving || isPublishingWorker ? (
+                       <Loader2 size={16} className="animate-spin" />
+                     ) : (
+                       <>
+                         Confirm & Publish Unit
+                         <SendHorizonal size={16} />
+                       </>
+                     )}
+                   </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

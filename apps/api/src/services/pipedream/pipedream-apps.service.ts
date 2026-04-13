@@ -1,6 +1,11 @@
+import { getRedisConnection } from '@repo/queue';
 import axios from 'axios';
 import { log } from '../../shared/logger.js';
 import { pipedreamAuthService } from './pipedream-auth.service.js';
+
+const redis = getRedisConnection();
+const REDIS_APPS_KEY = 'pipedream:apps:registry';
+const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 hours persistent cache
 
 interface PipedreamApp {
   id: string;
@@ -10,23 +15,34 @@ interface PipedreamApp {
   icon?: string;   // mapped from icon_url
 }
 
-// In-memory cache for apps fetched directly from Pipedream
+// In-memory cache for fast access during runtime
 let appsCache: PipedreamApp[] = [];
-let lastFetchTime = 0;
-const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
+let isFetching = false;
 
 export const pipedreamAppsService = {
   /**
-   * Fetch all apps from Pipedream and cache them in memory.
-   * Uses Pipedream's cursor-based pagination (page_info.end_cursor / after param).
+   * Fetch all apps from Pipedream and cache them in Redis + Memory.
    */
-  async ensureCache() {
-    const now = Date.now();
-    if (appsCache.length > 0 && now - lastFetchTime < CACHE_DURATION) {
-      return;
+  async ensureCache(forceRefresh = false) {
+    if (isFetching) return;
+
+    // 1. Check in-memory first
+    if (appsCache.length > 0 && !forceRefresh) return;
+
+    // 2. Check Redis for persistence across restarts
+    try {
+      const cached = await redis.get(REDIS_APPS_KEY);
+      if (cached && !forceRefresh) {
+        appsCache = JSON.parse(cached);
+        log.info(`[pipedream-apps] Restored ${appsCache.length} apps from Redis cache.`);
+        return;
+      }
+    } catch (err: any) {
+      log.warn('[pipedream-apps] Redis cache miss or error:', err.message);
     }
 
-    log.info('[pipedream-apps] Refreshing live apps cache from Pipedream...');
+    // 3. Fetch from Pipedream API (The slow path)
+    isFetching = true;
     try {
       const accessToken = await pipedreamAuthService.getOAuthToken();
       let allApps: PipedreamApp[] = [];
@@ -71,10 +87,19 @@ export const pipedreamAppsService = {
         if (!seen.has(app.id)) seen.set(app.id, app);
       }
       appsCache = Array.from(seen.values());
-      lastFetchTime = now;
-      log.info(`[pipedream-apps] Cached ${appsCache.length} unique apps from Pipedream.`);
+      
+      // Save to Redis for other processes and restarts
+      try {
+        await redis.setex(REDIS_APPS_KEY, CACHE_DURATION / 1000, JSON.stringify(appsCache));
+        log.info(`[pipedream-apps] Cached ${appsCache.length} unique apps to Redis.`);
+      } catch (redisErr: any) {
+        log.warn('[pipedream-apps] Failed to save to Redis:', redisErr.message);
+      }
+
     } catch (err: any) {
       log.error('[pipedream-apps] Failed to refresh apps cache:', err.message);
+    } finally {
+      isFetching = false;
     }
   },
 

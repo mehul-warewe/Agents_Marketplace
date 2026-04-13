@@ -3,11 +3,6 @@
  *
  * Used by all individual Pipedream node handlers (Slack, Discord, GitHub, etc.)
  * Handles MCP execution, credential validation, parameter cleaning, response parsing
- *
- * Individual handlers ONLY do:
- *   1. Validate platform-specific config (e.g., "channel" required for Slack)
- *   2. Check credentials exist
- *   3. Call this handler with appSlug + actionName + params
  */
 
 import { ToolContext } from '../types.js';
@@ -19,12 +14,7 @@ import {
   type MCPConnectionConfig
 } from './pipedream-mcp.js';
 import {
-  validateCredentialForApp,
-  formatCredentialForLog
-} from './pipedream-credentials.js';
-import {
   cleanParametersForPipedream,
-  validateActionConfig
 } from './pipedream-validation.js';
 
 export interface PipedreamConfig {
@@ -35,41 +25,20 @@ export interface PipedreamConfig {
 
 /**
  * Execute any Pipedream action for any platform
- *
- * Called by individual node handlers like:
- *   slackPostMessageHandler → pipedreamHandler()
- *   discordSendMessageHandler → pipedreamHandler()
- *
- * 8-Phase Execution:
- *   1. Validate Pipedream config (appSlug, actionName)
- *   2. Validate environment (Pipedream env vars)
- *   3. Validate credentials (user has credential for app)
- *   4. Clean parameters (remove internal fields, render templates)
- *   5. Initialize MCP client (get token, create transport)
- *   6. Execute tool (call Pipedream MCP)
- *   7. Extract response (parse result)
- *   8. Return success (with metadata)
  */
 export const pipedreamHandler = async (
   context: ToolContext,
   pipedreamConfig: PipedreamConfig
 ) => {
   const startTime = Date.now();
-  const { credentials, userId, render, logNodeStatus, nodeId, label } = context;
+  const { userId, render, logNodeStatus, nodeId } = context;
   const { appSlug, actionName, actionParams } = pipedreamConfig;
+  const credentialId = actionParams.credentialId;
 
   // ─── PHASE 1: VALIDATE PIPEDREAM CONFIG ──────────────────────────────
 
-  if (!appSlug) {
-    const error = 'appSlug is required';
-    console.error(`[Pipedream] ${error}`);
-    if (nodeId && logNodeStatus) await logNodeStatus(nodeId, 'failed', { error });
-    return { status: 'failed', error };
-  }
-
-  if (!actionName) {
-    const error = 'actionName is required';
-    console.error(`[Pipedream] ${error}`);
+  if (!appSlug || !actionName) {
+    const error = 'appSlug and actionName are required';
     if (nodeId && logNodeStatus) await logNodeStatus(nodeId, 'failed', { error });
     return { status: 'failed', error };
   }
@@ -79,23 +48,15 @@ export const pipedreamHandler = async (
   const pd = getPipedreamClient();
   if (!pd) {
     const error = 'Pipedream is not configured. Missing environment variables.';
-    console.error(`[Pipedream] ${error}`);
     if (nodeId && logNodeStatus) await logNodeStatus(nodeId, 'failed', { error });
-    return { status: 'failed', error, hint: 'Contact support' };
+    return { status: 'failed', error };
   }
-
-  // ─── PHASE 3: SKIP LOCAL VALIDATION (HANDLED BY PIPEDREAM) ──────────
-  // We no longer check local database for user tokens.
-  // Pipedream MCP uses the externalUserId (context.userId) to resolve credentials.
-
 
   // ─── PHASE 4: CLEAN PARAMETERS ──────────────────────────────────────
 
   const cleanedParams = cleanParametersForPipedream(actionParams, render);
 
-  console.log(
-    `[Pipedream] Executing "${actionName}" on ${appSlug} for user ${userId}`
-  );
+  console.log(`[Pipedream] Executing "${actionName}" on ${appSlug} for user ${userId}`);
 
   // ─── PHASE 5: INITIALIZE MCP CLIENT ─────────────────────────────────
 
@@ -104,45 +65,37 @@ export const pipedreamHandler = async (
     accessToken = await pd.rawAccessToken;
   } catch (err: any) {
     const error = `Failed to get Pipedream access token: ${err.message}`;
-    console.error(`[Pipedream] ${error}`);
-    if (nodeId && logNodeStatus) await logNodeStatus(nodeId, 'failed', { error });
-    return { status: 'failed', error };
-  }
-
-  let mcpClient;
-  try {
-    const mcpConfig: MCPConnectionConfig = {
-      accessToken,
-      projectId: process.env.PIPEDREAM_PROJECT_ID!,
-      appSlug,
-      environment: process.env.PIPEDREAM_ENVIRONMENT as any,
-      externalUserId: userId
-    };
-
-    mcpClient = await initializeMCPClient(mcpConfig);
-  } catch (err: any) {
-    const error = `Failed to initialize MCP client: ${err.message}`;
-    console.error(`[Pipedream] ${error}`);
     if (nodeId && logNodeStatus) await logNodeStatus(nodeId, 'failed', { error });
     return { status: 'failed', error };
   }
 
   const cleanSlug = appSlug.startsWith('app_') ? appSlug.replace('app_', '') : appSlug;
 
-  // ─── PHASE 6: EXECUTE TOOL ──────────────────────────────────────────
+  let mcpClient;
+  try {
+    const mcpConfig: MCPConnectionConfig = {
+      accessToken,
+      projectId: process.env.PIPEDREAM_PROJECT_ID!,
+      appSlug: cleanSlug,
+      environment: process.env.PIPEDREAM_ENVIRONMENT as any,
+      externalUserId: userId
+    };
+    mcpClient = await initializeMCPClient(mcpConfig);
+  } catch (err: any) {
+    const error = `Failed to initialize MCP client: ${err.message}`;
+    if (nodeId && logNodeStatus) await logNodeStatus(nodeId, 'failed', { error });
+    return { status: 'failed', error };
+  }
+
+  // ─── PHASE 6: EXECUTE TOOL (WITH SMART BRIDGING) ─────────────────
 
   let mcpResult;
   try {
     if (actionName === '__custom_api_call') {
-      // 🚀 NATIVE API PROXY ROUTING 🚀
-      // We bypass MCP entirely and use the official Pipedream Connect API Proxy.
       const { method, path, body, headers } = cleanedParams;
-      
       const parsedBody = body ? (typeof body === 'string' ? JSON.parse(body) : body) : undefined;
       const parsedHeaders = headers ? (typeof headers === 'string' ? JSON.parse(headers) : headers) : undefined;
-      
-      // The API proxy requires the user's specific accountId for relative paths.
-      // We query Pipedream for the user's account ID for this specific app.
+
       let accountId: string | undefined = undefined;
       try {
         const accountsRes: any = await pd.accounts.list({ externalUserId: userId });
@@ -156,9 +109,6 @@ export const pipedreamHandler = async (
         throw new Error('Could not resolve your connected account to securely proxy the request.');
       }
 
-      // Typed as `any` to prevent TypeScript inferring `accountId?: string | undefined`
-      // which conflicts with ProxyPostRequest requiring `accountId: string`.
-      // The guard above (line ~155) already throws if accountId is missing for relative paths.
       const proxyOpts: any = {
         url: path,
         externalUserId: userId,
@@ -167,7 +117,6 @@ export const pipedreamHandler = async (
 
       const m = (method || 'GET').toUpperCase();
       let proxyResult: any;
-      
       if (m === 'POST') proxyResult = await pd.proxy.post({ ...proxyOpts, body: parsedBody, headers: parsedHeaders });
       else if (m === 'PUT') proxyResult = await pd.proxy.put({ ...proxyOpts, body: parsedBody, headers: parsedHeaders });
       else if (m === 'PATCH') proxyResult = await pd.proxy.patch({ ...proxyOpts, body: parsedBody, headers: parsedHeaders });
@@ -175,8 +124,6 @@ export const pipedreamHandler = async (
       else proxyResult = await pd.proxy.get({ ...proxyOpts, params: parsedBody, headers: parsedHeaders });
 
       const duration = Date.now() - startTime;
-      console.log(`[Pipedream] ✓ Proxy Call to ${cleanSlug} completed in ${duration}ms`);
-      
       if (nodeId && logNodeStatus) await logNodeStatus(nodeId, 'completed', proxyResult.data || proxyResult);
       return {
         status: 'completed',
@@ -189,32 +136,56 @@ export const pipedreamHandler = async (
       };
     }
 
-    // Standard pre-built component execution
+    // PROACTIVE BRIDGING: Handle common naming mismatches before execution
+    const needsInstruction = actionName.includes('quick-add') || actionName.includes('smart-');
+    if (needsInstruction && !cleanedParams.instruction && (cleanedParams.text || cleanedParams.summary)) {
+      console.log(`[Pipedream] Proactively bridging granular fields to 'instruction' for ${actionName}`);
+      const details = Object.entries(cleanedParams)
+        .filter(([k, v]) => v !== undefined && v !== null && v !== '' && k !== 'platformName')
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(', ');
+      cleanedParams.instruction = `${actionName.replace(/-/g, ' ')} with: ${details}`;
+    }
+
+    const initialArguments = { 
+      ...cleanedParams,
+      ...(credentialId ? { accountId: credentialId } : {})
+    };
+
     mcpResult = await callPipedreamTool(mcpClient, {
       name: actionName,
-      arguments: cleanedParams
+      arguments: initialArguments
     });
 
-    console.log(`[Pipedream] Tool "${actionName}" executed successfully`);
   } catch (err: any) {
-    const error = err.message || 'Tool execution failed';
-    const isAuthError =
-      error.toLowerCase().includes('unauthorized') ||
-      error.toLowerCase().includes('not connected') ||
-      error.toLowerCase().includes('credential missing');
+    const errorMsg = err.message || '';
+    const isMissingInstruction = errorMsg.includes('instruction') && errorMsg.includes('Required');
 
-    console.error(`[Pipedream] Error executing "${actionName}": ${error}`);
-    if (nodeId && logNodeStatus) await logNodeStatus(nodeId, 'failed', { error });
+    if (isMissingInstruction) {
+      console.warn(`[Pipedream] Action "${actionName}" wants an 'instruction'. Retrying with flattened payload...`);
+      const details = Object.entries(cleanedParams)
+        .filter(([k, v]) => v !== undefined && v !== null && v !== '' && k !== 'platformName')
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(', ');
 
-    return {
-      status: 'failed',
-      error,
-      requiresAuth: isAuthError,
-      tool: actionName,
-      app: appSlug
-    };
+      const healingArguments = {
+        instruction: `${actionName.replace(/-/g, ' ')} with: ${details}`,
+        ...(credentialId ? { accountId: credentialId } : {})
+      };
+
+      try {
+        mcpResult = await callPipedreamTool(mcpClient, {
+          name: actionName,
+          arguments: healingArguments
+        });
+        console.log(`[Pipedream] ✓ Self-healing successful for "${actionName}"`);
+      } catch (retryErr: any) {
+        throw new Error(`Execution failed after self-healing attempt: ${retryErr.message}`);
+      }
+    } else {
+      throw err;
+    }
   }
-
 
   // ─── PHASE 7: EXTRACT & VALIDATE RESPONSE ───────────────────────────
 
@@ -222,35 +193,30 @@ export const pipedreamHandler = async (
 
   if (extractedResponse.status === 'failed') {
     const error = extractedResponse.error || 'Unknown error';
-    console.error(`[Pipedream] Tool returned error: ${error}`);
     if (nodeId && logNodeStatus) await logNodeStatus(nodeId, 'failed', { error });
-    return {
-      status: 'failed',
-      error,
-      tool: actionName,
-      app: appSlug
-    };
+    return { status: 'failed', error, tool: actionName, app: appSlug };
   }
 
   // ─── PHASE 8: RETURN SUCCESS RESPONSE ────────────────────────────────
 
   const duration = Date.now() - startTime;
+  const finalData = extractedResponse.data || extractedResponse.raw || { status: 'success' };
 
-  console.log(
-    `[Pipedream] ✓ "${actionName}" on ${appSlug} completed in ${duration}ms`
-  );
+  console.log(`[Pipedream] ACCOUNT: ${credentialId || 'Using Default'}`);
+  console.log(`[Pipedream] PARAMS: ${JSON.stringify(cleanedParams, null, 2)}`);
+  console.log(`[Pipedream] RESPONSE: ${JSON.stringify(finalData, null, 2)}`);
+  console.log(`[Pipedream] ✅ "${actionName}" on ${appSlug} completed in ${duration}ms`);
 
-  if (nodeId && logNodeStatus) await logNodeStatus(nodeId, 'completed', extractedResponse.data);
+  if (nodeId && logNodeStatus) await logNodeStatus(nodeId, 'completed', finalData);
 
   return {
     status: 'completed',
-    data: extractedResponse.data,
-    text: typeof extractedResponse.data === 'string'
-      ? extractedResponse.data
-      : JSON.stringify(extractedResponse.data),
+    data: finalData,
+    text: typeof finalData === 'string' ? finalData : JSON.stringify(finalData),
     app: appSlug,
     tool: actionName,
     duration,
     timestamp: new Date().toISOString()
   };
 };
+

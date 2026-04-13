@@ -14,6 +14,7 @@ export interface PipedreamApp {
 
 export interface PipedreamTool {
   name: string;
+  key: string;
   description: string;
   inputSchema?: Record<string, any>;
   outputSchema?: Record<string, any>;

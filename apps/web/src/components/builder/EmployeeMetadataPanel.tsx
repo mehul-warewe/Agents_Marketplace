@@ -28,7 +28,7 @@ export default function EmployeeMetadataPanel({
   })();
 
   return (
-    <div className="w-[420px] bg-card border-l border-border/60 flex flex-col h-full overflow-hidden">
+    <div className="w-full bg-transparent flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="px-6 py-6 border-b border-border/40 shrink-0">
         <div className="flex items-center gap-3 mb-2">

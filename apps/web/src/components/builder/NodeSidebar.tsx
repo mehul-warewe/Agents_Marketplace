@@ -63,7 +63,21 @@ export default function NodeSidebar({
     };
   });
 
-  const selectedTool = pipedreamToolsData?.find((t: any) => t.name === values.actionName);
+  // Sync values if node config changes from outside (e.g. by Architect)
+  React.useEffect(() => {
+    const cfg = node.data.config ?? {};
+    setValues(v => ({
+      ...v,
+      label: node.data.label ?? '',
+      appSlug: cfg.appSlug ?? '',
+      actionName: cfg.actionName ?? '',
+      credentialId: cfg.credentialId ?? '',
+      platformName: cfg.platformName ?? '',
+      ...cfg
+    }));
+  }, [node.data.config, node.data.label]);
+
+  const selectedTool = pipedreamToolsData?.find((t: any) => t.key === values.actionName || t.name === values.actionName);
   const toolSchema = selectedTool?.inputSchema || null;
 
   // Get incoming connections
@@ -117,7 +131,7 @@ export default function NodeSidebar({
               {node.data.label}
             </h2>
             <p className="text-[11px] text-muted/60 font-medium">
-              {isPreconfigured ? `${values.platformName || values.appSlug} → ${values.actionName}` : tool.name}
+              {isPreconfigured ? `${values.platformName || values.appSlug} → ${selectedTool?.name || values.actionName}` : tool.name}
             </p>
           </div>
           <button
