@@ -18,44 +18,54 @@
   --border: #e8e6d1;
   --sidebar: #fdfdf5;
   --sidebar-border: #e8e6d1;
-  --radius: 2rem;   
-  --radius-lg: 2.5rem;
-  --radius-md: 1.25rem;
+  --radius: 1.5rem;   
+  --radius-lg: 2.25rem;
+  --radius-md: 1rem;
   --radius-sm: 0.5rem;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.1);
 }
 
 .dark {
   /* warewe Dark - Charcoal & Lime */
-  --background: #0d0d0d; 
-  --foreground: #f8f9fa;
-  --card: #141414;      
-  --card-border: #1f1f1f;
-  --muted: #8c8c8c;     
+  --background: #080808; 
+  --foreground: #fcfcfc;
+  --card: #0c0c0c;      
+  --card-border: #161616;
+  --muted: #737373;     
   --primary: #d4ff3f;    /* warewe Lime */
   --primary-rgb: 212, 255, 63;
   --primary-foreground: #000000;
-  --accent: #1a1a1a;    
-  --accent-foreground: #f8f9fa;
-  --border: #1f1f1f;
-  --sidebar: #0a0a0a;
-  --sidebar-border: #1f1f1f;
+  --accent: #111111;    
+  --accent-foreground: #fcfcfc;
+  --border: #161616;
+  --sidebar: #050505;
+  --sidebar-border: #121212;
 }
 
 /* ─── Base Styles ────────────────────────────────────────── */
 * {
   border-color: var(--border);
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
 }
 
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-inter), system-ui, sans-serif;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 /* ─── Tailwind Utility Classes tied to CSS variables ──────── */
@@ -76,9 +86,19 @@ body {
   .border-card-border { border-color: var(--card-border); }
   .border-sidebar-border { border-color: var(--sidebar-border); }
   .border-accent { border-color: var(--accent); }
-  .border-input { border-color: var(--input-border); }
+
+  .shadow-soft {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  }
+
+  .glass-card {
+    background: color-mix(in srgb, var(--card) 80%, transparent);
+    backdrop-filter: blur(12px);
+    border: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  }
 
   /* Opacity variants */
+  .bg-foreground\/2 { background-color: color-mix(in srgb, var(--foreground) 2%, transparent); }
   .bg-foreground\/5 { background-color: color-mix(in srgb, var(--foreground) 5%, transparent); }
   .bg-foreground\/10 { background-color: color-mix(in srgb, var(--foreground) 10%, transparent); }
   .bg-accent\/10 { background-color: color-mix(in srgb, var(--accent) 10%, transparent); }
@@ -102,12 +122,10 @@ body {
   }
 }
 
-/* Removal of glass and morph animations */
-
 /* ─── Scrollbar ──────────────────────────────────────────── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 0px; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--border) 60%, transparent); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
 /* ─── Animations ─────────────────────────────────────────── */
@@ -117,7 +135,7 @@ body {
 }
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 

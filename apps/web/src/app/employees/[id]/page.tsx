@@ -3,8 +3,8 @@ import EmployeeDetail from '@/components/EmployeeDetail';
 
 export default function EmployeePage() {
   return (
-    <SidebarLayout title="PERSONNEL // OPERATIVE_DETAIL">
+    <div className="h-screen w-screen overflow-hidden flex flex-col bg-background">
       <EmployeeDetail />
-    </SidebarLayout>
+    </div>
   );
 }

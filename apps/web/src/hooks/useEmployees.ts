@@ -106,12 +106,38 @@ export function useEmployeeRuns(employeeId: string | null) {
     queryFn: async () => {
       if (!employeeId) return [];
       const { data } = await api.get(`/employees/${employeeId}/runs`);
-      return data;
+      return Array.isArray(data) ? data : [];
     },
     enabled: !!employeeId,
     refetchInterval: (data) => {
-      const hasPending = (data as any[])?.some(r => r.status === 'pending' || r.status === 'running');
+      if (!Array.isArray(data)) return false;
+      const hasPending = data.some(r => r.status === 'pending' || r.status === 'running');
       return hasPending ? 2000 : false;
+    },
+  });
+}
+
+export function useAssignKnowledge() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ employeeId, knowledgeId }: { employeeId: string, knowledgeId: string }) => {
+      const { data } = await api.post(`/employees/${employeeId}/knowledge`, { knowledgeId });
+      return data;
+    },
+    onSuccess: (_, { employeeId }) => {
+      queryClient.invalidateQueries({ queryKey: ['employee', employeeId] });
+    },
+  });
+}
+
+export function useRemoveKnowledge() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ employeeId, knowledgeId }: { employeeId: string, knowledgeId: string }) => {
+      await api.delete(`/employees/${employeeId}/knowledge/${knowledgeId}`);
+    },
+    onSuccess: (_, { employeeId }) => {
+      queryClient.invalidateQueries({ queryKey: ['employee', employeeId] });
     },
   });
 }

@@ -188,10 +188,10 @@ export default function ManagerDashboard() {
               <header className="flex justify-between items-start border-b border-border/40 pb-12 shrink-0">
                 <div className="space-y-6">
                    <div className="flex items-center gap-4">
-                      <Sparkles size={16} fill="currentColor" className="text-accent" />
+                      <Sparkles size={16} fill="currentColor" className="text-primary" />
                       <span className="text-[10px] font-black text-muted uppercase tracking-[0.4em] opacity-40">MANAGER_SETUP</span>
                    </div>
-                  <h2 className="text-5xl font-black tracking-tighter uppercase italic leading-none text-accent">Create_Manager</h2>
+                  <h2 className="text-5xl font-black tracking-tighter uppercase italic leading-none text-foreground">Create_Manager</h2>
                 </div>
                 <button onClick={() => setIsModalOpen(false)} className="w-14 h-14 bg-foreground/5 rounded-2xl hover:bg-foreground hover:text-background transition-all border border-border/40 flex items-center justify-center">
                   <X size={24} strokeWidth={3} />
@@ -207,7 +207,7 @@ export default function ManagerDashboard() {
                     <input 
                       value={newManager.name}
                       onChange={e => setNewManager(prev => ({ ...prev, name: e.target.value }))}
-                      className="w-full bg-foreground/[0.03] border border-border/60 rounded-[2rem] px-10 py-8 outline-none focus:bg-background focus:border-foreground transition-all font-black text-2xl tracking-tighter italic shadow-inner"
+                      className="w-full bg-foreground/[0.03] border border-border/60 rounded-[2rem] px-10 py-8 outline-none focus:bg-background focus:border-primary/40 transition-all font-black text-2xl tracking-tighter italic shadow-inner"
                       placeholder="e.g. OPERATIONS_GENERAL_V1"
                     />
                   </div>
@@ -219,7 +219,7 @@ export default function ManagerDashboard() {
                     <textarea 
                       value={newManager.goal}
                       onChange={e => setNewManager(prev => ({ ...prev, goal: e.target.value }))}
-                      className="w-full bg-foreground/[0.03] border border-border/60 rounded-[2.5rem] px-10 py-10 outline-none focus:bg-background focus:border-foreground transition-all font-bold text-lg tracking-tight italic shadow-inner min-h-[140px] resize-none"
+                      className="w-full bg-foreground/[0.03] border border-border/60 rounded-[2.5rem] px-10 py-10 outline-none focus:bg-background focus:border-primary/40 transition-all font-bold text-lg tracking-tight italic shadow-inner min-h-[140px] resize-none"
                       placeholder="Specify the long-term goal for this manager agent..."
                     />
                   </div>
@@ -231,7 +231,7 @@ export default function ManagerDashboard() {
                     <textarea
                       value={newManager.systemPrompt}
                       onChange={e => setNewManager(prev => ({ ...prev, systemPrompt: e.target.value }))}
-                      className="w-full bg-foreground/[0.03] border border-border/60 rounded-[2.5rem] px-10 py-10 outline-none focus:bg-background focus:border-foreground transition-all font-mono text-xs shadow-inner min-h-[180px] resize-none"
+                      className="w-full bg-foreground/[0.03] border border-border/60 rounded-[2.5rem] px-10 py-10 outline-none focus:bg-background focus:border-primary/40 transition-all font-mono text-xs shadow-inner min-h-[180px] resize-none"
                       placeholder="You are an autonomous operations manager. Your job is to delegate tasks to your specialized employee fleet..."
                     />
                   </div>
@@ -252,14 +252,14 @@ export default function ManagerDashboard() {
                           <div 
                             key={worker.id} 
                             onClick={() => toggleWorker(worker.id)}
-                            className={`p-6 border transition-all duration-300 rounded-3xl cursor-pointer flex items-center gap-6 ${newManager.workerIds.includes(worker.id) ? 'bg-foreground text-background border-foreground shadow-[0_15px_30px_-10px_rgba(0,0,0,0.3)]' : 'bg-background hover:bg-foreground/5 border-border/40'}`}
+                            className={`p-6 border transition-all duration-300 rounded-3xl cursor-pointer flex items-center gap-6 ${newManager.workerIds.includes(worker.id) ? 'bg-primary text-primary-foreground border-primary shadow-[0_15px_30px_-10px_rgba(var(--primary-rgb),0.3)]' : 'bg-background hover:bg-foreground/5 border-border/40'}`}
                           >
                             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${newManager.workerIds.includes(worker.id) ? 'bg-background/20' : 'bg-foreground/5'}`}>
                               <Bot size={20} strokeWidth={2} />
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="text-[11px] font-black uppercase tracking-tighter truncate">{worker.name}</p>
-                              <p className={`text-[9px] font-bold uppercase tracking-tight opacity-50 line-clamp-1 italic ${newManager.workerIds.includes(worker.id) ? 'text-background' : 'text-muted'}`}>
+                              <p className={`text-[9px] font-bold uppercase tracking-tight opacity-50 line-clamp-1 italic ${newManager.workerIds.includes(worker.id) ? 'text-primary-foreground' : 'text-muted'}`}>
                                 {worker.workerDescription || 'No cap description'}
                               </p>
                             </div>
@@ -276,9 +276,9 @@ export default function ManagerDashboard() {
                 <button
                   onClick={handleCreate}
                   disabled={isCreating}
-                  className="w-full bg-accent text-accent-foreground py-12 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.4em] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-6 shadow-2xl shadow-accent/20"
+                  className="w-full bg-primary text-primary-foreground py-10 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.4em] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-6 shadow-2xl shadow-primary/20"
                 >
-                  {isCreating ? 'CREATING_MANAGER...' : 'CREATE_MANAGER'}
+                  {isCreating ? 'CREATING_MANAGER...' : 'INITIALIZE_MANAGER'}
                   <ChevronRight size={24} strokeWidth={3} />
                 </button>
               </footer>

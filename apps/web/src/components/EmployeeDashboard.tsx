@@ -167,35 +167,43 @@ export default function EmployeeDashboard() {
 function EmployeeCard({ employee, onClick, onDelete }: { employee: any, onClick: () => void, onDelete: () => void }) {
   return (
     <motion.div 
-      whileHover={{ y: -10 }}
-      className="bg-card rounded-[3rem] border border-border/60 p-8 flex flex-col gap-6 cursor-pointer group hover:border-primary/40 transition-all duration-500 shadow-xl overflow-hidden relative"
+      whileHover={{ y: -6, scale: 1.01 }}
+      className="bg-card rounded-[2.5rem] border border-border/60 p-10 flex flex-col gap-8 cursor-pointer group hover:border-primary/30 transition-all duration-500 shadow-xl hover:shadow-2xl relative overflow-hidden"
       onClick={onClick}
     >
-      <div className="flex items-center justify-between">
-         <div className="w-16 h-16 rounded-[1.5rem] bg-foreground/[0.03] border border-border/40 flex items-center justify-center text-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500 shadow-inner">
-            <User size={28} strokeWidth={2.5} />
+      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000 opacity-0 group-hover:opacity-100" />
+      
+      <div className="flex items-center justify-between relative z-10">
+         <div className="w-14 h-14 rounded-2xl bg-foreground/[0.03] border border-border/40 flex items-center justify-center text-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500 shadow-inner group-hover:shadow-lg group-hover:scale-105">
+            <Bot size={24} strokeWidth={2.5} />
          </div>
-         <div className="flex gap-2">
+         <div className="flex items-center gap-3">
+            <div className="px-4 py-1.5 rounded-full bg-foreground/[0.03] border border-border/60 text-[8px] font-black uppercase tracking-widest opacity-60">
+               UNIT::ACTIVE
+            </div>
             <button 
-              onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              className="p-3 bg-foreground/[0.03] rounded-xl text-muted hover:bg-red-500/10 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+              onClick={(e) => { e.stopPropagation(); if(confirm('Deactivate this unit?')) onDelete(); }}
+              className="p-2.5 bg-foreground/[0.03] rounded-xl text-muted hover:bg-red-500/10 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
             >
                <MoreHorizontal size={14} />
             </button>
          </div>
       </div>
 
-      <div className="space-y-3">
-         <h3 className="text-2xl font-black italic tracking-tighter uppercase leading-none group-hover:text-primary transition-colors truncate">{employee.name}</h3>
-         <p className="text-muted text-[10px] font-bold uppercase tracking-widest line-clamp-3 opacity-40 leading-relaxed min-h-[4ch]">
-            {employee.description}
+      <div className="space-y-4 relative z-10">
+         <div className="flex flex-col">
+            <span className="text-[8px] font-black text-muted uppercase tracking-[0.4em] mb-1 opacity-40 italic">Designation</span>
+            <h3 className="text-2xl font-black italic tracking-tighter uppercase leading-none group-hover:text-primary transition-colors truncate">{employee.name}</h3>
+         </div>
+         <p className="text-muted text-[11px] font-bold uppercase tracking-tight line-clamp-2 opacity-50 leading-relaxed min-h-[4ch] italic">
+            {employee.description || "No tactical parameters defined."}
          </p>
       </div>
 
-      <div className="flex flex-wrap gap-2 mt-auto">
+      <div className="flex flex-wrap gap-2 mt-auto relative z-10">
          {employee.skillIds && employee.skillIds.length > 0 ? (
             employee.skillIds.slice(0, 3).map((s: string, i: number) => (
-               <div key={i} className="px-3 py-1 bg-foreground/[0.03] border border-border/40 rounded-lg text-[8px] font-black uppercase tracking-wider text-muted group-hover:bg-primary/5 group-hover:text-primary transition-all">
+               <div key={i} className="px-3 py-1.5 bg-foreground/[0.03] border border-border/40 rounded-lg text-[8px] font-black uppercase tracking-wider text-muted group-hover:bg-primary/10 group-hover:text-primary transition-all">
                   SKILL::{i+1}
                </div>
             ))
@@ -206,12 +214,12 @@ function EmployeeCard({ employee, onClick, onDelete }: { employee: any, onClick:
          )}
       </div>
 
-      <div className="pt-6 border-t border-border/40 flex items-center justify-between">
+      <div className="pt-8 border-t border-border/40 flex items-center justify-between relative z-10">
          <div className="flex flex-col">
-            <span className="text-[8px] font-black text-muted uppercase tracking-widest opacity-30 mb-0.5">Assigned_Logic</span>
-            <span className="text-xs font-black italic uppercase tracking-tighter">{employee.skillIds?.length || 0} Modules</span>
+            <span className="text-[8px] font-black text-muted uppercase tracking-widest opacity-30 mb-0.5 italic">Assigned_Logic</span>
+            <span className="text-[11px] font-black italic uppercase tracking-tighter">{employee.skillIds?.length || 0} Modules</span>
          </div>
-         <div className="flex items-center gap-2 text-primary font-black text-[9px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all">
+         <div className="flex items-center gap-2 text-primary font-black text-[9px] uppercase tracking-widest opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-300 shadow-xl">
             Configure <ChevronRight size={14} strokeWidth={3} />
          </div>
       </div>

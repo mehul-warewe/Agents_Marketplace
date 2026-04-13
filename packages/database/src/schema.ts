@@ -60,6 +60,7 @@ export const employees = pgTable('employees', {
   systemPrompt: text('system_prompt'),                // Custom personality/instructions
   model: text('model').default('google/gemini-2.0-flash-001'),
   skillIds: jsonb('skill_ids').$type<string[]>().default([]),  // Assigned skills
+  knowledgeIds: jsonb('knowledge_ids').$type<string[]>().default([]), // Assigned RAG knowledge
   skillInstructions: jsonb('skill_instructions').$type<Record<string, string>>().default({}),
   // ^ Maps skillId → "Use this skill when the user asks for X"
   creatorId: uuid('creator_id').references(() => users.id).notNull(),
@@ -204,6 +205,16 @@ export const pipedreamApps = pgTable('pipedream_apps', {
   return {
     nameIdx: index('pd_app_name_idx').on(table.name),
   };
+});
+
+export const knowledge = pgTable('knowledge', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  title: text('title').notNull(),
+  content: text('content').notNull(),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 

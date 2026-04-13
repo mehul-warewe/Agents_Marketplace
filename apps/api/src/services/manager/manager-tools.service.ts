@@ -8,7 +8,8 @@ export const createManagerTools = (
   userId: string,
   employeeIds: string[],
   managerRunId?: string,
-  onProgress?: (step: any) => void
+  onProgress?: (step: any) => void,
+  sessionContext: Record<string, any> = {}
 ) => {
   return [
     new DynamicStructuredTool({
@@ -35,11 +36,17 @@ export const createManagerTools = (
            task_input: z.string().describe("The natural language description of the task for the employee")
         }),
         func: async ({ employee_id, task_input }) => {
-           const res = await employeesService.runEmployee(employee_id, userId, task_input);
+           // We pass the global sessionContext to the employee for continuity
+           const res = await employeesService.runEmployee(employee_id, userId, task_input, sessionContext);
 
-           // Emit progress event for employee dispatch
+           // Emit progress event for employee dispatch with initial reasoning (if we had it, but for now we have the skill selection)
            if (onProgress) {
-              onProgress({ type: 'employee_called', employeeId: employee_id, runId: res.runId });
+              onProgress({ 
+                type: 'employee_called', 
+                employeeId: employee_id, 
+                runId: res.runId,
+                thought: `Operative is analyzing the request. Protocol established: ${res.message}`
+              });
            }
 
            // Track the child run in the manager run's childRunIds
@@ -49,11 +56,10 @@ export const createManagerTools = (
               }).where(eq(managerRuns.id, managerRunId));
            }
 
-           // Poll for results (employee runs map to skill runs)
+           // Poll for results
            let attempts = 0;
            let result = "Employee timed out.";
            while (attempts < 60) {
-              // We reuse the employee run tracking
               const runs = await employeesService.getRuns(employee_id, userId);
               const run = runs.find(r => r.id === res.runId);
               
@@ -64,6 +70,8 @@ export const createManagerTools = (
               }
               if (run.status === 'completed') {
                  result = JSON.stringify(run.output);
+                 // Update session context with the result for future handoffs
+                 sessionContext[`last_result_${employee_id.slice(0,4)}`] = run.output;
                  break;
               }
               if (run.status === 'failed') {

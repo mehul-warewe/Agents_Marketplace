@@ -34,8 +34,22 @@ export const managerEngine = {
     };
 
     wrappedOnStep({ type: 'init', runId: run.id });
+    
+    // Shared workforce context for task continuity (Relevance AI style)
+    const sessionContext: Record<string, any> = { 
+      mission_start: new Date(),
+      initial_input: userInput 
+    };
 
-    const tools = createManagerTools(userId, manager.employeeIds || [], run.id, wrappedOnStep);
+    const tools = createManagerTools(userId, manager.employeeIds || [], run.id, (step) => {
+       // Enrich progress steps from tools
+       const enrichedStep = {
+          ...step,
+          type: step.type === 'employee_called' ? 'delegation' : step.type === 'employee_done' ? 'handoff' : step.type,
+          action: step.type === 'employee_called' ? `Delegating to Operative...` : `Receiving Handoff...`
+       };
+       wrappedOnStep(enrichedStep);
+    }, sessionContext);
     const model = new ChatOpenAI({
       modelName: manager.model || 'google/gemini-2.0-flash-001',
       apiKey: process.env.OPENROUTER_API_KEY,

@@ -33,6 +33,14 @@ router.delete('/:id/skills/:skillId', async (req: any, res, next) => {
   try { res.json(await employeesService.removeSkill(req.params.id, req.user.id, req.params.skillId)); } catch (err) { next(err); }
 });
 
+router.post('/:id/knowledge', async (req: any, res, next) => {
+  try { res.json(await employeesService.assignKnowledge(req.params.id, req.user.id, req.body.knowledgeId)); } catch (err) { next(err); }
+});
+
+router.delete('/:id/knowledge/:knowledgeId', async (req: any, res, next) => {
+  try { res.json(await employeesService.removeKnowledge(req.params.id, req.user.id, req.params.knowledgeId)); } catch (err) { next(err); }
+});
+
 router.post('/:id/run', async (req: any, res, next) => {
   try { res.json(await employeesService.runEmployee(req.params.id, req.user.id, req.body.task)); } catch (err) { next(err); }
 });
