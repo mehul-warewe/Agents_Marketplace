@@ -10,10 +10,8 @@ import { log } from './shared/logger.js';
 
 import authRoutes from './routes/auth.routes.js';
 import credentialRoutes from './routes/credentials.routes.js';
-import agentRoutes from './routes/agents.routes.js';
 import billingRoutes from './routes/billing.routes.js';
 import templatesRoutes from './routes/templates.routes.js';
-import workerRoutes from './routes/workers.routes.js';
 import managerRoutes from './routes/manager.routes.js';
 import skillsRoutes from './routes/skills.routes.js';
 import employeesRoutes from './routes/employees.routes.js';
@@ -40,10 +38,8 @@ app.use(passport.initialize());
 // Routes
 app.use('/auth', authRoutes);
 app.use('/credentials', credentialRoutes);
-app.use('/agents', agentRoutes);
 app.use('/billing', billingRoutes);
 app.use('/templates', templatesRoutes);
-app.use('/workers', workerRoutes);
 app.use('/managers', managerRoutes);
 app.use('/skills', skillsRoutes);
 app.use('/employees', employeesRoutes);

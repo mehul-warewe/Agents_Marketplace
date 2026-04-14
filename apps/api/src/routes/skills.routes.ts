@@ -4,6 +4,8 @@ import { skillsService } from '../services/skills/skills.service.js';
 import { architectService } from '../services/architect/architect.service.js';
 import { runLimiter } from '../middleware/rateLimit.middleware.js';
 
+import { toolsService } from '../services/agents/tools.service.js';
+
 const router: express.Router = express.Router();
 router.use(passport.authenticate('jwt', { session: false }));
 
@@ -33,6 +35,18 @@ router.delete('/:id', async (req: any, res, next) => {
 
 router.post('/:id/run', runLimiter, async (req: any, res, next) => {
   try { res.json(await skillsService.runSkill(req.params.id, req.user.id, req.body)); } catch (err) { next(err); }
+});
+
+router.get('/tools/registry', async (req, res, next) => {
+    try { res.json(await toolsService.listAvailableTools()); } catch (err) { next(err); }
+});
+
+router.post('/:id/clone', async (req: any, res, next) => {
+    try { res.json(await skillsService.cloneSkill(req.params.id, req.user.id)); } catch (err) { next(err); }
+});
+
+router.post('/:id/publish', async (req: any, res, next) => {
+    try { res.json(await skillsService.publishSkill(req.params.id, req.user.id, req.body)); } catch (err) { next(err); }
 });
 
 // Architect loop (moved from agents/architect)

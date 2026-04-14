@@ -35,120 +35,45 @@ export const managerEngine = {
 
     wrappedOnStep({ type: 'init', runId: run.id });
     
-    // Shared workforce context for task continuity (Relevance AI style)
-    const sessionContext: Record<string, any> = { 
-      mission_start: new Date(),
-      initial_input: userInput 
-    };
+    // Import the graph builder
+    const { buildManagerGraph } = await import('./manager-graph.js');
+    const graph = buildManagerGraph(manager, userId, run.id, wrappedOnStep);
 
-    const tools = createManagerTools(userId, manager.employeeIds || [], run.id, (step) => {
-       // Enrich progress steps from tools
-       const enrichedStep = {
-          ...step,
-          type: step.type === 'employee_called' ? 'delegation' : step.type === 'employee_done' ? 'handoff' : step.type,
-          action: step.type === 'employee_called' ? `Delegating to Operative...` : `Receiving Handoff...`
-       };
-       wrappedOnStep(enrichedStep);
-    }, sessionContext);
-    const model = new ChatOpenAI({
-      modelName: manager.model || 'google/gemini-2.0-flash-001',
-      apiKey: process.env.OPENROUTER_API_KEY,
-      temperature: 0.2,
-      configuration: {
-        baseURL: 'https://openrouter.ai/api/v1',
-        defaultHeaders: {
-          'HTTP-Referer': 'http://localhost:3000',
-          'X-Title': 'Hub Manager Engine',
-        },
-      },
-    }).bindTools(tools);
+    // Run the graph asynchronously
+    (async () => {
+      try {
+        const result = await graph.invoke({
+          userInput,
+          userId,
+          manager,
+          messages: [],
+          steps: [],
+          finalOutput: null,
+          status: 'running'
+        }, { recursionLimit: 100 });
 
-    const systemPrompt = `You are the ${manager.name} Manager Agent.
-Goal: ${manager.goal}
-Instructions: ${manager.systemPrompt}
+        await db.update(managerRuns).set({
+          status: 'completed',
+          steps: result.steps,
+          output: result.finalOutput,
+          endTime: new Date()
+        }).where(eq(managerRuns.id, run.id));
 
-You have access to specialized workers. Use 'list_available_workers' if you are unsure who can help.
-The current mission is: "${userInput}"
-
-Break down the user's mission, call relevant workers, and synthesize the result.
-Be decisive and professional.`;
-
-    const messages: any[] = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userInput },
-    ];
-
-    const currentSteps: any[] = [];
-
-    try {
-      let iteration = 0;
-      while (iteration < 15) {
-        iteration++;
-        const response: any = await model.invoke(messages);
+        emitter.emit('done', { status: 'completed', output: result.finalOutput });
+        runEmitters.delete(run.id);
+      } catch (err: any) {
+        console.error(`[ManagerGraph:${run.id}] Strategic failure:`, err);
+        await db.update(managerRuns).set({
+          status: 'failed',
+          output: { error: err.message },
+          endTime: new Date()
+        }).where(eq(managerRuns.id, run.id));
+        wrappedOnStep({ type: 'error', thought: `Strategic failure: ${err.message}` });
         
-        const thought = response.content;
-        const toolCalls = response.tool_calls || [];
-
-        const step = {
-          thought,
-          tool: toolCalls[0]?.name,
-          action: toolCalls[0] ? `Invoking ${toolCalls[0].name}` : 'Finalizing Results',
-          type: toolCalls.length === 0 ? 'final' : 'thought'
-        };
-        
-        currentSteps.push(step);
-        wrappedOnStep(step);
-        
-        messages.push({ 
-          role: "assistant", 
-          content: thought || "", 
-          tool_calls: toolCalls 
-        });
-
-        if (toolCalls.length > 0) {
-          for (const tc of toolCalls) {
-            const tool = tools.find(t => t.name === tc.name);
-            if (tool) {
-               log.info(`[ManagerEngine] Running tool: ${tc.name}`);
-               const result = await tool.invoke(tc.args);
-               messages.push({
-                 role: "tool",
-                 content: `Tool ${tc.name} result: ${result}`,
-                 tool_call_id: tc.id
-               });
-            }
-          }
-        } else {
-           break;
-        }
+        emitter.emit('done', { status: 'failed', error: err.message });
+        runEmitters.delete(run.id);
       }
-
-      const lastStep = currentSteps[currentSteps.length - 1];
-      await db.update(managerRuns).set({
-        status: 'completed',
-        steps: currentSteps,
-        output: lastStep,
-        endTime: new Date()
-      }).where(eq(managerRuns.id, run.id));
-
-      // Signal completion and clean up emitter
-      emitter.emit('done', { status: 'completed', output: lastStep });
-      runEmitters.delete(run.id);
-
-    } catch (err: any) {
-      log.error(`[ManagerEngine] Error: ${err.message}`);
-      await db.update(managerRuns).set({
-        status: 'failed',
-        steps: currentSteps,
-        output: { error: err.message },
-        endTime: new Date()
-      }).where(eq(managerRuns.id, run.id));
-      wrappedOnStep({ type: 'error', thought: `Strategic failure: ${err.message}` });
-
-      // Signal completion and clean up emitter
-      emitter.emit('done', { status: 'failed', error: err.message });
-      runEmitters.delete(run.id);
-    }
+    })();
 
     return run.id;
   },

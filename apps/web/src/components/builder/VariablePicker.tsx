@@ -112,6 +112,22 @@ export default function VariablePicker({ nodes, edges, currentNodeId, onSelect, 
            }));
          }
 
+        // --- SPECIAL CASE: Skill Input ---
+        // If this is the Skill Input node, we also inject the Skill Contract variables
+        if (node.data.toolId === 'skill.input') {
+          const currentContract = node.data.inputSchema || [];
+          if (currentContract.length > 0) {
+            const contractFields = currentContract.map((f: any) => ({
+              key: f.name,
+              label: f.name,
+              type: f.type,
+              preview: f.description,
+              fullPath: `input.${f.name}`
+            }));
+            fields = [...fields, ...contractFields];
+          }
+        }
+
         return {
           id: node.id,
           label: node.data.label || tool.label,

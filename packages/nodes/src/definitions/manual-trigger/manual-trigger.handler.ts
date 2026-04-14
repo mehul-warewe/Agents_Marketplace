@@ -18,5 +18,6 @@ export const manualTriggerHandler: ToolHandler = async (ctx: ToolContext) => {
   delete result.trigger_output;
   delete result.operation;
 
+  console.log(`[Skill Input] Receiving:`, result);
   return result;
 };

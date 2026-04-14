@@ -41,12 +41,28 @@ router.delete('/:id/knowledge/:knowledgeId', async (req: any, res, next) => {
   try { res.json(await employeesService.removeKnowledge(req.params.id, req.user.id, req.params.knowledgeId)); } catch (err) { next(err); }
 });
 
+router.get('/runs/my', async (req: any, res, next) => {
+  try { res.json(await employeesService.getMyRuns(req.user.id)); } catch (err) { next(err); }
+});
+
+router.get('/dashboard/stats', async (req: any, res, next) => {
+  try { res.json(await employeesService.getDashboardStats(req.user.id)); } catch (err) { next(err); }
+});
+
+router.get('/directory', async (req, res, next) => {
+  try { res.json(await employeesService.listPublicDirectory()); } catch (err) { next(err); }
+});
+
 router.post('/:id/run', async (req: any, res, next) => {
   try { res.json(await employeesService.runEmployee(req.params.id, req.user.id, req.body.task)); } catch (err) { next(err); }
 });
 
 router.get('/:id/runs', async (req: any, res, next) => {
   try { res.json(await employeesService.getRuns(req.params.id, req.user.id)); } catch (err) { next(err); }
+});
+
+router.get('/runs/:runId', async (req: any, res, next) => {
+  try { res.json(await employeesService.getRunDetails(req.params.runId)); } catch (err) { next(err); }
 });
 
 export default router;

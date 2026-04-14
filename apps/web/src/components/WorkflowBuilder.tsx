@@ -33,13 +33,14 @@ import { useToast } from '@/components/ui/Toast';
 
 import FlowNode from './builder/FlowNode';
 import ToolSidebar from './builder/ToolSidebar';
-import NodeSidebar from './builder/NodeSidebar';
+import UnifiedSidebar, { InputParam } from './builder/UnifiedSidebar';
 import BuilderTopbar from './builder/BuilderTopbar';
 import ArchitectBar from './builder/ArchitectBar';
 import EmployeeMetadataPanel from './builder/EmployeeMetadataPanel';
 import { makeNode, getToolById, getToolByExecutionKey, INITIAL_NODES, INITIAL_EDGES, MODEL_TYPES, TOOL_REGISTRY } from './builder/toolRegistry';
 
 import { EDGE_DEFAULTS } from './builder/toolRegistry';
+import { PublishModal } from './builder/PublishModal';
 
 // ─── Deletable edge with ✕ button ──────────────────────────────────────────────
 function DeletableEdge({
@@ -230,8 +231,51 @@ function WorkflowBuilderInner() {
   const { mutate: runAgent } = useRunAgent();
   const { mutate: runSkill } = useRunSkill();
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES as any);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES as any);
+  const [nodes, setNodes, onNodesChange] = useNodesState(
+    isSkillMode 
+    ? [
+        {
+          id: 'skill_input',
+          type: 'wareweNode',
+          position: { x: 0, y: 50 },
+          data: {
+            label: 'Skill Input',
+            toolId: 'skill.input',
+            executionKey: 'trigger_manual', 
+            isTrigger: true,
+            status: 'idle',
+            config: {},
+          },
+        },
+        {
+          id: 'skill_output',
+          type: 'wareweNode',
+          position: { x: 0, y: 450 },
+          data: {
+            label: 'Skill Output',
+            toolId: 'skill.output',
+            executionKey: 'skill_output',
+            status: 'idle',
+            config: {},
+          },
+        }
+      ] as any
+    : INITIAL_NODES as any
+  );
+  const [edges, setEdges, onEdgesChange] = useEdgesState(
+    isSkillMode 
+    ? [
+        {
+          id: 'e_skill_input_output',
+          source: 'skill_input',
+          sourceHandle: 'output',
+          target: 'skill_output',
+          targetHandle: 'input',
+          ...EDGE_DEFAULTS,
+        }
+      ] as any
+    : INITIAL_EDGES as any
+  );
   const [name, setName]               = useState('Untitled Workflow');
   const [description, setDescription] = useState('');
   const [model, setModel]             = useState<string>(MODEL_TYPES[0]?.id || 'google/gemini-2.0-flash-001');
@@ -248,7 +292,26 @@ function WorkflowBuilderInner() {
   const [employeeDescription, setEmployeeDescription] = useState('');
   const [employeeInputSchema, setEmployeeInputSchema] = useState('{}');
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  
+  // Skill tool contract state (Relevance AI-style typed inputs)
+  const [skillInputSchema, setSkillInputSchema] = useState<InputParam[]>([]);
+  const [skillOutputDescription, setSkillOutputDescription] = useState('');
+  const [showSkillInputsPanel, setShowSkillInputsPanel] = useState(false);
   const isEmployeeMode = mode === 'employee' || (existingItem?.isWorker === true);
+
+  // ── Dynamic Scroll Bounds: Stop indefinite scrolling ──
+  const dynamicTranslateExtent = useMemo<[[number, number], [number, number]]>(() => {
+    if (!nodes || nodes.length === 0) return [[-200, -200], [1000, 1000]];
+    
+    // Find the vertical spread
+    const yCoords = nodes.map(n => n.position.y);
+    const minY = Math.min(...yCoords) - 250; // Padding for top
+    const maxY = Math.max(...yCoords) + 450; // Padding for bottom (more at bottom for + button)
+    
+    // Force absolute horizontal deadlock around X=0 to prevent any drift
+    return [[-0.01, minY], [0.01, maxY]];
+  }, [nodes]);
 
   useEffect(() => {
     const handleDown = (e: KeyboardEvent) => { if (e.key === 'Control' || e.metaKey) setCtrlPressed(true); };
@@ -265,6 +328,16 @@ function WorkflowBuilderInner() {
   const { theme } = useTheme();
   const router = useRouter();
   const toast = useToast();
+  const { fitView } = useReactFlow();
+
+  // ── Self-Healing Centering ────────────────────────────────────────────────
+  // This ensures the workflow stays perfectly centered horizontally even if the user scrolls/pans
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fitView({ duration: 400, padding: 0.8, nodes: nodes });
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [nodes.length, fitView]); // Only trigger on structural changes to avoid jitter
 
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = useCallback(async (options: { silent?: boolean, nodesOverride?: any[] } = {}) => {
@@ -287,6 +360,11 @@ function WorkflowBuilderInner() {
       description,
       workflow: { nodes: cleanNodes, edges, model },
       category: 'Automation',
+      // Skill tool contract — only included in skill mode
+      ...(isSkillMode ? {
+        inputSchema: skillInputSchema,
+        outputDescription: skillOutputDescription,
+      } : {})
     };
 
     try {
@@ -318,7 +396,7 @@ function WorkflowBuilderInner() {
             onSuccess: () => {
               setIsPublishing(false); // Close modal on success
               toast.success('Employee Unit Initialized!');
-              router.push('/agents');
+              router.push('/employees');
             },
             onError: (err: any) => {
               toast.error('Failed to promote to employee: ' + (err?.message || 'Unknown error'));
@@ -329,7 +407,13 @@ function WorkflowBuilderInner() {
           return savedItem;
         }
       } else if (!options.silent) {
-        router.push('/agents');
+        if (isSkillMode) {
+          router.push('/skills');
+        } else if (isEmployeeMode) {
+          router.push('/employees');
+        } else {
+          router.push('/manager');
+        }
       }
 
       return savedItem;
@@ -488,41 +572,57 @@ function WorkflowBuilderInner() {
   const handlePickerSelect = useCallback((toolId: string, override?: any) => {
     if (!pickerState) return;
 
-    // --- CASE A: INSERTION BETWEEN NODES ---
-    if (pickerState.insertion) {
-      const { sourceId, targetId, edgeId, sourceHandle, targetHandle, position } = pickerState;
-      // Insert node in the middle (vertical)
-      const newNode = makeNode(toolId, { x: position.x, y: position.y }, nodes, override || (getToolById(toolId) as any).override) as any;
-      if (!newNode) return;
+      // --- CASE A: INSERTION BETWEEN NODES ---
+      if (pickerState.insertion) {
+        const { sourceId, targetId, edgeId, sourceHandle, targetHandle, position } = pickerState;
+        
+        const sourceNode = nodes.find(n => n.id === sourceId);
+        if (!sourceNode) return;
 
-      const sourceNode = nodes.find(n => n.id === sourceId);
-      const targetNode = nodes.find(n => n.id === targetId);
+        // Find ALL nodes downstream of the target node to shift them down
+        const getDownstreamIds = (startId: string, visited = new Set<string>()): string[] => {
+          if (visited.has(startId)) return [];
+          visited.add(startId);
+          const children = edges.filter(e => e.source === startId).map(e => e.target);
+          return [startId, ...children.flatMap(c => getDownstreamIds(c, visited))];
+        };
+        const downstreamIds = getDownstreamIds(targetId);
 
-      // Create new edges
-      const edgeToNew = {
-        id: `e_${sourceId}_${newNode.id}_${Date.now()}`,
-        source: sourceId,
-        sourceHandle: sourceHandle || 'output',
-        target: newNode.id,
-        targetHandle: 'input',
-        ...EDGE_DEFAULTS,
-      };
+        // Shift amount (standard vertical gap)
+        const SHIFT_Y = 150;
 
-      const edgeFromNew = {
-        id: `e_${newNode.id}_${targetId}_${Date.now()}`,
-        source: newNode.id,
-        sourceHandle: 'output',
-        target: targetId,
-        targetHandle: targetHandle || 'input',
-        ...EDGE_DEFAULTS,
-      };
+        // Insert node in the middle (vertical) - Force X alignment with source
+        const newNode = makeNode(toolId, { x: sourceNode.position.x, y: position.y }, nodes, override || (getToolById(toolId) as any).override) as any;
+        if (!newNode) return;
 
-      setNodes(ns => ns.concat(newNode));
-      setEdges(es => es.filter(e => e.id !== edgeId).concat(edgeToNew, edgeFromNew));
-      setSelectedNode(newNode);
-      setPickerState(null);
-      return;
-    }
+        // Apply Shift to downstream nodes
+        setNodes(ns => ns.map(n => downstreamIds.includes(n.id) ? { ...n, position: { ...n.position, y: n.position.y + SHIFT_Y } } : n).concat(newNode));
+
+        // Create new edges
+        const edgeToNew = {
+          id: `e_${sourceId}_${newNode.id}_${Date.now()}`,
+          source: sourceId,
+          sourceHandle: sourceHandle || 'output',
+          target: newNode.id,
+          targetHandle: 'input',
+          ...EDGE_DEFAULTS,
+        };
+
+        const edgeFromNew = {
+          id: `e_${newNode.id}_${targetId}_${Date.now()}`,
+          source: newNode.id,
+          sourceHandle: 'output',
+          target: targetId,
+          targetHandle: targetHandle || 'input',
+          ...EDGE_DEFAULTS,
+        };
+
+        setEdges(es => es.filter(e => e.id !== edgeId).concat(edgeToNew, edgeFromNew));
+        setSelectedNode(newNode);
+        setPickerState(null);
+        setSidebarOpen(false); // Auto-close tool sidebar on successful add
+        return;
+      }
 
     // --- CASE B: STANDARD APPEND ---
     const { nodeId, handleId, handleType, socketType } = pickerState;
@@ -581,6 +681,7 @@ function WorkflowBuilderInner() {
     setEdges(es => addEdge(newEdge, es));
     setSelectedNode(newNode);
     setPickerState(null);
+    setSidebarOpen(false); // Auto-close tool sidebar on successful add
   }, [pickerState, nodes, setNodes, setEdges]);
 
 
@@ -613,6 +714,12 @@ function WorkflowBuilderInner() {
       })));
     }
     if (wf?.model) setModel(wf.model);
+
+    // Load tool contract if this is a skill
+    if (isSkillMode) {
+      setSkillInputSchema(existingItem.inputSchema || []);
+      setSkillOutputDescription(existingItem.outputDescription || '');
+    }
   }, [existingItem, setNodes, setEdges]);
 
   useEffect(() => { if (!authLoading && !user) router.push('/'); }, [user, authLoading, router]);
@@ -671,6 +778,7 @@ function WorkflowBuilderInner() {
        return;
     }
     setSelectedNode(node);
+    setSidebarOpen(false); // Task 1: Auto-close Tool Sidebar
   }, []);
   const onPaneClick = useCallback(() => setSelectedNode(null), []);
 
@@ -690,25 +798,26 @@ function WorkflowBuilderInner() {
     const last = nodes[nodes.length - 1];
     const pos = last
       ? { x: last.position.x, y: last.position.y + 150 }
-      : { x: 400, y: 50 };
+      : { x: 0, y: 50 };
     const newNode = makeNode(toolId, pos, nodes, override) as any;
     if (newNode) {
       setNodes(ns => ns.concat(newNode));
-      setSelectedNode(newNode);
-
-      // ─── AUTO-CONNECT (Employee Mode) ───
-      // If we're in employee mode and there's a previous node, connect them automatically
-      if (isEmployeeMode && last && !last.data?.executionKey.includes('sticky_note')) {
-        const lastTool = getToolById(last.data.toolId);
+      
+      // ─── AUTO-CONNECT ───
+      // If there's a selected node, connect from it to the new node
+      const sourceNode = selectedNode || nodes[nodes.length - 1];
+      
+      if (sourceNode && !sourceNode.data?.executionKey.includes('sticky_note')) {
+        const lastTool = getToolById(sourceNode.data.toolId);
         const newTool = getToolById(newNode.data.toolId);
         
-        if (lastTool && newTool) {
+        if (lastTool && newTool && lastTool.outputs.length > 0 && newTool.inputs.length > 0) {
           const sourceHandle = lastTool.outputs[0]?.name || 'output';
           const targetHandle = newTool.inputs[0]?.name || 'input';
           
           const newEdge = {
-            id: `e_${last.id}_${newNode.id}_${Date.now()}`,
-            source: last.id,
+            id: `e_${sourceNode.id}_${newNode.id}_${Date.now()}`,
+            source: sourceNode.id,
             sourceHandle: sourceHandle,
             target: newNode.id,
             targetHandle: targetHandle,
@@ -718,8 +827,10 @@ function WorkflowBuilderInner() {
           setEdges(es => addEdge(newEdge, es));
         }
       }
+
+      setSelectedNode(newNode);
     }
-    setSidebarOpen(false); // Auto-close sidebar after adding
+    setSidebarOpen(false); 
   };
 
   const updateSelectedNode = useCallback((updates: any) => {
@@ -743,13 +854,37 @@ function WorkflowBuilderInner() {
         }
       };
     });
-  }, [selectedNode, setNodes]);
+  }, [nodes, selectedNode, isSkillMode]);
+
+  // Handle cross-component UI events
+  useEffect(() => {
+    const handleOpenContract = () => setShowSkillInputsPanel(true);
+    window.addEventListener('warewe:open-contract-tab', handleOpenContract);
+    return () => window.removeEventListener('warewe:open-contract-tab', handleOpenContract);
+  }, []);
 
   const deleteSelectedNode = useCallback((nodeId?: string) => {
     const idToDelete = nodeId || selectedNode?.id;
     if (!idToDelete) return;
 
-    setNodes(ns => ns.filter(n => n.id !== idToDelete));
+    // PROTECT SKILL GATEWAYS: Cannot delete input or output nodes in skill mode
+    if (isSkillMode && (idToDelete === 'skill_input' || idToDelete === 'skill_output')) {
+      const nodeName = idToDelete === 'skill_input' ? 'Input' : 'Output';
+      toast.error(`The Skill ${nodeName} node is mandatory for defining your tool contract and cannot be removed.`);
+      return;
+    }
+
+    // --- COORDINATE-BASED REFLOW: Shift EVERYTHING below up ---
+    const targetNode = nodes.find(n => n.id === idToDelete);
+    if (!targetNode) return;
+    const targetY = targetNode.position.y;
+    const SHIFT_UP = -150;
+
+    setNodes(ns => ns.filter(n => n.id !== idToDelete).map(n => 
+      n.position.y > targetY 
+      ? { ...n, position: { ...n.position, y: n.position.y + SHIFT_UP } } 
+      : n
+    ));
     
     setEdges(es => {
       const incoming = es.filter(e => e.target === idToDelete);
@@ -784,6 +919,8 @@ function WorkflowBuilderInner() {
       className: n.data?.executionKey === 'sticky_note' ? 'sticky-note-wrapper' : '',
       data: {
         ...(n.data || { status: 'idle', config: {} }),
+        // Sync skill contract into the input node data so picker can see it
+        ...(n.data?.toolId === 'skill.input' ? { inputSchema: skillInputSchema } : {}),
         onTrigger: handleTrigger,
         onAddConnect: handleAddConnect,
         onDelete: deleteSelectedNode,
@@ -793,7 +930,7 @@ function WorkflowBuilderInner() {
         }
       }
     })),
-    [nodes, handleTrigger, handleAddConnect, deleteSelectedNode],
+    [nodes, handleTrigger, handleAddConnect, deleteSelectedNode, skillInputSchema],
   );
 
 
@@ -856,7 +993,7 @@ function WorkflowBuilderInner() {
         onModelChange={setModel}
         onBack={() => router.back()}
         onReset={() => { setNodes(INITIAL_NODES as any); setEdges(INITIAL_EDGES as any); setSelectedNode(null); }}
-        onSave={() => isEmployeeMode ? setIsPublishing(true) : handleSave()}
+        onSave={() => setIsPublishModalOpen(true)}
         onRun={handleTrigger}
         isRunning={isRunning}
         isSaving={isSaving || isPublishingWorker}
@@ -866,7 +1003,7 @@ function WorkflowBuilderInner() {
         isEmployeeMode={isEmployeeMode}
       />
 
-      {/* ── Body */}
+{/* ── Body */}
       <div className="flex flex-1 overflow-hidden">
 
         {/* Left: Node palette */}
@@ -875,24 +1012,12 @@ function WorkflowBuilderInner() {
           isOpen={sidebarOpen} 
           onToggle={() => { setSidebarOpen(s => !s); if (sidebarOpen) setPickerState(null); }} 
           socketType={pickerState?.socketType}
+          isSkillMode={isSkillMode}
+          filter={isSkillMode ? (tool: any) => !tool.id.startsWith('trigger_') && tool.id !== 'trigger_manual' : undefined}
         />
 
         {/* Centre: Canvas — Deep Aether Interface */}
         <div className="flex-1 relative overflow-hidden bg-[#0d0d12]">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className={`
-              absolute top-8 left-8 z-50 w-12 h-12 bg-foreground text-background rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-500 hover:scale-110 active:scale-95 group
-              ${sidebarOpen ? 'opacity-0 pointer-events-none scale-0' : 'opacity-100 scale-100'}
-            `}
-          >
-            <div className="absolute inset-0 bg-foreground/20 rounded-2xl animate-ping group-hover:block hidden" />
-            <Plus size={24} className="group-hover:rotate-90 transition-transform duration-500" />
-            <span className="absolute left-full ml-4 px-3 py-1.5 bg-black/80 border border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-               Add New Node
-            </span>
-          </button>
-
           <ReactFlow
             nodes={nodesWithHandlers}
             edges={edges}
@@ -906,15 +1031,21 @@ function WorkflowBuilderInner() {
             onEdgeContextMenu={onEdgeContextMenu}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
-            zoomOnScroll={ctrlPressed}
-            panOnScroll={!ctrlPressed}
-            panOnScrollMode={PanOnScrollMode.Free}
-            zoomOnPinch={true}
-            minZoom={0.05}
-            maxZoom={4}
+            zoomOnScroll={false}
+            panOnScroll={true}
+            panOnScrollMode={PanOnScrollMode.Vertical}
+            zoomOnPinch={false}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={true}
+            nodeOrigin={[0.5, 0]}
+            panOnDrag={[false, true]}
+            translateExtent={[[-2000, dynamicTranslateExtent[0][1]], [2000, dynamicTranslateExtent[1][1]]]}
+            minZoom={0.8}
+            maxZoom={0.8}
             fitView
             proOptions={{ hideAttribution: true }}
-            fitViewOptions={{ padding: 0.8, maxZoom: 0.7 }}
+            fitViewOptions={{ padding: 0.8, maxZoom: 0.8 }}
             defaultEdgeOptions={{
               ...EDGE_DEFAULTS,
               style: { strokeWidth: 1.5, stroke: 'rgba(255,255,255,0.1)', transition: 'stroke 0.5s' }
@@ -991,21 +1122,26 @@ function WorkflowBuilderInner() {
           </div>
         </div>
 
-        {/* Floating Tool Picker removed in favor of Sidebar integration */}
-
-        {/* Right Panel: Clean Sidebar in building phase */}
-        {selectedNode && selectedNode.data?.executionKey !== 'sticky_note' ? (
-          <NodeSidebar
-            key={selectedNode.id}
-            node={selectedNode}
-            nodes={nodes}
-            edges={edges}
-            onClose={() => setSelectedNode(null)}
-            onUpdate={updateSelectedNode}
-            onDelete={deleteSelectedNode}
-            onTrigger={handleTrigger}
-          />
-        ) : null}
+        {/* Right Panel: Unified Intelligence Sidebar */}
+        <UnifiedSidebar
+          context={selectedNode ? 'NODE' : (isSkillMode ? 'SKILL' : 'AGENT')}
+          node={selectedNode}
+          nodes={nodes}
+          edges={edges}
+          onClose={() => setSelectedNode(null)}
+          onUpdateNode={updateSelectedNode}
+          onDeleteNode={deleteSelectedNode}
+          onTriggerNode={handleTrigger}
+          // Global Settings
+          name={name}
+          onNameChange={setName}
+          description={description}
+          onDescriptionChange={setDescription}
+          inputSchema={skillInputSchema}
+          onInputSchemaChange={setSkillInputSchema}
+          outputDescription={skillOutputDescription}
+          onOutputDescriptionChange={setSkillOutputDescription}
+        />
       </div>
 
       {/* ── Employee Finalize Modal ────────────────────────────────────────── */}
@@ -1103,6 +1239,21 @@ function WorkflowBuilderInner() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <PublishModal 
+        isOpen={isPublishModalOpen}
+        onClose={() => setIsPublishModalOpen(false)}
+        name={name}
+        onNameChange={setName}
+        description={description}
+        onDescriptionChange={setDescription}
+        onPublish={() => {
+          setIsPublishModalOpen(false);
+          handleSave();
+        }}
+        isPublishing={isSaving}
+        isEditMode={!!itemId}
+      />
     </div>
   );
 }

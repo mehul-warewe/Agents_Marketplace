@@ -52,7 +52,7 @@ export const createManagerTools = (
            // Track the child run in the manager run's childRunIds
            if (managerRunId) {
               await db.update(managerRuns).set({
-                 childRunIds: sql`${managerRuns.childRunIds} || jsonb_build_array(${res.runId})`
+                 childRunIds: sql`${managerRuns.childRunIds} || jsonb_build_array(${res.runId}::text)`
               }).where(eq(managerRuns.id, managerRunId));
            }
 

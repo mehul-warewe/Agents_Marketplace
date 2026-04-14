@@ -46,14 +46,19 @@ export async function executeRun(job: any) {
       objective: workflow.description ?? 'Initializing.',
       workflow:  { name: workflow.name, model },
       nodes:     {},
-      ids:       {}
+      ids:       {},
+      _skillInput: job.data.inputData || {},  // Typed inputs injected here
+      _skillOutput: null,
     };
 
     const nodeMap = new Map<string, any>(nodes.map((n: any) => [n.id, n]));
     const executionCounts = new Map<string, number>();
     const pendingInputs = new Map<string, Record<string, any>>();
     
+    // If inputData is provided, skip trigger-type nodes entirely by treating them as resolved
+    // This allows Skills to be invoked as tools with typed parameters
     const startNodes = resolveStartNodes(nodes, edges, job.data.triggerNodeId);
+    const isToolInvocation = !!(job.data.inputData && Object.keys(job.data.inputData).length > 0);
     const reachableIds = buildReachableSubgraph(startNodes, edges);
     const inDegree = calculateActiveInDegree(reachableIds, edges);
 
@@ -61,6 +66,18 @@ export async function executeRun(job: any) {
       pendingInputs.set(n.id, { ...(job.data.inputData || {}) });
       return n.id;
     });
+
+    // If trigger was skipped, resolve the downstream starting queue
+    if (isToolInvocation && queue.length === 0) {
+      startNodes.forEach((n: any) => {
+        const isTrigger = (n.data?.toolId || '').includes('trigger') || n.data?.isTrigger;
+        if (isTrigger) {
+          edges.filter((e: any) => e.source === n.id).forEach((e: any) => {
+            if (!queue.includes(e.target)) queue.push(e.target);
+          });
+        }
+      });
+    }
 
     let hasFailed = false;
     let failureReason = '';
@@ -188,10 +205,16 @@ export async function executeRun(job: any) {
       }
     }
 
+    // Capture the last node's output as the canonical skill output
+    const lastNodeResult = Object.values(ctx.ids).pop();
+    ctx._skillOutput = lastNodeResult;
+
     await db.update(table).set({
       status: hasFailed ? 'failed' : 'completed',
       endTime: new Date(),
-      output: hasFailed ? { error: failureReason } : { result: ctx.report || ctx.result || 'Success' }
+      output: hasFailed 
+        ? { error: failureReason, success: false } 
+        : { data: ctx._skillOutput, success: true }
     }).where(eq(table.id, runId));
 
   } catch (err: any) {

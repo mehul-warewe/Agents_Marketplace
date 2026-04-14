@@ -5,7 +5,7 @@ export function useAgents() {
   return useQuery({
     queryKey: ['agents'],
     queryFn: async () => {
-      const { data } = await api.get('/agents');
+      const { data } = await api.get('/skills'); // Marketplace now lists published skills
       return data;
     },
   });
@@ -15,7 +15,7 @@ export function useMyAgents() {
   return useQuery({
     queryKey: ['my-agents'],
     queryFn: async () => {
-      const { data } = await api.get('/agents/mine');
+      const { data } = await api.get('/skills/mine');
       return data;
     },
   });
@@ -26,7 +26,7 @@ export function useAgent(id: string | null) {
     queryKey: ['agent', id],
     queryFn: async () => {
       if (!id) return null;
-      const { data } = await api.get(`/agents/${id}`);
+      const { data } = await api.get(`/skills/${id}`);
       return data;
     },
     enabled: !!id,
@@ -37,7 +37,8 @@ export function useAgentRuns() {
   return useQuery({
     queryKey: ['agent-runs'],
     queryFn: async () => {
-      const { data } = await api.get('/agents/my-runs');
+      // For my-runs, we now pull from employees system
+      const { data } = await api.get('/employees/runs/my'); 
       return data;
     },
     refetchInterval: 10000,
@@ -48,7 +49,7 @@ export function useDashboardStats() {
   return useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      const { data } = await api.get('/agents/dashboard-stats');
+      const { data } = await api.get('/employees/dashboard/stats');
       return data;
     },
   });
@@ -58,7 +59,8 @@ export function useTools() {
   return useQuery({
     queryKey: ['tools'],
     queryFn: async () => {
-      const { data } = await api.get('/agents/tools/available');
+      // Tools are essentially the available Skills for building
+      const { data } = await api.get('/skills/tools/registry');
       return data;
     },
   });
@@ -68,11 +70,11 @@ export function useCreateAgent() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (agentData: any) => {
-      const { data } = await api.post('/agents', agentData);
+      const { data } = await api.post('/skills', agentData);
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agents'] });
+      queryClient.invalidateQueries({ queryKey: ['skills'] });
       queryClient.invalidateQueries({ queryKey: ['my-agents'] });
     },
   });
@@ -82,11 +84,11 @@ export function useUpdateAgent() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, agentData }: { id: string, agentData: any }) => {
-      const { data } = await api.patch(`/agents/${id}`, agentData);
+      const { data } = await api.patch(`/skills/${id}`, agentData);
       return data;
     },
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ['agents'] });
+      queryClient.invalidateQueries({ queryKey: ['skills'] });
       queryClient.invalidateQueries({ queryKey: ['my-agents'] });
       queryClient.invalidateQueries({ queryKey: ['agent', id] });
     },
@@ -97,10 +99,10 @@ export function useDeleteAgent() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/agents/${id}`);
+      await api.delete(`/skills/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agents'] });
+      queryClient.invalidateQueries({ queryKey: ['skills'] });
       queryClient.invalidateQueries({ queryKey: ['my-agents'] });
     },
   });
@@ -110,11 +112,11 @@ export function useRunAgent() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ agentId, inputData, triggerNodeId, runMode }: { agentId: string, inputData?: any, triggerNodeId?: string, runMode?: 'single' | 'full' }) => {
-      const { data } = await api.post(`/agents/${agentId}/run`, { inputData, triggerNodeId, runMode });
+      const { data } = await api.post(`/skills/${agentId}/run`, { inputData, triggerNodeId, runMode });
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agent-runs'] });
+      queryClient.invalidateQueries({ queryKey: ['employee-runs'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
   });
@@ -124,20 +126,19 @@ export function useAcquireAgent() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data } = await api.post(`/agents/${id}/acquire`);
+      const { data } = await api.post(`/skills/${id}/clone`); // Cloning a published skill
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-agents'] });
+      queryClient.invalidateQueries({ queryKey: ['skills'] });
     },
   });
 }
 
-
 export function useArchitect() {
   return useMutation({
     mutationFn: async ({ prompt, history = [] }: { prompt: string; history?: {role: string; content: string}[] }) => {
-      const { data } = await api.post('/agents/architect', { prompt, history });
+      const { data } = await api.post('/skills/architect', { prompt, history });
       return data;
     },
   });
@@ -147,12 +148,12 @@ export function usePublishAgent() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, published, price, category }: { id: string, published: boolean, price?: number, category?: string }) => {
-      const { data } = await api.post(`/agents/${id}/publish`, { published, price, category });
+      const { data } = await api.post(`/skills/${id}/publish`, { published, price, category });
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agents'] }); // Marketplace
-      queryClient.invalidateQueries({ queryKey: ['my-agents'] }); // Personal list
+      queryClient.invalidateQueries({ queryKey: ['published-skills'] });
+      queryClient.invalidateQueries({ queryKey: ['skills'] });
     },
   });
 }
@@ -161,13 +162,11 @@ export function usePublishAsWorker() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, isWorker, workerDescription, workerInputSchema }: { id: string, isWorker?: boolean, workerDescription?: string, workerInputSchema?: any }) => {
-      const { data } = await api.post(`/agents/${id}/publish-as-worker`, { isWorker, workerDescription, workerInputSchema });
-      return data;
+      // Legacy operation, now Skills are just Skills
+      return { success: true };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-agents'] });
-      queryClient.invalidateQueries({ queryKey: ['workers'] });
-      queryClient.invalidateQueries({ queryKey: ['worker-directory'] });
+      queryClient.invalidateQueries({ queryKey: ['skills'] });
     },
   });
 }
@@ -176,7 +175,7 @@ export function useWorkers() {
   return useQuery({
     queryKey: ['workers'],
     queryFn: async () => {
-      const { data } = await api.get('/workers');
+      const { data } = await api.get('/employees'); // Employees are the new workers
       return data;
     },
   });
@@ -186,7 +185,7 @@ export function useWorkerDirectory() {
   return useQuery({
     queryKey: ['worker-directory'],
     queryFn: async () => {
-      const { data } = await api.get('/workers/directory');
+      const { data } = await api.get('/employees/directory');
       return data;
     },
   });
@@ -281,7 +280,7 @@ export function useAgentRun(runId: string | null) {
     queryKey: ['agent-run', runId],
     queryFn: async () => {
       if (!runId) return null;
-      const { data } = await api.get(`/agents/runs/${runId}`);
+      const { data } = await api.get(`/employees/runs/${runId}`);
       return data;
     },
     enabled: !!runId,
@@ -341,7 +340,7 @@ export function useUseTemplate() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-agents'] });
+      queryClient.invalidateQueries({ queryKey: ['skills'] });
     },
   });
 }

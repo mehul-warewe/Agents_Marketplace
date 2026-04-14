@@ -1,4 +1,4 @@
-import { agents } from '@repo/database';
+import { skills } from '@repo/database';
 import { db } from '../../shared/db.js';
 
 export const templates = [
@@ -53,16 +53,15 @@ export const templatesService = {
     const template = templates.find(t => t.id === templateId);
     if (!template) throw new Error('Template not found');
 
-    const [newAgent] = await db.insert(agents).values({
+    const [newSkill] = await db.insert(skills).values({
       name: template.title,
       description: template.description,
       workflow: template.workflow,
       category: template.category,
-      price: 0,
       creatorId: userId,
       isPublished: false,
     }).returning();
 
-    return newAgent;
+    return newSkill;
   }
 };

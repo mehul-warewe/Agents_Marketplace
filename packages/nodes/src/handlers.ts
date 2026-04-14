@@ -105,7 +105,15 @@ export const WORKER_NODES: Record<string, ToolHandler> = {
   'google_sheets_get_values': pipedreamActionHandler,
 
   // ─── UI & HELPERS
-  'sticky_note': stickyNoteHandler
+  'sticky_note': stickyNoteHandler,
+  'skill_output': async (ctx) => {
+    const { incomingData } = ctx;
+    // Extract the most relevant 'data' or 'text' from the cumulative context for a clean log
+    const cleanResult = incomingData.data || incomingData.text || incomingData;
+    
+    console.log(`[Skill Output] Returning Result:`, (typeof cleanResult === 'object') ? JSON.stringify(cleanResult, null, 2) : cleanResult);
+    return incomingData;
+  }
 };
 
 // ─── REGISTRY VALIDATION ───────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { agents, agentRuns, employeeRuns, employees, eq, desc, and } from '@repo/database';
+import { agents, agentRuns, employeeRuns, employees, skills, eq, desc, and } from '@repo/database';
 import { db } from '../../shared/db.js';
 import { createExecutionQueue, getRedisConnection } from '@repo/queue';
 
@@ -7,9 +7,9 @@ const executionQueue = createExecutionQueue(redis);
 
 export const agentsService = {
   async listPublishedAgents() {
-    return await db.select().from(agents)
-      .where(eq(agents.isPublished, true))
-      .orderBy(desc(agents.createdAt));
+    return await db.select().from(skills)
+      .where(eq(skills.isPublished, true))
+      .orderBy(desc(skills.createdAt));
   },
 
   async listMyAgents(userId: string) {
@@ -78,21 +78,19 @@ export const agentsService = {
   },
 
   async acquireAgent(agentId: string, userId: string) {
-    const agent = await this.getAgent(agentId);
+    const [skill] = await db.select().from(skills).where(eq(skills.id, agentId));
     
-    if (!agent || !agent.isPublished) {
-      throw new Error('Marketplace agent not found');
+    if (!skill || !skill.isPublished) {
+      throw new Error('Marketplace skill not found');
     }
 
-    const [acquired] = await db.insert(agents).values({
-      name: agent.name,
-      description: agent.description,
-      workflow: agent.workflow,
-      category: agent.category,
-      price: 0,
+    const [acquired] = await db.insert(skills).values({
+      name: skill.name,
+      description: skill.description,
+      workflow: skill.workflow,
+      category: skill.category,
       creatorId: userId,
       isPublished: false,
-      originalId: agent.id
     }).returning();
 
     return acquired;

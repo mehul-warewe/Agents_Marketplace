@@ -48,6 +48,15 @@ export const skills = pgTable('skills', {
   workflow: jsonb('workflow').notNull(),  // The ReactFlow nodes + edges JSON
   isPublished: boolean('is_published').default(false).notNull(),
   category: text('category'),
+  // Tool contract: defines typed input parameters for agent invocation
+  inputSchema: jsonb('input_schema').$type<{
+    name: string;
+    type: 'string' | 'number' | 'boolean';
+    description: string;
+    required: boolean;
+  }[]>().default([]),
+  // Human-readable description of what this skill returns (used by AI to decide when to call it)
+  outputDescription: text('output_description'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

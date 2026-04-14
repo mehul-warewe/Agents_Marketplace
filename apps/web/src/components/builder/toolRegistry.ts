@@ -281,6 +281,44 @@ export const getToolById = (id: string): ToolDefinition => {
   const tool = TOOL_REGISTRY.find((t) => t.id === id);
   if (tool) return tool;
   
+  // Specific fallback for skill gateway nodes if they aren't in the external registry yet
+  if (id === 'skill.input') {
+    return {
+      id: 'skill.input',
+      name: 'Skill Input',
+      label: 'Skill Input',
+      icon: ICON_MAP['Signpost'] || Signpost,
+      category: 'Triggers',
+      description: 'Starting point for this skill.',
+      executionKey: 'trigger_manual',
+      bg: 'bg-indigo-500/10',
+      color: 'text-indigo-500',
+      border: 'border-indigo-500/20',
+      isTrigger: true,
+      inputs: [],
+      outputs: [{ name: 'output', label: 'Inputs', type: 'any' }],
+      configFields: []
+    } as any;
+  }
+  if (id === 'skill.output') {
+    return {
+      id: 'skill.output',
+      name: 'Skill Output',
+      label: 'Skill Output',
+      icon: ICON_MAP['Signpost'] || Signpost,
+      category: 'Output',
+      description: 'Terminal point for this skill.',
+      executionKey: 'skill_output',
+      bg: 'bg-green-500/10',
+      color: 'text-green-500',
+      border: 'border-green-500/20',
+      isTrigger: false,
+      inputs: [{ name: 'input', label: 'Output Data', type: 'any' }],
+      outputs: [],
+      configFields: [{ key: 'description', label: 'Summary', type: 'text', required: false }]
+    } as any;
+  }
+  
   // Return Pipedream as fallback
   const pd = TOOL_REGISTRY.find(t => t.id === 'pipedream.action') || (PIPEDREAM_TEMPLATE as any);
   return { ...pd, icon: (ICON_MAP[pd.icon] || Zap) };

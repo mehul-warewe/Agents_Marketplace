@@ -10,6 +10,8 @@ interface ToolSidebarProps {
   isOpen: boolean;
   onToggle: () => void;
   socketType?: string | null;
+  filter?: (tool: any) => boolean;
+  isSkillMode?: boolean;
 }
 
 interface PipedreamApp {
@@ -25,7 +27,7 @@ interface PipedreamTool {
 }
 
 // Tool Registry Navigation State
-export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType }: ToolSidebarProps) {
+export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, filter, isSkillMode }: ToolSidebarProps) {
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [activePlatform, setActivePlatform] = useState<string | null>(null);
@@ -92,9 +94,8 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType }:
   }, [pipedreamApps]);
 
   const categories = useMemo(() => {
-    // Don't include Integrations in the main categories list anymore
-    // We'll show it as a separate button
-    return TOOL_CATEGORIES.filter(cat => cat !== 'Integrations');
+    // Hide Triggers and Integrations from the main category folders
+    return TOOL_CATEGORIES.filter(cat => cat !== 'Integrations' && cat !== 'Triggers');
   }, []);
 
   const filtered = useMemo(() => {
@@ -128,7 +129,11 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType }:
           category: 'Integrations'
         }));
 
-      return [...staticMatches, ...subActionMatches, ...platformMatches].sort((a, b) => {
+      const baseResults = [...staticMatches, ...subActionMatches, ...platformMatches]
+        .filter(t => (t as any).category !== 'Triggers');
+      const filteredResults = filter ? baseResults.filter(filter) : baseResults;
+
+      return filteredResults.sort((a, b) => {
         const aLabel = (a as any).label || (a as any).name || '';
         const bLabel = (b as any).label || (b as any).name || '';
         const aExact = aLabel.toLowerCase() === q;
@@ -137,6 +142,12 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType }:
         if (bExact && !aExact) return 1;
         return aLabel.toLowerCase().startsWith(q) ? -1 : 1;
       });
+    }
+
+    // 2. If no query, apply filter to the whole TOOL_REGISTRY for categories
+    let visibleRegistry = TOOL_REGISTRY;
+    if (filter) {
+      visibleRegistry = TOOL_REGISTRY.filter(filter);
     }
 
     // 2. If viewing a platform's actions (drill-down)
@@ -364,7 +375,8 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType }:
                 </button>
 
                 {categories.map(cat => {
-                  const items = combinedRegistry.filter(t => (t as any).category === cat);
+                  const items = (query.trim() ? filtered : (filter ? TOOL_REGISTRY.filter(filter) : TOOL_REGISTRY))
+                    .filter(t => (t as any).category === cat);
                   if (items.length === 0) return null;
                   const isCollapsed = collapsed[cat];
 

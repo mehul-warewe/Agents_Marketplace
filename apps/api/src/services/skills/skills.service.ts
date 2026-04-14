@@ -22,24 +22,27 @@ export const skillsService = {
   },
 
   async createSkill(userId: string, data: any) {
-    const { name, description, workflow, category } = data;
+    const { name, description, workflow, category, inputSchema, outputDescription } = data;
     const [newSkill] = await db.insert(skills).values({
       name, description, workflow, category, creatorId: userId,
+      inputSchema: inputSchema || [],
+      outputDescription: outputDescription || null,
     }).returning();
     return newSkill;
   },
 
   async updateSkill(skillId: string, userId: string, data: any) {
-    const { name, description, workflow, category, isPublished } = data;
+    const { name, description, workflow, category, isPublished, inputSchema, outputDescription } = data;
     
-    // Ownership check
     const existing = await this.getSkill(skillId);
     if (!existing || existing.creatorId !== userId) {
        throw new Error('Unauthorized or not found');
     }
 
     const [updated] = await db.update(skills).set({
-      name, description, workflow, category, isPublished, updatedAt: new Date()
+      name, description, workflow, category, isPublished, updatedAt: new Date(),
+      inputSchema: inputSchema !== undefined ? inputSchema : existing.inputSchema,
+      outputDescription: outputDescription !== undefined ? outputDescription : existing.outputDescription,
     }).where(eq(skills.id, skillId)).returning();
     
     return updated;
@@ -90,5 +93,68 @@ export const skillsService = {
     });
     
     return { runId: run.id, status: 'queued' };
+  },
+
+  async cloneSkill(skillId: string, userId: string) {
+    const skill = await this.getSkill(skillId);
+    if (!skill || !skill.isPublished) throw new Error('Skill not found or not published');
+
+    const [cloned] = await db.insert(skills).values({
+      name: skill.name,
+      description: skill.description,
+      workflow: skill.workflow,
+      category: skill.category,
+      creatorId: userId,
+      isPublished: false,
+    }).returning();
+    return cloned;
+  },
+
+  async publishSkill(skillId: string, userId: string, data: any) {
+    const { published, category } = data;
+    const existing = await this.getSkill(skillId);
+    if (!existing || existing.creatorId !== userId) throw new Error('Unauthorized');
+
+    const [updated] = await db.update(skills).set({
+      isPublished: published === undefined ? true : !!published,
+      category: category || existing.category,
+      updatedAt: new Date()
+    }).where(eq(skills.id, skillId)).returning();
+    return updated;
+  },
+  /**
+   * Invoke a skill as a synchronous tool call — used by the Employee ReAct loop.
+   * Queues the job, polls the DB, and returns a structured { data, success } result.
+   */
+  async invokeSkillAsToolSync(
+    skillId: string,
+    userId: string,
+    inputData: Record<string, any>,
+    timeoutMs = 120_000
+  ): Promise<{ data: any; success: boolean; error?: string }> {
+    const { runId } = await this.runSkill(skillId, userId, { inputData });
+    
+    const deadline = Date.now() + timeoutMs;
+    const POLL_INTERVAL = 2000;
+    
+    while (Date.now() < deadline) {
+      const rows = await db.select().from(employeeRuns).where(eq(employeeRuns.id, runId));
+      const run = rows[0];
+      
+      if (run?.status === 'completed') {
+        const output = run.output as any;
+        return output?.success === false
+          ? { data: null, success: false, error: output.error }
+          : { data: output?.data ?? output, success: true };
+      }
+      if (run?.status === 'failed') {
+        const output = run.output as any;
+        return { data: null, success: false, error: output?.error || 'Skill execution failed' };
+      }
+      
+      await new Promise(r => setTimeout(r, POLL_INTERVAL));
+    }
+    
+    return { data: null, success: false, error: 'Skill execution timed out' };
   }
 };

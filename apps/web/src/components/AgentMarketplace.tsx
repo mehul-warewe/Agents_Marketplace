@@ -13,7 +13,7 @@ export default function AgentMarketplace() {
   const handleAcquireAgent = async (agentId: string) => {
     acquireAgent(agentId, {
       onSuccess: () => {
-        router.push('/employees');
+        router.push('/skills');
       },
       onError: (err: any) => {
         alert(err.response?.data?.error || "Failed to acquire agent");

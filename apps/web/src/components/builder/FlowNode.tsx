@@ -165,9 +165,15 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
     <div className={`group relative transition-all duration-300 ${selected ? 'scale-[1.02]' : ''}`}>
       
       {/* Node Toolbar - Moved to the left and vertical */}
-      <div className="absolute -left-12 top-1/2 -translate-y-1/2 hidden group-hover:flex flex-col items-center gap-3 px-1.5 py-3 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-[100] animate-in fade-in zoom-in-95 duration-200 before:content-[''] before:absolute before:left-full before:top-0 before:bottom-0 before:w-4 before:bg-transparent">
+      <div className={`
+        absolute -left-12 top-1/2 -translate-y-1/2 hidden group-hover:flex flex-col items-center gap-3 px-1.5 py-3 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-[100] animate-in fade-in zoom-in-95 duration-200
+        before:content-[''] before:absolute before:-right-4 before:top-0 before:bottom-0 before:w-8 before:bg-transparent
+        ${(data.toolId === 'skill.output') ? '!hidden' : ''}
+      `}>
         <button onClick={onPlayClick} className="p-1.5 text-white/50 hover:text-white transition-colors relative z-[101]"><Play size={14} fill="currentColor" /></button>
-        <button onClick={onDeleteClick} className="p-1.5 text-white/50 hover:text-red-400 transition-colors relative z-[101]"><Trash2 size={14} /></button>
+        {data.toolId !== 'skill.input' && (
+          <button onClick={onDeleteClick} className="p-1.5 text-white/50 hover:text-red-400 transition-colors relative z-[101]"><Trash2 size={14} /></button>
+        )}
       </div>
 
       {/* Main Body */}

@@ -15,6 +15,8 @@ import { codeNode } from './definitions/code/code.js';
 
 import { stickyNoteNode } from './definitions/sticky-note/sticky-note.js';
 import { structuredOutputParserNode } from './definitions/structured-output-parser/structured-output-parser.js';
+import { skillOutputNode } from './definitions/skill-output/skill-output.js';
+import { skillInputNode } from './definitions/skill-input/skill-input.js';
 
 // ─── DYNAMIC INTEGRATIONS (3,000+ platforms via Pipedream) ───────────────
 import { pipedreamActionNode } from './definitions/pipedream/pipedream.js';
@@ -24,21 +26,13 @@ import type { NodeDefinition } from './types.js';
 
 /**
  * NODE_REGISTRY: Single source of truth for all node definitions
- *
- * Architecture:
- *   ✓ CORE NODES: Triggers, Logic, LLMs, UI helpers
- *       └─ Hand-written, actively maintained
- *
- *   ✓ DYNAMIC INTEGRATION NODES:
- *       └─ One base 'pipedream.action' node
- *       └─ The frontend clones this node to create individual platform identities
- *       └─ Supports all 3,000+ Pipedream apps dynamically
  */
 export const NODE_REGISTRY: NodeDefinition[] = [
   // ─── TRIGGERS (Workflow Entry Points) ──────────────────────────────────
   manualTrigger,
   chatTrigger,
   webhookTrigger,
+  skillInputNode,
 
   // ─── AI MODELS (LLM Runners) ──────────────────────────────────────────
   geminiNode,
@@ -56,12 +50,9 @@ export const NODE_REGISTRY: NodeDefinition[] = [
   // ─── UI & HELPERS ─────────────────────────────────────────────────────
   stickyNoteNode,
   structuredOutputParserNode,
+  skillOutputNode,
 ];
 
-/**
- * All unique executionKeys in the registry.
- * Used by worker to validate incoming nodes and warn about missing handlers.
- */
 export const EXECUTION_KEYS: Set<string> = new Set(
   NODE_REGISTRY.map((n) => n.executionKey),
 );

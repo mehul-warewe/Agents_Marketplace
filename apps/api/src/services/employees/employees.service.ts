@@ -138,102 +138,55 @@ export const employeesService = {
     if (!employee) throw new Error('Employee not found');
 
     const skillIds = employee.skillIds || [];
-    const knowledgeIds = (employee as any).knowledgeIds || [];
-
     if (skillIds.length === 0) {
       throw new Error('Employee has no logic units (skills) assigned.');
     }
 
-    // 1. RAG Grounding (Relevance AI Knowledge Style)
-    let groundingData = "";
-    if (knowledgeIds.length > 0) {
-       const relevantInfo = await knowledgeService.searchKnowledge(userId, task, knowledgeIds);
-       if (relevantInfo.length > 0) {
-          groundingData = relevantInfo.map(k => `[Title: ${k.title}]\n${k.content}`).join('\n---\n');
-          context.grounding_facts = relevantInfo;
-       }
-    }
-
-    // 2. Fetch assigned skills metadata
-    const assignedSkills = await db.select().from(skills).where(inArray(skills.id, skillIds));
-    
-    // 3. LLM Recommendation / Routing
-    let selectedSkillId = skillIds[0];
-    let refinedTask = task;
-
-    if (assignedSkills.length > 1) {
-      const model = new ChatOpenAI({
-        modelName: employee.model || 'google/gemini-2.0-flash-001',
-        apiKey: process.env.OPENROUTER_API_KEY,
-        temperature: 0,
-        configuration: {
-          baseURL: 'https://openrouter.ai/api/v1',
-        },
-      });
-
-      const skillContext = assignedSkills.map(s => {
-        const instr = employee.skillInstructions?.[s.id] || '';
-        return `ID: ${s.id}\nName: ${s.name}\nDecription: ${s.description}\nInstructions: ${instr}`;
-      }).join('\n---\n');
-
-      const prompt = `You are the dispatcher for an AI Operative named "${employee.name}".
-Your job is to read the user's task and select the BEST skill from the list below to handle it.
-
-USER TASK: "${task}"
-${groundingData ? `\nGROUNDING KNOWLEDGE PRE-FETCHED:\n${groundingData}\n` : ''}
-${context ? `PRIOR MISSION CONTEXT: ${JSON.stringify(context)}` : ''}
-
-AVAILABLE SKILLS:
-${skillContext}
-
-RESPONSE FORMAT:
-Return ONLY a JSON object with two fields:
-"skillId": The UUID of the chosen skill.
-"input": A refined version of the task. Use GROUNDING KNOWLEDGE to be more specific.
-
-JSON:`;
-
-      try {
-        const response: any = await model.invoke(prompt);
-        const text = response.content as string;
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          if (parsed.skillId && skillIds.includes(parsed.skillId)) {
-            selectedSkillId = parsed.skillId;
-            refinedTask = parsed.input || task;
-          }
-        }
-      } catch (err) {
-        console.error('[EmployeeRouter] Routing failed:', err);
-      }
-    }
-
-    const skill = assignedSkills.find(s => s.id === selectedSkillId);
-    if (!skill) throw new Error('Selected skill not found');
-
     const [run] = await db.insert(employeeRuns).values({
       employeeId,
-      skillId: selectedSkillId,
       userId,
       status: 'pending',
       inputData: { 
-        task: refinedTask, 
-        originalTask: task,
+        task: task, 
         context: context || {} 
       }
     }).returning();
 
-    await executionQueue.add('execute-skill', {
-      runId: run.id,
-      skillId: skill.id,
-      workflow: skill.workflow,
-      userId,
-      inputData: { ...context, task: refinedTask },
-      runTable: 'employee_runs'
-    });
+    if (!run) throw new Error("Failed to initialize employee run record.");
 
-    return { runId: run.id, status: 'queued', message: `Operative ${employee.name} initialized on protocol: ${skill.name}` };
+    // Import and build the ReAct reasoning graph
+    const { buildEmployeeGraph } = await import('./employee-graph.js');
+    const graph = buildEmployeeGraph(employee, userId);
+
+    // Run the graph asynchronously (fire-and-forget, DB tracks status)
+    (async () => {
+      try {
+        const result = await graph.invoke({
+          task,
+          userId,
+          employee,
+          groundingData: '',
+          messages: [],
+          result: null,
+          status: 'pending'
+        }, { recursionLimit: 50 });
+
+        await db.update(employeeRuns).set({
+          status: result.status === 'completed' ? 'completed' : 'failed',
+          output: { data: result.result, success: result.status === 'completed' },
+          endTime: new Date()
+        }).where(eq(employeeRuns.id, run.id));
+      } catch (err: any) {
+        console.error(`[EmployeeGraph:${run.id}] Execution failed:`, err);
+        await db.update(employeeRuns).set({
+          status: 'failed',
+          output: { error: err.message, success: false },
+          endTime: new Date()
+        }).where(eq(employeeRuns.id, run.id));
+      }
+    })();
+
+    return { runId: run.id, status: 'queued', message: `Operative ${employee.name} initialized via Reasoning Graph.` };
   },
 
   async getRuns(employeeId: string, userId: string) {
@@ -251,5 +204,51 @@ JSON:`;
       .leftJoin(skills, eq(employeeRuns.skillId, skills.id))
       .where(and(eq(employeeRuns.employeeId, employeeId), eq(employeeRuns.userId, userId)))
       .orderBy(desc(employeeRuns.startTime));
+  },
+
+  async getMyRuns(userId: string) {
+    return await db.select({
+      id: employeeRuns.id,
+      status: employeeRuns.status,
+      inputData: employeeRuns.inputData,
+      output: employeeRuns.output,
+      startTime: employeeRuns.startTime,
+      endTime: employeeRuns.endTime,
+      employeeName: employees.name
+    })
+      .from(employeeRuns)
+      .innerJoin(employees, eq(employeeRuns.employeeId, employees.id))
+      .where(eq(employeeRuns.userId, userId))
+      .orderBy(desc(employeeRuns.startTime));
+  },
+
+  async getDashboardStats(userId: string) {
+    const eRuns = await db.select().from(employeeRuns).where(eq(employeeRuns.userId, userId));
+    const userEmployees = await db.select().from(employees).where(eq(employees.creatorId, userId));
+    
+    const totalRuns = eRuns.length;
+    const activeEntities = userEmployees.length;
+
+    const successfulRuns = eRuns.filter(r => r.status === 'completed').length;
+    const successRate = totalRuns > 0 ? Math.round((successfulRuns / totalRuns) * 100) : 100;
+
+    return { 
+      totalRuns, 
+      activeAgents: activeEntities,
+      successRate,
+      aiUsage: totalRuns > 0 ? `${(totalRuns * 0.12).toFixed(1)}K` : "0", 
+      toolsConnected: 4
+    };
+  },
+
+  async listPublicDirectory() {
+    return await db.select().from(employees)
+      .where(eq(employees.isPublished, true))
+      .orderBy(desc(employees.updatedAt));
+  },
+
+  async getRunDetails(runId: string) {
+    const rows = await db.select().from(employeeRuns).where(eq(employeeRuns.id, runId));
+    return rows[0];
   }
 };
