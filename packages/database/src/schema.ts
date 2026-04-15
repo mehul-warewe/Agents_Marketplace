@@ -68,6 +68,7 @@ export const employees = pgTable('employees', {
   avatar: text('avatar'),                             // Emoji or URL
   systemPrompt: text('system_prompt'),                // Custom personality/instructions
   model: text('model').default('google/gemini-2.0-flash-001'),
+  temperature: doublePrecision('temperature').default(0.1),  // Model temperature (0 = precise, 1 = creative)
   skillIds: jsonb('skill_ids').$type<string[]>().default([]),  // Assigned skills
   knowledgeIds: jsonb('knowledge_ids').$type<string[]>().default([]), // Assigned RAG knowledge
   skillInstructions: jsonb('skill_instructions').$type<Record<string, string>>().default({}),
@@ -87,7 +88,9 @@ export const employeeRuns = pgTable('employee_runs', {
   inputData: jsonb('input_data'),
   output: jsonb('output'),
   logs: jsonb('logs'),
+  steps: jsonb('steps').$type<any[]>().default([]),
   startTime: timestamp('start_time').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
   endTime: timestamp('end_time'),
   duration: integer('duration'),
 });

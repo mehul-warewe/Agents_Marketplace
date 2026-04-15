@@ -239,7 +239,7 @@ function ContractEditor({ mode, inputSchema, outputDescription, onChange }: Cont
                                     className="w-full h-full bg-transparent border-none outline-none resize-none custom-scrollbar"
                                     spellCheck={false}
                                   />
-                                  <div className="absolute bottom-2 right-4 text-[8px] font-bold text-muted/20 uppercase tracking-widest group-hover/json:text-indigo-500/40 transition-colors pointer-events-none">JSON_EDITOR</div>
+                                  <div className="absolute bottom-2 right-4 text-[8px] font-bold text-muted/20 uppercase tracking-widest group-hover/json:text-indigo-500/40 transition-colors pointer-events-none">JSON Editor</div>
                                 </div>
                             </div>
                             {p.type === 'json_list' && (
@@ -581,9 +581,7 @@ export default function UnifiedSidebar({
                     )}
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-black uppercase tracking-[0.3em] text-muted/30 font-mono leading-none mb-1">
-                    {isSkillInput ? 'SKILL_GATEWAY' : 'ACTION_STEP'}
-                  </span>
+                    {isSkillInput ? 'Skill entry' : 'Action step'}
                   <div className="flex items-center gap-2">
                     <div className="w-1 h-1 rounded-full bg-indigo-500/40" />
                     <span className="text-[10px] font-bold text-muted/50 uppercase tracking-widest">{node.id}</span>
@@ -781,7 +779,7 @@ export default function UnifiedSidebar({
 
              {node.data.result ? (
                 <div className="p-6 bg-[#070708] border border-white/5 rounded-3xl font-mono text-[10px] text-emerald-400/80 shadow-inner group relative">
-                   <div className="absolute top-2 right-4 text-[8px] font-bold text-emerald-500/40 uppercase tracking-widest">JSON_RAW</div>
+                   <div className="absolute top-2 right-4 text-[8px] font-bold text-emerald-500/40 uppercase tracking-widest">JSON Output</div>
                    <pre className="whitespace-pre-wrap break-words leading-relaxed overflow-x-auto">
                     {JSON.stringify(node.data.result, null, 2)}
                   </pre>

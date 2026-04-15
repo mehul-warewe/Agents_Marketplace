@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { devtools, persist } from 'zustand/middleware';
 
 export interface User {
   id: string;
@@ -25,29 +25,35 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>()(
-  devtools(
-    (set) => ({
-      user: null,
-      token: typeof window !== 'undefined' ? localStorage.getItem('agent_token') : null,
-      isLoading: true,
-      isAuthModalOpen: false,
-      login: (token, user) => {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('agent_token', token);
-        }
-        set({ token, user, isLoading: false, isAuthModalOpen: false });
-      },
-      logout: () => {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('agent_token');
-        }
-        set({ token: null, user: null, isLoading: false });
-      },
-      setLoading: (state) => set({ isLoading: state }),
-      setUser: (user) => set({ user, isLoading: false }),
-      openAuthModal: () => set({ isAuthModalOpen: true }),
-      closeAuthModal: () => set({ isAuthModalOpen: false }),
-    }),
-    { name: 'AuthStore' }
+  persist(
+    devtools(
+      (set) => ({
+        user: null,
+        token: typeof window !== 'undefined' ? localStorage.getItem('agent_token') : null,
+        isLoading: true,
+        isAuthModalOpen: false,
+        login: (token, user) => {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('agent_token', token);
+          }
+          set({ token, user, isLoading: false, isAuthModalOpen: false });
+        },
+        logout: () => {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('agent_token');
+          }
+          set({ token: null, user: null, isLoading: false });
+        },
+        setLoading: (state) => set({ isLoading: state }),
+        setUser: (user) => set({ user, isLoading: false }),
+        openAuthModal: () => set({ isAuthModalOpen: true }),
+        closeAuthModal: () => set({ isAuthModalOpen: false }),
+      }),
+      { name: 'AuthStore' }
+    ),
+    {
+      name: 'auth-store',
+      partialize: (state) => ({ token: state.token, user: state.user })
+    }
   )
 );

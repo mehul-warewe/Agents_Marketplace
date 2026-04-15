@@ -3,6 +3,8 @@ import { ChatOpenAI } from "@langchain/openai";
 import { db } from '../../shared/db.js';
 import { createExecutionQueue, getRedisConnection } from '@repo/queue';
 import { knowledgeService } from '../knowledge/knowledge.service.js';
+import { employeeEngine } from './employee-engine.js';
+import { createLLM } from '../../shared/langgraph-utils.js';
 
 const redis = getRedisConnection();
 const executionQueue = createExecutionQueue(redis);
@@ -142,51 +144,10 @@ export const employeesService = {
       throw new Error('Employee has no logic units (skills) assigned.');
     }
 
-    const [run] = await db.insert(employeeRuns).values({
-      employeeId,
-      userId,
-      status: 'pending',
-      inputData: { 
-        task: task, 
-        context: context || {} 
-      }
-    }).returning();
+    // Delegate to engine for SSE streaming support
+    const runId = await employeeEngine.runEmployee(employeeId, userId, employee, task, context);
 
-    if (!run) throw new Error("Failed to initialize employee run record.");
-
-    // Import and build the ReAct reasoning graph
-    const { buildEmployeeGraph } = await import('./employee-graph.js');
-    const graph = buildEmployeeGraph(employee, userId);
-
-    // Run the graph asynchronously (fire-and-forget, DB tracks status)
-    (async () => {
-      try {
-        const result = await graph.invoke({
-          task,
-          userId,
-          employee,
-          groundingData: '',
-          messages: [],
-          result: null,
-          status: 'pending'
-        }, { recursionLimit: 50 });
-
-        await db.update(employeeRuns).set({
-          status: result.status === 'completed' ? 'completed' : 'failed',
-          output: { data: result.result, success: result.status === 'completed' },
-          endTime: new Date()
-        }).where(eq(employeeRuns.id, run.id));
-      } catch (err: any) {
-        console.error(`[EmployeeGraph:${run.id}] Execution failed:`, err);
-        await db.update(employeeRuns).set({
-          status: 'failed',
-          output: { error: err.message, success: false },
-          endTime: new Date()
-        }).where(eq(employeeRuns.id, run.id));
-      }
-    })();
-
-    return { runId: run.id, status: 'queued', message: `Operative ${employee.name} initialized via Reasoning Graph.` };
+    return { runId, status: 'queued', message: `Operative ${employee.name} initialized via Reasoning Graph.` };
   },
 
   async getRuns(employeeId: string, userId: string) {
@@ -198,6 +159,7 @@ export const employeesService = {
       startTime: employeeRuns.startTime,
       endTime: employeeRuns.endTime,
       skillId: employeeRuns.skillId,
+      steps: employeeRuns.steps,
       skillName: skills.name
     })
       .from(employeeRuns)
@@ -214,6 +176,7 @@ export const employeesService = {
       output: employeeRuns.output,
       startTime: employeeRuns.startTime,
       endTime: employeeRuns.endTime,
+      steps: employeeRuns.steps,
       employeeName: employees.name
     })
       .from(employeeRuns)
@@ -250,5 +213,29 @@ export const employeesService = {
   async getRunDetails(runId: string) {
     const rows = await db.select().from(employeeRuns).where(eq(employeeRuns.id, runId));
     return rows[0];
+  },
+
+  async publishEmployee(employeeId: string, userId: string, published: boolean) {
+    const existing = await this.getEmployee(employeeId);
+    if (!existing || existing.creatorId !== userId) {
+      throw new Error('Unauthorized or not found');
+    }
+
+    const [updated] = await db.update(employees)
+      .set({ isPublished: published, updatedAt: new Date() })
+      .where(eq(employees.id, employeeId))
+      .returning();
+    return updated;
+  },
+
+  async draftSystemPrompt(name: string, description: string, model: string) {
+    const llm = createLLM(model, 0.5);
+    const response = await llm.invoke([
+      {
+        type: 'human' as const,
+        content: `Write a concise, actionable system prompt for an AI agent named '${name}'. Role: ${description}. Return only the prompt text, no preamble.`
+      }
+    ]);
+    return { prompt: response.content };
   }
 };

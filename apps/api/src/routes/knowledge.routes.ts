@@ -17,4 +17,12 @@ router.get('/:id', async (req, res, next) => {
   try { res.json(await knowledgeService.getKnowledge(req.params.id)); } catch (err) { next(err); }
 });
 
+router.patch('/:id', async (req: any, res, next) => {
+  try { res.json(await knowledgeService.updateKnowledge(req.params.id, req.user.id, req.body)); } catch (err) { next(err); }
+});
+
+router.delete('/:id', async (req: any, res, next) => {
+  try { res.json(await knowledgeService.deleteKnowledge(req.params.id, req.user.id)); } catch (err) { next(err); }
+});
+
 export default router;

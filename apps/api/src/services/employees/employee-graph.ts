@@ -16,6 +16,7 @@ interface EmployeeGraphState {
   employee: any;
   groundingData: string;
   messages: BaseMessage[];
+  steps: any[];
   result: any;
   status: 'pending' | 'completed' | 'failed';
 }
@@ -47,7 +48,7 @@ function buildZodSchema(inputSchema: any[]): z.ZodObject<any> {
 
 // ─── Graph Builder ────────────────────────────────────────────────────────────
 
-export function buildEmployeeGraph(employee: any, userId: string) {
+export function buildEmployeeGraph(employee: any, userId: string, onStep?: (step: any) => void) {
   
   // Load all assigned skills and build typed LangChain tools from them
   // This is done outside the workflow so all nodes share the same tools reference
@@ -60,6 +61,10 @@ export function buildEmployeeGraph(employee: any, userId: string) {
       employee: null,
       groundingData: { default: () => "" },
       messages: {
+        reducer: (a, b) => a.concat(b),
+        default: () => [],
+      },
+      steps: {
         reducer: (a, b) => a.concat(b),
         default: () => [],
       },
@@ -123,7 +128,7 @@ export function buildEmployeeGraph(employee: any, userId: string) {
   // ── Node 3: ReAct Loop ────────────────────────────────────────────────────
   // Full Thought → Act → Observe reasoning loop using the skill tools
   workflow.addNode("reason", async (state) => {
-    const model = createLLM(state.employee.model).bindTools(skillTools);
+    const model = createLLM(state.employee.model, state.employee.temperature ?? 0.1).bindTools(skillTools);
 
     const systemPrompt = `IDENTITY & ROLE:
 ${state.employee.systemPrompt || 'You are a professional AI operative.'}
@@ -143,8 +148,18 @@ INSTRUCTIONS:
     const response = await model.invoke(msgs);
     const hasToolCalls = (response as any).tool_calls?.length > 0;
 
+    const step = {
+      type: hasToolCalls ? 'thought' : 'final',
+      thought: response.content,
+      action: hasToolCalls ? (response as any).tool_calls.map((tc: any) => tc.name).join(', ') : 'Final Response',
+      timestamp: new Date()
+    };
+
+    if (onStep) onStep(step);
+
     return {
       messages: [response],
+      steps: [step],
       status: hasToolCalls ? 'pending' : 'completed',
       result: hasToolCalls ? null : response.content,
     };
@@ -176,7 +191,17 @@ INSTRUCTIONS:
       }
     }
 
-    return { messages: toolResults };
+    const step = {
+      type: 'observation',
+      observation: toolResults.map(tr => tr.content).join('\n---\n'),
+      timestamp: new Date()
+    };
+    if (onStep) onStep(step);
+
+    return { 
+      messages: toolResults,
+      steps: [step]
+    };
   });
 
   // ─── Edges ────────────────────────────────────────────────────────────────

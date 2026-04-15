@@ -1,6 +1,7 @@
 import express from 'express';
 import passport from '../middleware/auth.middleware.js';
 import { employeesService } from '../services/employees/employees.service.js';
+import { employeeEngine } from '../services/employees/employee-engine.js';
 
 const router: express.Router = express.Router();
 router.use(passport.authenticate('jwt', { session: false }));
@@ -19,6 +20,10 @@ router.get('/:id', async (req, res, next) => {
 
 router.patch('/:id', async (req: any, res, next) => {
   try { res.json(await employeesService.updateEmployee(req.params.id, req.user.id, req.body)); } catch (err) { next(err); }
+});
+
+router.patch('/:id/publish', async (req: any, res, next) => {
+  try { res.json(await employeesService.publishEmployee(req.params.id, req.user.id, req.body.published)); } catch (err) { next(err); }
 });
 
 router.delete('/:id', async (req: any, res, next) => {
@@ -57,8 +62,69 @@ router.post('/:id/run', async (req: any, res, next) => {
   try { res.json(await employeesService.runEmployee(req.params.id, req.user.id, req.body.task)); } catch (err) { next(err); }
 });
 
+router.post('/draft-prompt', async (req: any, res, next) => {
+  try { res.json(await employeesService.draftSystemPrompt(req.body.name, req.body.description, req.body.model)); } catch (err) { next(err); }
+});
+
 router.get('/:id/runs', async (req: any, res, next) => {
   try { res.json(await employeesService.getRuns(req.params.id, req.user.id)); } catch (err) { next(err); }
+});
+
+// SSE stream endpoint — must come before GET /runs/:runId to avoid route conflicts
+router.get('/runs/:runId/stream', async (req: any, res, next) => {
+  try {
+    const run = await employeesService.getRunDetails(req.params.runId);
+    if (!run) return res.status(404).json({ error: 'Run not found' });
+    if (run.userId !== req.user.id) return res.status(403).json({ error: 'Unauthorized' });
+
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+
+    // Send connection heartbeat
+    res.write('data: {"type":"connected"}\n\n');
+
+    // If run is already completed/failed, stream stored steps and close
+    if (run.status === 'completed' || run.status === 'failed') {
+      if (run.steps && Array.isArray(run.steps)) {
+        for (const step of run.steps) {
+          res.write(`data: ${JSON.stringify(step)}\n\n`);
+        }
+      }
+      res.write(`data: {"type":"done","status":"${run.status}","output":${JSON.stringify(run.output)}}\n\n`);
+      res.end();
+      return;
+    }
+
+    // Otherwise, subscribe to live events
+    const emitter = employeeEngine.getEmitter(req.params.runId);
+    if (emitter) {
+      const stepHandler = (step: any) => {
+        res.write(`data: ${JSON.stringify(step)}\n\n`);
+      };
+      const doneHandler = (data: any) => {
+        res.write(`data: ${JSON.stringify({ type: 'done', ...data })}\n\n`);
+        res.end();
+      };
+
+      emitter.on('step', stepHandler);
+      emitter.on('done', doneHandler);
+
+      // Clean up on client disconnect
+      req.on('close', () => {
+        emitter.removeListener('step', stepHandler);
+        emitter.removeListener('done', doneHandler);
+      });
+    } else {
+      // Emitter not found (run not started or already completed)
+      res.write(`data: {"type":"done","status":"${run.status}","output":${JSON.stringify(run.output)}}\n\n`);
+      res.end();
+    }
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.get('/runs/:runId', async (req: any, res, next) => {

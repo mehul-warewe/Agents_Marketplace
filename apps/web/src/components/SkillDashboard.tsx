@@ -60,21 +60,10 @@ export default function SkillDashboard() {
               className="bg-primary text-primary-foreground px-12 py-5 rounded-[2rem] font-black text-[11px] uppercase tracking-[0.4em] hover:scale-[1.05] active:scale-[0.95] transition-all flex items-center justify-center gap-4 shadow-2xl shadow-primary/30 group"
            >
               <Plus size={20} strokeWidth={3} className="group-hover:rotate-90 transition-transform duration-500" /> 
-              DEVELOP_SKILL
+              Create Skill
            </button>
         </div>
 
-        {/* Search & Filter (Placeholder for now) */}
-        <div className="relative group mx-4">
-           <div className="absolute inset-y-0 left-8 flex items-center pointer-events-none text-muted group-focus-within:text-primary transition-colors">
-              <Search size={18} strokeWidth={3} />
-           </div>
-           <input 
-              type="text" 
-              placeholder="SEARCH_REGISTRY..." 
-              className="w-full bg-card border border-border/60 rounded-[2.5rem] py-8 pl-18 pr-10 text-xs font-black uppercase tracking-widest placeholder:text-muted/20 focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all shadow-xl"
-           />
-        </div>
 
         {/* Skills Grid */}
         {skillsLoading ? (
@@ -93,7 +82,7 @@ export default function SkillDashboard() {
                 No vertical workflows detected in the vault. Initialise your first capability using the visual builder.
               </p>
               <button onClick={() => router.push('/skills/builder')} className="bg-foreground text-background px-16 py-6 rounded-[2rem] font-black text-[10px] uppercase tracking-[0.4em] hover:scale-[1.05] transition-all">
-                LAUNCH_ENGINE
+                Create First Skill
               </button>
            </div>
         ) : (

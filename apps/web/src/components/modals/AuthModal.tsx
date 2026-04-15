@@ -90,11 +90,11 @@ export default function AuthModal() {
               <X size={18} strokeWidth={3} className="group-hover:rotate-90 transition-transform duration-500" />
             </button>
 
-            {/* Left Side: Image */}
+            {/* Left Side: Illustration */}
             <div className="hidden lg:block w-[45%] relative bg-background border-r border-border/40">
                <img 
                  src="/images/auth-bg-nature.png" 
-                 alt="Nature themed authentication background" 
+                 alt="Authentication background" 
                  className="absolute inset-0 w-full h-full object-cover brightness-[0.9] contrast-[1.05]"
                />
                <div className="absolute inset-0 bg-gradient-to-r from-background via-background/20 to-transparent opacity-60" />
@@ -103,16 +103,16 @@ export default function AuthModal() {
                      <Bot size={24} strokeWidth={2.5} />
                   </div>
                   <div className="flex flex-col">
-                     <span className="font-black text-lg tracking-tighter leading-none mb-1 text-foreground italic">warewe</span>
-                     <span className="text-[8px] font-black text-primary uppercase tracking-[0.3em] italic">PROTOCOL_ROOT</span>
+                     <span className="font-bold text-lg tracking-tight leading-none mb-1 text-foreground">warewe</span>
+                     <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Secure Access</span>
                   </div>
                </div>
                <div className="absolute bottom-10 left-10 space-y-3">
                   <div className="flex items-center gap-3">
                      <div className="w-8 h-px bg-foreground/30" />
-                     <span className="text-[8px] font-black text-foreground uppercase tracking-[0.4em] italic opacity-50">NATURE_SYNC_V01</span>
+                     <span className="text-[10px] font-bold text-foreground uppercase tracking-widest opacity-50">Active Sync</span>
                   </div>
-                  <h3 className="text-xl font-black text-foreground uppercase italic tracking-tighter">Harmonic_Nodes</h3>
+                  <h3 className="text-xl font-bold text-foreground tracking-tight">Connected Workforce</h3>
                </div>
             </div>
 
@@ -123,19 +123,19 @@ export default function AuthModal() {
                   <div className="flex justify-center mb-4">
                     <div className="w-3 h-3 rounded-full bg-foreground shadow-[0_0_15px_rgba(0,0,0,0.3)]" />
                   </div>
-                  <h2 className="text-4xl font-black tracking-tighter text-foreground uppercase italic leading-tight">
-                    {step === 'email' ? 'Initialise_Node' : 'Authorisation_Code'}
+                  <h2 className="text-4xl font-bold tracking-tight text-foreground leading-tight">
+                    {step === 'email' ? 'Welcome back' : 'Verify Identity'}
                   </h2>
-                  <p className="text-muted font-bold text-sm tracking-tight opacity-40 uppercase">
+                  <p className="text-muted font-medium text-sm tracking-tight opacity-60">
                     {step === 'email' 
-                      ? "Establish secure uplink to the autonomous network"
-                      : `Decryption key transmitted to: ${email}`}
+                      ? "Secure access to your professional agent dashboard"
+                      : `A verification code was sent to ${email}`}
                   </p>
                 </div>
 
                 {error && (
-                  <div className="bg-foreground text-background p-6 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest animate-shake shadow-2xl">
-                    Error:: {error}
+                  <div className="bg-foreground text-background p-6 rounded-[1.5rem] text-xs font-bold animate-shake shadow-2xl">
+                    {error}
                   </div>
                 )}
 
@@ -145,7 +145,7 @@ export default function AuthModal() {
                       {/* Google Login */}
                       <button
                         onClick={handleGoogleLogin}
-                        className="w-full h-16 flex items-center justify-center gap-5 bg-card hover:bg-primary hover:text-primary-foreground text-foreground font-black rounded-[1.5rem] transition-all shadow-2xl shadow-foreground/5 hover:scale-[1.02] active:scale-[0.98] uppercase tracking-[0.2em] text-[10px] border border-border/60"
+                        className="w-full h-16 flex items-center justify-center gap-5 bg-card hover:bg-primary hover:text-primary-foreground text-foreground font-bold rounded-[1.5rem] transition-all shadow-xl shadow-foreground/5 hover:scale-[1.02] active:scale-[0.98] tracking-wide text-xs border border-border/60"
                       >
                         <svg className="w-5 h-5" viewBox="0 0 24 24">
                           <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -153,28 +153,28 @@ export default function AuthModal() {
                           <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                           <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                         </svg>
-                        Link_Via_Google
+                        Continue with Google
                       </button>
 
                       <div className="relative">
                         <div className="absolute inset-0 flex items-center">
                           <div className="w-full border-t border-border/40" />
                         </div>
-                        <div className="relative flex justify-center text-[9px] font-black uppercase tracking-[0.4em] text-muted opacity-30">
-                          <span className="bg-card px-8 italic">Direct_Tunnel_Access</span>
+                        <div className="relative flex justify-center text-[10px] font-bold uppercase tracking-widest text-muted opacity-40">
+                          <span className="bg-card px-8">Or continue with email</span>
                         </div>
                       </div>
 
                       {/* Email Send OTP Form */}
                       <form onSubmit={handleSendOTP} className="space-y-6">
                         <div className="relative group">
-                          <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-muted opacity-40 group-focus-within:text-foreground transition-all" size={18} strokeWidth={3} />
+                          <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-muted opacity-40 group-focus-within:text-foreground transition-all" size={18} strokeWidth={2.5} />
                           <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="OPERATOR_EMAIL"
-                            className="w-full h-14 bg-foreground/[0.03] border border-border/60 rounded-[1.25rem] pl-16 pr-6 text-sm font-black placeholder:text-muted/40 focus:bg-background focus:border-foreground outline-none transition-all uppercase tracking-widest italic shadow-inner"
+                            placeholder="Email address"
+                            className="w-full h-14 bg-foreground/[0.03] border border-border/60 rounded-[1.25rem] pl-16 pr-6 text-sm font-medium placeholder:text-muted/40 focus:bg-background focus:border-foreground outline-none transition-all shadow-inner"
                             required
                           />
                         </div>
@@ -182,12 +182,12 @@ export default function AuthModal() {
                         <button
                           type="submit"
                           disabled={loading}
-                          className="w-full h-14 bg-primary text-primary-foreground font-black rounded-[1.25rem] flex items-center justify-center transition-all uppercase tracking-[0.2em] text-[10px] border border-primary/20 shadow-[0_20px_40px_-10px_rgba(var(--primary-rgb),0.3)] hover:scale-[1.02] active:scale-[0.98]"
+                          className="w-full h-14 bg-primary text-primary-foreground font-bold rounded-[1.25rem] flex items-center justify-center transition-all tracking-wider text-xs border border-primary/20 shadow-xl shadow-primary/10 hover:scale-[1.02] active:scale-[0.98]"
                         >
                           {loading ? (
                             <div className="w-5 h-5 border-4 border-primary-foreground/40 border-t-primary-foreground rounded-full animate-spin" />
                           ) : (
-                            'Establish_Uplink'
+                            'Sign in'
                           )}
                         </button>
                       </form>
@@ -196,14 +196,14 @@ export default function AuthModal() {
                     /* OTP Verification Form */
                     <form onSubmit={handleVerifyOTP} className="space-y-10">
                       <div className="relative group">
-                        <ShieldCheck className="absolute left-6 top-1/2 -translate-y-1/2 text-muted opacity-40 group-focus-within:text-foreground transition-all" size={20} strokeWidth={3} />
+                        <ShieldCheck className="absolute left-6 top-1/2 -translate-y-1/2 text-muted opacity-40 group-focus-within:text-foreground transition-all" size={20} strokeWidth={2.5} />
                         <input
                           type="text"
                           maxLength={6}
                           value={otpCode}
                           onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
                           placeholder="000000"
-                          className="w-full h-20 bg-foreground/[0.03] border border-border/60 rounded-[2rem] pl-16 pr-6 text-4xl tracking-[0.3em] font-black placeholder:text-muted/10 focus:bg-background focus:border-foreground outline-none transition-all text-center italic shadow-inner"
+                          className="w-full h-20 bg-foreground/[0.03] border border-border/60 rounded-[2rem] pl-16 pr-6 text-4xl tracking-[0.3em] font-bold placeholder:text-muted/10 focus:bg-background focus:border-foreground outline-none transition-all text-center shadow-inner"
                           required
                           autoFocus
                         />
@@ -213,29 +213,29 @@ export default function AuthModal() {
                         <button
                           type="submit"
                           disabled={loading}
-                          className="w-full h-14 bg-primary text-primary-foreground font-black rounded-[1.25rem] flex items-center justify-center transition-all shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] uppercase tracking-[0.3em] text-[10px]"
+                          className="w-full h-14 bg-primary text-primary-foreground font-bold rounded-[1.25rem] flex items-center justify-center transition-all shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] tracking-widest text-xs"
                         >
                           {loading ? (
                             <div className="w-5 h-5 border-4 border-primary-foreground/40 border-t-primary-foreground rounded-full animate-spin" />
                           ) : (
-                            'VERIFY_AND_SYNC'
+                            'Continue'
                           )}
                         </button>
                         
                         <button 
                           type="button"
                           onClick={() => setStep('email')}
-                          className="text-[10px] font-black text-muted hover:text-foreground transition-colors uppercase tracking-[0.3em] italic underline underline-offset-8 decoration-border/60"
+                          className="text-xs font-bold text-muted hover:text-foreground transition-colors underline underline-offset-8 decoration-border/60"
                         >
-                          Abort_And_Reroute
+                          Go back
                         </button>
                       </div>
                     </form>
                   )}
                 </div>
 
-                <p className="text-[10px] leading-relaxed text-muted font-bold uppercase tracking-widest opacity-30 pt-8 italic leading-tight">
-                  By initialising a session, you agree to the <a href="/terms" className="text-foreground underline">Protocol_Framework</a> and <a href="/privacy" className="text-foreground underline">Privacy_Encryption_Standards</a>.
+                <p className="text-[10px] leading-relaxed text-muted font-medium opacity-40 pt-8 leading-tight">
+                  By signing in, you agree to the <a href="/terms" className="text-foreground underline">Terms of Service</a> and <a href="/privacy" className="text-foreground underline">Privacy Policy</a>.
                 </p>
               </div>
             </div>

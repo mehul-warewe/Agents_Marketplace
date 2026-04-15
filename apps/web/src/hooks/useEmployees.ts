@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 
 export function useEmployees() {
@@ -140,4 +141,82 @@ export function useRemoveKnowledge() {
       queryClient.invalidateQueries({ queryKey: ['employee', employeeId] });
     },
   });
+}
+
+export function usePublishEmployee() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, published }: { id: string; published: boolean }) => {
+      const { data } = await api.patch(`/employees/${id}/publish`, { published });
+      return data;
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['employee', id] });
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+    },
+  });
+}
+
+export function useEmployeeStream(runId: string | null) {
+  const [steps, setSteps] = useState<any[]>([]);
+  const [status, setStatus] = useState<'pending' | 'running' | 'completed' | 'failed'>('pending');
+  const [output, setOutput] = useState<any>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+
+  useEffect(() => {
+    if (!runId) return;
+
+    setIsStreaming(true);
+    setSteps([]);
+    setStatus('running');
+
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const eventSource = new EventSource(`${apiUrl}/employees/runs/${runId}/stream`, {
+      withCredentials: true,
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('agent_token')}`
+      }
+    } as any);
+
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'connected') {
+          // Connection established
+          return;
+        }
+
+        if (data.type === 'done') {
+          setStatus((data.status as any) || 'completed');
+          setOutput(data.output);
+          setIsStreaming(false);
+          eventSource.close();
+          return;
+        }
+
+        // Regular step event
+        setSteps(prev => [...prev, data]);
+      } catch (err) {
+        console.error('Error parsing SSE message:', err);
+      }
+    };
+
+    const handleError = () => {
+      setIsStreaming(false);
+      setStatus('failed');
+      eventSource.close();
+    };
+
+    eventSource.addEventListener('message', handleMessage);
+    eventSource.addEventListener('error', handleError);
+
+    return () => {
+      eventSource.removeEventListener('message', handleMessage);
+      eventSource.removeEventListener('error', handleError);
+      eventSource.close();
+    };
+  }, [runId]);
+
+  return { steps, status, output, isStreaming };
 }
