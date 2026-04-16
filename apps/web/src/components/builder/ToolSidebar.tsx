@@ -167,7 +167,7 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
 
   return (
     <aside
-      className={`fixed top-14 left-0 h-[calc(100vh-3.5rem)] bg-background border-r border-border transition-all duration-300 z-40 flex flex-col ${
+      className={`fixed top-14 left-0 h-[calc(100vh-3.5rem)] bg-card border-r border-border transition-all duration-300 z-40 flex flex-col ${
         isOpen ? 'w-80' : 'w-0 overflow-hidden border-none'
       }`}
     >

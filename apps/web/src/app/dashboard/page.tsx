@@ -3,7 +3,7 @@ import AgentDashboard from '@/components/AgentDashboard';
 
 export default function DashboardPage() {
   return (
-    <SidebarLayout title="OPERATIONS // DASHBOARD">
+    <SidebarLayout title="Overview">
       <AgentDashboard />
     </SidebarLayout>
   );

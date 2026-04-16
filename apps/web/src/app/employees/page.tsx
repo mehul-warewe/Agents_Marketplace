@@ -3,7 +3,7 @@ import EmployeeDashboard from '@/components/EmployeeDashboard';
 
 export default function EmployeesPage() {
   return (
-    <SidebarLayout title="Active Workforce">
+    <SidebarLayout title="Employees">
       <EmployeeDashboard />
     </SidebarLayout>
   );

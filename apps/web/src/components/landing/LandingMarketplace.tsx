@@ -12,37 +12,38 @@ const agents = [
 
 export default function LandingMarketplace() {
   return (
-    <section className="py-32 px-6 bg-accent/30">
-      <div className="max-w-7xl mx-auto space-y-16">
-        <div className="text-center space-y-4">
-           <h2 className="text-4xl lg:text-5xl font-black italic uppercase tracking-tighter">Community_Registry</h2>
-           <p className="text-xl text-muted font-bold opacity-60 uppercase tracking-tight">Browse and install specialized logic units curated by the network.</p>
+    <section className="py-40 px-6 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/2 rounded-full blur-[120px] -mr-32 -mt-32" />
+      <div className="max-w-7xl mx-auto space-y-20 relative z-10">
+        <div className="text-center space-y-4 max-w-3xl mx-auto">
+           <h2 className="text-4xl lg:text-6xl font-bold font-display tracking-tight text-foreground">A thriving ecosystem <br /> of pre-built intelligence</h2>
+           <p className="text-lg text-muted-foreground font-medium">Browse and deploy specialized agent templates curated by our global network of developers.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {agents.map((agent, i) => (
-            <div key={i} className="bg-card rounded-[2.5rem] border border-border/60 overflow-hidden hover:shadow-2xl hover:scale-[1.02] transition-all group">
-               <div className="p-8 space-y-6">
-                  <div className="flex items-center gap-4">
-                     <div className="w-14 h-14 bg-primary/10 rounded-[1.25rem] flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500 shadow-inner">
-                        <Bot size={32} strokeWidth={3} />
+            <div key={i} className="bg-card rounded-[2rem] border border-border/40 overflow-hidden hover:shadow-xl transition-all group">
+               <div className="p-8 space-y-8">
+                  <div className="flex items-center gap-5">
+                     <div className="w-14 h-14 bg-secondary rounded-2xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 border border-border/40">
+                        <Bot size={28} strokeWidth={2.5} />
                      </div>
-                     <div className="text-left">
-                        <h4 className="font-black text-sm uppercase italic tracking-tighter">{agent.name}</h4>
-                        <p className="text-[10px] text-muted font-bold opacity-40 uppercase">CREATOR::{agent.creator}</p>
+                     <div className="text-left space-y-1">
+                        <h4 className="font-bold text-sm text-foreground tracking-tight">{agent.name}</h4>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">By {agent.creator}</p>
                      </div>
                   </div>
-                  <div className="flex items-center justify-between py-5 border-y border-border/40">
-                     <div className="flex items-center gap-2 text-[10px] font-black uppercase text-muted italic tracking-widest">
-                        <MousePointer2 size={14} strokeWidth={3} className="text-primary" /> {agent.inst} :: UPLINKS
+                  <div className="flex items-center justify-between py-6 border-y border-border/40">
+                     <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-muted-foreground tracking-widest">
+                        <MousePointer2 size={12} strokeWidth={2.5} className="text-primary" /> {agent.inst} installs
                      </div>
                      <div className="flex items-center gap-1.5 text-primary">
-                        <Star size={12} fill="currentColor" />
-                        <span className="text-[10px] font-black italic text-foreground tracking-tighter">{agent.rating}</span>
+                        <Star size={10} fill="currentColor" />
+                        <span className="text-xs font-bold text-foreground">{agent.rating}</span>
                      </div>
                   </div>
-                  <button className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] hover:scale-[1.05] transition-all shadow-xl shadow-primary/20 italic">
-                    INITIALISE_UNIT
+                  <button className="w-full bg-secondary text-foreground hover:bg-primary hover:text-primary-foreground py-4 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all">
+                    Deploy Template
                   </button>
                </div>
             </div>

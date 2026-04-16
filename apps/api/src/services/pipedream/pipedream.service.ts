@@ -121,4 +121,25 @@ export const pipedreamService = {
       } : null
     }));
   },
+
+  /**
+   * Delete a connected account from Pipedream.
+   */
+  async deleteAccount(externalUserId: string, accountId: string) {
+    const accessToken = await this.getOAuthToken();
+    const projectId = process.env.PIPEDREAM_PROJECT_ID;
+    const environment = process.env.PIPEDREAM_ENVIRONMENT || 'development';
+
+    const url = `https://api.pipedream.com/v1/connect/${projectId}/accounts/${accountId}?external_user_id=${externalUserId}`;
+    
+    await axios.delete(url, {
+      headers: { 
+        Authorization: `Bearer ${accessToken}`, 
+        'x-pd-environment': environment 
+      },
+    });
+
+    log.info(`[pipedream] account ${accountId} deleted for user=${externalUserId}`);
+    return { success: true };
+  },
 };

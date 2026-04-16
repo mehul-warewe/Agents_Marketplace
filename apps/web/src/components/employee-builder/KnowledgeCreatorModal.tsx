@@ -28,8 +28,9 @@ export default function KnowledgeCreatorModal({ onClose, onSave }: KnowledgeCrea
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files.length > 0) {
-      handleFileSelect(e.dataTransfer.files[0]);
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleFileSelect(file);
     }
   };
 
@@ -46,17 +47,17 @@ export default function KnowledgeCreatorModal({ onClose, onSave }: KnowledgeCrea
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="relative w-full max-w-3xl bg-card border border-border/60 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col p-12 space-y-10"
+        className="relative w-full max-w-2xl bg-card border border-border/60 rounded-3xl shadow-2xl overflow-hidden flex flex-col p-10 space-y-8"
       >
         <div className="flex justify-between items-center">
-          <div className="space-y-2">
+          <div className="space-y-1">
             <div className="flex items-center gap-3 text-primary">
-              <BookOpen size={20} strokeWidth={3} />
-              <span className="text-[10px] font-black uppercase tracking-[0.5em] italic">KnowledgeGrounding</span>
+              <BookOpen size={18} strokeWidth={2.5} />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Knowledge Base</span>
             </div>
-            <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none">Inject_Memory_Cluster</h2>
+            <h2 className="text-2xl font-bold font-display tracking-tight text-foreground">Add Context Record</h2>
           </div>
-          <button onClick={onClose} className="p-4 bg-foreground/5 rounded-2xl hover:bg-foreground/10 transition-all">
+          <button onClick={onClose} className="p-2.5 bg-secondary hover:bg-muted transition-all rounded-xl text-muted-foreground">
             <X size={20} />
           </button>
         </div>
@@ -86,23 +87,23 @@ export default function KnowledgeCreatorModal({ onClose, onSave }: KnowledgeCrea
         </div>
 
         {mode === 'write' ? (
-          <div className="space-y-8">
-            <div className="space-y-3">
-              <label className="text-[9px] font-black uppercase tracking-[0.3em] text-muted ml-4">Descriptor</label>
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 ml-1">Document Title</label>
               <input
                 value={data.title}
                 onChange={e => setData({ ...data, title: e.target.value })}
-                placeholder="e.g. Professional records v1"
-                className="w-full bg-background border border-border/40 rounded-xl px-6 py-4 text-xs font-black uppercase focus:border-primary focus:outline-none shadow-inner"
+                placeholder="e.g. Sales Report Q1"
+                className="w-full bg-secondary border border-border/40 rounded-xl px-4 py-3 text-sm font-medium focus:border-primary/40 focus:outline-none transition-all placeholder:text-muted/40"
               />
             </div>
-            <div className="space-y-3">
-              <label className="text-[9px] font-black uppercase tracking-[0.3em] text-muted ml-4">Content_Stream</label>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 ml-1">Content Body</label>
               <textarea
                 value={data.content}
                 onChange={e => setData({ ...data, content: e.target.value })}
-                placeholder="PASTE FULL TEXTUAL DATA..."
-                className="w-full bg-background border border-border/40 rounded-2xl px-6 py-6 text-xs font-bold uppercase focus:border-primary focus:outline-none shadow-inner min-h-[250px] resize-none no-scrollbar"
+                placeholder="Paste the documentation source here..."
+                className="w-full bg-secondary border border-border/40 rounded-xl px-4 py-4 text-sm font-medium focus:border-primary/40 focus:outline-none min-h-[220px] resize-none no-scrollbar placeholder:text-muted/40 leading-relaxed"
               />
             </div>
             {data.content && (
@@ -152,9 +153,9 @@ export default function KnowledgeCreatorModal({ onClose, onSave }: KnowledgeCrea
         <button
           onClick={() => onSave(data)}
           disabled={!data.title || !data.content}
-          className="w-full h-16 bg-foreground text-background rounded-2xl font-black text-xs uppercase tracking-[0.4em] hover:bg-primary hover:text-white transition-all shadow-xl disabled:opacity-50"
+          className="w-full h-14 bg-primary text-primary-foreground rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50 active:scale-[0.98]"
         >
-          Mount_Knowledge_Node
+          Add to Knowledge Base
         </button>
       </motion.div>
     </div>

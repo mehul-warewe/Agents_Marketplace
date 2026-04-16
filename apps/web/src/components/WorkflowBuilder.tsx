@@ -983,7 +983,7 @@ function WorkflowBuilderInner() {
   const isSaving = isCreating || isUpdating;
 
   return (
-    <div className="flex flex-col h-screen w-full overflow-hidden bg-background font-inter">
+    <div className="flex flex-col h-screen w-full overflow-hidden bg-secondary">
 
       {/* ── Topbar */}
       <BuilderTopbar
@@ -991,8 +991,12 @@ function WorkflowBuilderInner() {
         onNameChange={setName}
         model={model}
         onModelChange={setModel}
-        onBack={() => router.back()}
-        onReset={() => { setNodes(INITIAL_NODES as any); setEdges(INITIAL_EDGES as any); setSelectedNode(null); }}
+        onBack={() => {
+          if (isSkillMode) router.push('/skills');
+          else if (isEmployeeMode) router.push('/employees');
+          else router.push('/manager');
+        }}
+        onReset={() => { if(confirm('Reset current graph?')) { setNodes(INITIAL_NODES as any); setEdges(INITIAL_EDGES as any); setSelectedNode(null); } }}
         onSave={() => setIsPublishModalOpen(true)}
         onRun={handleTrigger}
         isRunning={isRunning}
@@ -1004,20 +1008,22 @@ function WorkflowBuilderInner() {
       />
 
 {/* ── Body */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden p-4">
 
         {/* Left: Node palette */}
-        <ToolSidebar 
-          onAddTool={addToolNode} 
-          isOpen={sidebarOpen} 
-          onToggle={() => { setSidebarOpen(s => !s); if (sidebarOpen) setPickerState(null); }} 
-          socketType={pickerState?.socketType}
-          isSkillMode={isSkillMode}
-          filter={isSkillMode ? (tool: any) => !tool.id.startsWith('trigger_') && tool.id !== 'trigger_manual' : undefined}
-        />
+        <div className="z-50">
+          <ToolSidebar 
+            onAddTool={addToolNode} 
+            isOpen={sidebarOpen} 
+            onToggle={() => { setSidebarOpen(s => !s); if (sidebarOpen) setPickerState(null); }} 
+            socketType={pickerState?.socketType}
+            isSkillMode={isSkillMode}
+            filter={isSkillMode ? (tool: any) => !tool.id.startsWith('trigger_') && tool.id !== 'trigger_manual' : undefined}
+          />
+        </div>
 
-        {/* Centre: Canvas — Deep Aether Interface */}
-        <div className="flex-1 relative overflow-hidden bg-[#0d0d12]">
+        {/* Centre: Canvas Area */}
+        <div className="flex-1 relative overflow-hidden bg-secondary rounded-2xl border border-border/40 ml-4 shadow-sm">
           <ReactFlow
             nodes={nodesWithHandlers}
             edges={edges}
@@ -1039,7 +1045,7 @@ function WorkflowBuilderInner() {
             nodesConnectable={false}
             elementsSelectable={true}
             nodeOrigin={[0.5, 0]}
-            panOnDrag={[false, true]}
+            panOnDrag={true}
             translateExtent={[[-2000, dynamicTranslateExtent[0][1]], [2000, dynamicTranslateExtent[1][1]]]}
             minZoom={0.8}
             maxZoom={0.8}
@@ -1054,10 +1060,10 @@ function WorkflowBuilderInner() {
           >
             <Background 
               variant={BackgroundVariant.Dots} 
-              gap={24} 
-              size={1.2} 
-              color="rgba(255,255,255,0.06)" 
-              className="bg-[radial-gradient(circle_at_center,_rgba(59,130,246,0.03)_0%,_transparent_70%)]"
+              gap={40} 
+              size={1} 
+              color="var(--border)" 
+              className="opacity-40"
             />
 
             {/* Zoom Controls — bottom-right (n8n style) */}

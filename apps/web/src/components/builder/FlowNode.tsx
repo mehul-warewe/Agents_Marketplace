@@ -91,13 +91,13 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
           minHeight={50} 
           isVisible={true}
           lineStyle={{ border: '16px solid transparent' }}
-          handleStyle={{ width: 32, height: 32, background: 'transparent', border: 'none', borderRadius: '50%' }}
+          handleStyle={{ width: 12, height: 12, background: 'var(--primary)', border: 'none', borderRadius: '50%' }}
         />
 
         {/* Note Toolbar - Moved to the left and vertical */}
-        <div className="absolute -left-12 top-1/2 -translate-y-1/2 hidden group-hover:flex flex-col items-center gap-3 px-1.5 py-3 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-[100] animate-in fade-in zoom-in-95 duration-200 before:content-[''] before:absolute before:left-full before:top-0 before:bottom-0 before:w-4 before:bg-transparent">
+        <div className="absolute -left-12 top-1/2 -translate-y-1/2 hidden group-hover:flex flex-col items-center gap-3 px-1.5 py-3 bg-card border border-border/40 rounded-xl shadow-xl z-[100] animate-in fade-in zoom-in-95 duration-200">
           <div className="relative group/color p-1.5 cursor-pointer">
-            <Palette size={14} className="text-white/50 hover:text-white transition-colors" />
+            <Palette size={14} className="text-muted-foreground hover:text-foreground transition-colors" />
             <input 
               type="color" 
               className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
@@ -105,7 +105,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
               onChange={(e) => data.onUpdate?.(id, { config: { ...data.config, noteColor: e.target.value } })}
             />
           </div>
-          <button onClick={onDeleteClick} className="p-1.5 text-white/50 hover:text-red-400 transition-colors">
+          <button onClick={onDeleteClick} className="p-1.5 text-muted-foreground hover:text-red-500 transition-colors">
             <Trash2 size={14} />
           </button>
         </div>
@@ -114,8 +114,8 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
           style={{ backgroundColor: noteColor }}
           onDoubleClick={() => setIsEditing(true)}
           className={`
-            w-full h-full p-6 rounded-xl shadow-2xl transition-all duration-300
-            ${selected ? 'opacity-100 ring-1 ring-black/5' : 'opacity-90 hover:opacity-100'}
+            w-full h-full p-6 rounded-2xl shadow-lg transition-all duration-300
+            ${selected ? 'opacity-100 ring-2 ring-primary/20' : 'opacity-90 hover:opacity-100'}
             text-zinc-900 flex flex-col cursor-text overflow-hidden
           `}
         >
@@ -124,24 +124,18 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
               <textarea
                 ref={textAreaRef}
                 autoFocus
-                className="w-full h-full bg-transparent border-none outline-none resize-none text-[13px] font-medium leading-relaxed overflow-hidden"
+                className="w-full h-full bg-transparent border-none outline-none resize-none text-sm font-medium leading-relaxed overflow-hidden placeholder:text-black/20"
                 value={content}
                 onChange={(e) => data.onUpdate?.(id, { config: { ...data.config, content: e.target.value } })}
                 onBlur={() => setIsEditing(false)}
                 placeholder="Type your notes here..."
               />
             ) : (
-              <div className="h-full overflow-hidden">
-                <MemoizedMarkdown content={content || "*Double click to add instructions*"} />
+              <div className="h-full overflow-hidden text-sm font-medium leading-relaxed opacity-80">
+                <MemoizedMarkdown content={content || "*Double click to edit*"} />
               </div>
             )}
           </div>
-          
-          {!isEditing && (
-             <div className="absolute top-4 right-6 opacity-20 pointer-events-none">
-                <StickyIcon size={16} />
-             </div>
-          )}
         </div>
       </div>
     );
@@ -154,11 +148,11 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   const isTrigger = data.isTrigger || tool.isTrigger;
   
   const statusStyles = {
-    idle: 'border-white/5 bg-[#121212]',
-    pending: 'border-blue-500/20 bg-[#121212]',
-    running: 'border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.3)] bg-blue-500/5',
-    completed: 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)] bg-[#121212]',
-    failed: 'border-red-500/50 bg-[#121212]',
+    idle: 'border-border/40 bg-card',
+    pending: 'border-primary/20 bg-card',
+    running: 'border-primary shadow-lg shadow-primary/10 bg-primary/5',
+    completed: 'border-primary/20 bg-card shadow-md',
+    failed: 'border-red-500/30 bg-card',
   };
 
   return (
@@ -166,54 +160,53 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
       
       {/* Node Toolbar - Moved to the left and vertical */}
       <div className={`
-        absolute -left-12 top-1/2 -translate-y-1/2 hidden group-hover:flex flex-col items-center gap-3 px-1.5 py-3 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-[100] animate-in fade-in zoom-in-95 duration-200
-        before:content-[''] before:absolute before:-right-4 before:top-0 before:bottom-0 before:w-8 before:bg-transparent
+        absolute -left-12 top-1/2 -translate-y-1/2 hidden group-hover:flex flex-col items-center gap-3 px-2 py-3 bg-card border border-border/40 rounded-xl shadow-xl z-[100] animate-in fade-in zoom-in-95 duration-200
         ${(data.toolId === 'skill.output') ? '!hidden' : ''}
       `}>
-        <button onClick={onPlayClick} className="p-1.5 text-white/50 hover:text-white transition-colors relative z-[101]"><Play size={14} fill="currentColor" /></button>
+        <button onClick={onPlayClick} className="p-1.5 text-muted-foreground hover:text-primary transition-colors relative z-[101]"><Play size={14} fill="currentColor" /></button>
         {data.toolId !== 'skill.input' && (
-          <button onClick={onDeleteClick} className="p-1.5 text-white/50 hover:text-red-400 transition-colors relative z-[101]"><Trash2 size={14} /></button>
+          <button onClick={onDeleteClick} className="p-1.5 text-muted-foreground hover:text-red-500 transition-colors relative z-[101]"><Trash2 size={14} /></button>
         )}
       </div>
 
       {/* Main Body */}
       <div 
         className={`
-          w-[240px] min-h-[85px] rounded-[2rem] border p-4 flex items-center gap-3 transition-all duration-500
+          w-[260px] min-h-[90px] rounded-3xl border p-4 flex items-center gap-4 transition-all duration-300
           ${statusStyles[status]}
-          ${selected ? 'border-blue-500 shadow-2xl' : 'hover:border-white/10 shadow-lg'}
+          ${selected ? 'border-primary shadow-xl ring-4 ring-primary/5' : 'hover:border-primary/20 shadow-md'}
         `}
       >
         {/* Status indicator pulse ring */}
         {status === 'running' && (
-          <div className="absolute inset-0 -m-1 rounded-[2rem] border-2 border-blue-500 animate-ping opacity-20 pointer-events-none" />
+          <div className="absolute inset-0 -m-1 rounded-3xl border-2 border-primary animate-ping opacity-20 pointer-events-none" />
         )}
 
         {/* Icon Section */}
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 ${tool.bg} shadow-inner overflow-hidden`}>
+        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border border-border/40 transition-all duration-300 overflow-hidden p-3 bg-secondary group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary`}>
           {typeof tool.icon === 'string' && (tool.icon.startsWith('http') || tool.icon.startsWith('/')) ? (
-            <img src={tool.icon} alt={tool.label} className="w-full h-full object-contain p-2" />
+            <img src={tool.icon} alt={tool.label} className="w-full h-full object-contain" />
           ) : (
-            <Icon size={20} className={tool.color} />
+            <Icon size={24} strokeWidth={2.5} className="transition-colors group-hover:text-primary-foreground" />
           )}
         </div>
 
         {/* Info Section */}
         <div className="flex-1 min-w-0">
-          <p className="text-[12px] font-black text-white/90 truncate leading-tight tracking-tight">
+          <p className="text-sm font-bold font-display text-foreground truncate leading-tight tracking-tight">
             {data.label}
           </p>
-          <p className="text-[9px] font-bold text-muted uppercase tracking-widest truncate opacity-40 mt-1">
-             {status === 'running' ? 'Executing...' : tool.name.replace(' node', '')}
+          <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest truncate mt-1.5">
+             {status === 'running' ? 'Active' : tool.name.replace(' node', '')}
           </p>
         </div>
 
         {/* Internal Status Icon (Top Right) */}
-        <div className="absolute top-2.5 right-2.5">
-           {status === 'completed' && <CheckCircle size={14} className="text-emerald-500" />}
+        <div className="absolute top-4 right-4 animate-in fade-in slide-in-from-top-1">
+           {status === 'completed' && <CheckCircle size={14} className="text-primary" />}
            {status === 'failed' && <AlertCircle size={14} className="text-red-500" />}
-           {status === 'running' && <Loader2 size={14} className="animate-spin text-blue-500" />}
-           {isTrigger && status === 'idle' && <Zap size={10} className="text-orange-400 fill-orange-400 animate-pulse" />}
+           {status === 'running' && <Loader2 size={14} className="animate-spin text-primary" />}
+           {isTrigger && status === 'idle' && <Zap size={10} className="text-amber-500 fill-amber-500 animate-pulse" />}
         </div>
       </div>
 
@@ -246,7 +239,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
             {!isConnected && (
               <div className="absolute top-[100%] left-1/2 -translate-x-1/2 flex flex-col items-center">
                 {/* Short dashed line extension (vertical) */}
-                <div className="w-[1px] h-4 border-l border-dashed border-white/20 transition-opacity" />
+                <div className="w-[1px] h-6 border-l border-dashed border-border/60" />
                 
                 <div 
                   onClick={(e) => {
@@ -260,9 +253,9 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                       clientY: e.clientY
                     });
                   }}
-                  className="w-5 h-5 bg-[#1a1a1a] border border-white/10 rounded-lg flex items-center justify-center text-white/40 hover:bg-white hover:text-black transition-all cursor-pointer shadow-xl scale-90 hover:scale-110 z-50 mt-0"
+                  className="w-8 h-8 bg-card border border-border/40 rounded-xl flex items-center justify-center text-muted-foreground/40 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all cursor-pointer shadow-lg scale-90 hover:scale-100 z-50 mt-0"
                 >
-                  <Plus size={10} strokeWidth={3} />
+                  <Plus size={16} strokeWidth={2.5} />
                 </div>
               </div>
             )}

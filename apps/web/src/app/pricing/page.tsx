@@ -77,66 +77,62 @@ export default function PricingPage() {
   };
 
   return (
-    <SidebarLayout title="Billing & Quota">
-      <div className="max-w-7xl mx-auto px-6 py-10 lg:py-20 font-inter">
+    <SidebarLayout title="Billing">
+      <div className="max-w-7xl mx-auto px-6 py-10 lg:py-16">
         
         {/* Header Section */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-24 gap-12 px-4">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-20 gap-10 px-4">
           <div className="max-w-3xl space-y-6">
-             <div className="flex items-center gap-3">
-                <Sparkles size={20} className="text-foreground" />
-                <span className="text-[10px] font-black text-muted uppercase tracking-[0.4em]">Resource_Allocation</span>
-             </div>
-             <h1 className="text-5xl sm:text-7xl font-black tracking-tighter text-foreground uppercase italic leading-[0.9]">
-               Scalable_Units <br /> for_Private_Grids
+             <h1 className="text-5xl font-bold font-display tracking-tight text-foreground leading-[1.1]">
+               Scalable infrastructure for <br /> modern agentic workflows
              </h1>
           </div>
-          <p className="text-muted font-bold text-lg max-w-sm leading-tight uppercase opacity-50 tracking-tight">
-            Transparent, usage-based infrastructure designed for collective intelligence.
+          <p className="text-muted-foreground font-medium text-base max-w-sm leading-relaxed">
+            Transparent, usage-based credit system designed for high-performance digital teams.
           </p>
         </header>
 
         {/* Pricing Tiers */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-32">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
           {tiers.map((tier) => (
             <div 
               key={tier.id}
-              className={`relative p-12 rounded-[3rem] border-2 flex flex-col transition-all duration-700 hover:shadow-2xl overflow-hidden group ${
+              className={`relative p-10 rounded-3xl border flex flex-col transition-all duration-300 hover:shadow-xl group ${
                 tier.highlight 
-                  ? 'bg-card border-foreground shadow-[0_50px_100px_-20px_rgba(0,0,0,0.1)] scale-[1.05] z-10' 
-                  : 'bg-card border-border/60 hover:border-foreground/30'
+                  ? 'bg-card border-primary/40 shadow-xl shadow-primary/5 scale-[1.02] z-10' 
+                  : 'bg-card border-border/40 hover:border-primary/20'
               }`}
             >
               {tier.highlight && (
-                <div className="absolute top-10 right-10 bg-foreground text-background px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-xl">
-                  Recommended_Path
+                <div className="absolute top-8 right-8 bg-primary text-primary-foreground px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-md">
+                  Recommended
                 </div>
               )}
 
-              <div className="mb-12 relative z-10">
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-10 shadow-xl border border-border/40 ${tier.highlight ? 'bg-foreground text-background' : 'bg-foreground/5 text-foreground'}`}>
-                   {tier.id === 'free' ? <Shield size={28} /> : tier.id === 'pro' ? <Zap size={28} /> : <Star size={28} />}
+              <div className="mb-10 relative z-10">
+                <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-8 shadow-sm border border-border/40 transition-colors ${tier.highlight ? 'bg-primary text-primary-foreground' : 'bg-secondary text-foreground'}`}>
+                   {tier.id === 'free' ? <Shield size={24} /> : tier.id === 'pro' ? <Zap size={24} /> : <Star size={24} />}
                 </div>
-                <h3 className="text-3xl font-black mb-3 tracking-tighter uppercase italic leading-none">{tier.name}</h3>
-                <p className="text-[13px] font-bold text-muted mb-10 leading-relaxed uppercase opacity-40">{tier.description}</p>
-                <div className="flex items-baseline gap-3">
-                  <span className="text-6xl font-black tracking-tighter text-foreground italic">{tier.price}</span>
-                  <span className="text-[10px] font-black text-muted uppercase tracking-widest opacity-40 italic">/ cycle</span>
+                <h3 className="text-2xl font-bold font-display mb-2 tracking-tight text-foreground">{tier.name}</h3>
+                <p className="text-sm font-medium text-muted-foreground mb-8 leading-relaxed opacity-60">{tier.description}</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-5xl font-bold font-display tracking-tight text-foreground">{tier.price}</span>
+                  <span className="text-xs font-bold text-muted-foreground/40 uppercase tracking-widest">/mo</span>
                 </div>
               </div>
 
-              <div className="p-10 rounded-[2rem] bg-foreground/5 border border-border/60 mb-12 flex justify-between items-center group-hover:bg-foreground group-hover:text-background transition-all duration-500 relative z-10">
+              <div className="p-8 rounded-2xl bg-secondary border border-border/40 mb-10 flex justify-between items-center group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black text-muted uppercase tracking-[0.3em] mb-3 group-hover:text-background/60">Logic_Units</span>
-                  <span className="text-3xl font-black tracking-tighter uppercase">{tier.credits} Cr</span>
+                  <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider mb-2 group-hover:text-primary-foreground/60">Logic Credits</span>
+                  <span className="text-2xl font-bold font-display">{tier.credits} Cr</span>
                 </div>
-                <Activity size={32} strokeWidth={3} className="text-foreground/10 group-hover:text-background/20 transition-colors" />
+                <Activity size={24} strokeWidth={2.5} className="opacity-20 translate-x-1" />
               </div>
 
-              <ul className="space-y-6 mb-16 flex-1 relative z-10">
+              <ul className="space-y-4 mb-12 flex-1 relative z-10">
                 {tier.features.map((feature, i) => (
-                  <li key={i} className="flex items-center gap-4 text-xs font-black uppercase tracking-widest text-foreground/70">
-                    <CheckCircle2 size={20} strokeWidth={3} className="text-foreground shrink-0" />
+                  <li key={i} className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
+                    <Check size={18} strokeWidth={3} className="text-primary shrink-0" />
                     {feature}
                   </li>
                 ))}
@@ -145,66 +141,64 @@ export default function PricingPage() {
               <button
                 disabled={user?.tier === tier.id || loading !== null}
                 onClick={() => handleCheckout('subscription', tier.id)}
-                className={`w-full py-6 rounded-[1.75rem] font-black text-[10px] uppercase tracking-[0.4em] transition-all flex items-center justify-center gap-4 active:scale-[0.98] relative z-10 ${
+                className={`w-full py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-3 active:scale-[0.98] relative z-10 ${
                   user?.tier === tier.id
-                    ? 'bg-foreground/10 text-muted border border-border/40 cursor-default'
-                    : 'bg-foreground text-background hover:scale-[1.02] shadow-2xl shadow-foreground/20'
+                    ? 'bg-secondary text-muted-foreground border border-border/40 cursor-default'
+                    : 'bg-primary text-primary-foreground hover:opacity-90 shadow-lg shadow-primary/20'
                 }`}
               >
                 {loading === tier.id ? (
-                  <div className="w-6 h-6 border-4 border-background/20 border-t-background rounded-full animate-spin" />
-                ) : user?.tier === tier.id ? 'Session_Active' : tier.buttonText}
+                  <div className="w-5 h-5 border-3 border-primary-foreground/20 border-t-primary-foreground rounded-full animate-spin" />
+                ) : user?.tier === tier.id ? 'Active Plan' : tier.buttonText}
               </button>
             </div>
           ))}
         </div>
 
         {/* Credit Packs - Top up */}
-        <div className="bg-card text-foreground rounded-[4rem] p-12 md:p-20 relative overflow-hidden group border border-border shadow-2xl">
-          <div className="absolute top-0 right-0 p-16 opacity-5 group-hover:opacity-10 transition-all pointer-events-none group-hover:rotate-12 duration-1000">
+        <div className="bg-card text-foreground rounded-3xl p-10 md:p-16 relative overflow-hidden group border border-border/40 shadow-xl">
+          <div className="absolute top-0 right-0 p-16 opacity-[0.03] group-hover:opacity-[0.05] transition-all pointer-events-none group-hover:rotate-6 duration-1000">
              <Terminal size={320} strokeWidth={1} />
           </div>
           
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-20 relative z-10">
-            <div className="max-w-xl space-y-10">
-              <div className="flex items-center gap-6">
-                <div className="w-20 h-20 rounded-[2.5rem] bg-foreground flex items-center justify-center text-background shadow-2xl shadow-foreground/20">
-                  <CreditCard size={36} strokeWidth={1.5} />
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-16 relative z-10">
+            <div className="max-w-xl space-y-8">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-xl bg-primary flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20">
+                  <CreditCard size={30} strokeWidth={1.5} />
                 </div>
-                <h2 className="text-5xl font-black tracking-tighter uppercase italic leading-none">Quantum_Refill</h2>
+                <h2 className="text-4xl font-bold font-display tracking-tight text-foreground">Credit Recharge</h2>
               </div>
-              <p className="text-xl font-bold text-muted leading-tight uppercase opacity-60">
-                Need more execution capacity? Top up with on-demand units that <span className="text-foreground underline decoration-foreground/20 decoration-4 underline-offset-8">never expire</span>.
+              <p className="text-lg font-medium text-muted-foreground leading-relaxed">
+                Need extra execution capacity? Top up with on-demand credits that <span className="text-foreground font-bold">never expire</span>.
               </p>
-              <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.4em] text-muted/60 bg-foreground/5 px-8 py-5 rounded-[2rem] border border-border/60 w-fit">
-                <Shield size={20} className="opacity-40" />
-                Secure_Stripe_Gateway
+              <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 bg-secondary px-6 py-3.5 rounded-xl border border-border/40 w-fit">
+                <Shield size={16} className="opacity-40" />
+                Secure Payments via Stripe
               </div>
             </div>
 
-            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-8 w-full">
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-6 w-full">
               {creditPacks.map((pack) => (
                 <button
                   key={pack.id}
                   onClick={() => handleCheckout('credits', pack.id)}
                   disabled={loading !== null}
-                  className="group relative flex flex-col items-start p-10 bg-foreground/5 border border-border/60 rounded-[3rem] hover:bg-foreground hover:text-background transition-all duration-700 text-left overflow-hidden shadow-xl"
+                  className="group relative flex flex-col items-start p-8 bg-secondary/40 border border-border/40 rounded-2xl hover:bg-primary transition-all duration-300 text-left overflow-hidden shadow-sm"
                 >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-foreground/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150 duration-1000" />
-                  
                   {pack.discount && (
-                    <div className="bg-foreground text-background text-[9px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest mb-10 relative z-10 group-hover:bg-background group-hover:text-foreground">
-                      {pack.discount.toUpperCase()}
+                    <div className="bg-primary text-primary-foreground text-[9px] font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-8 relative z-10 group-hover:bg-primary-foreground group-hover:text-primary">
+                      {pack.discount}
                     </div>
                   )}
-                  <p className="text-[10px] font-black text-muted uppercase tracking-[0.3em] mb-3 relative z-10 group-hover:text-background/60">Usage_Pack</p>
-                  <div className="text-5xl font-black mb-2 tracking-tighter relative z-10 italic">{pack.amount}</div>
-                  <div className="text-[11px] font-black text-muted uppercase tracking-widest mb-12 relative z-10 group-hover:text-background/40 italic">Logic_Units</div>
+                  <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-2 relative z-10 group-hover:text-primary-foreground/60">Top Up</p>
+                  <div className="text-4xl font-bold font-display mb-1 tracking-tight relative z-10 group-hover:text-primary-foreground text-foreground">{pack.amount}</div>
+                  <div className="text-[11px] font-bold text-muted-foreground/40 uppercase tracking-widest mb-10 relative z-10 group-hover:text-primary-foreground/40">Credits</div>
                   
-                  <div className="mt-auto pt-8 border-t border-foreground/10 group-hover:border-background/20 w-full flex items-center justify-between relative z-10">
-                    <span className="text-3xl font-black italic tracking-tighter">{pack.price}</span>
-                    <div className="w-12 h-12 rounded-full bg-foreground text-background flex items-center justify-center group-hover:bg-background group-hover:text-foreground transition-all duration-500 shadow-xl">
-                       <ArrowRight size={22} strokeWidth={3} />
+                  <div className="mt-auto pt-6 border-t border-border/40 group-hover:border-primary-foreground/20 w-full flex items-center justify-between relative z-10">
+                    <span className="text-2xl font-bold font-display tracking-tight group-hover:text-primary-foreground">{pack.price}</span>
+                    <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center group-hover:bg-primary-foreground group-hover:text-primary transition-all duration-300 shadow-md">
+                       <ArrowRight size={18} strokeWidth={2.5} />
                     </div>
                   </div>
                 </button>

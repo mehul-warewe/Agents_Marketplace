@@ -17,7 +17,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useToast } from '@/components/ui/Toast';
 
 // Modular Imports
-import { LeftSubNav, RightConfigPane } from './employee-builder/TacticalSidebar';
+import { LeftSubNav, RightConfigPane } from './employee-builder/EmployeeSidebar';
 import { BuildTabContent, MonitorTabContent } from './employee-builder/BuilderTabs';
 import RunTabContent from './employee-builder/RunTabContent';
 import { RunDetailsModal } from './employee-builder/TelemetryView';
@@ -108,7 +108,7 @@ export default function EmployeeDetail() {
 
   if (!localEmployee && !isNew) {
     return (
-      <div className="flex-1 bg-background flex flex-col items-center justify-center p-12 h-full uppercase italic">
+      <div className="flex-1 bg-card flex flex-col items-center justify-center p-12 h-full uppercase italic">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
         <p className="mt-8 text-[10px] font-bold text-muted uppercase tracking-[0.4em]">Loading agent profile...</p>
       </div>
@@ -118,7 +118,7 @@ export default function EmployeeDetail() {
   if (!localEmployee) return null;
 
   return (
-    <div className="flex-1 bg-background flex flex-col h-full overflow-hidden font-inter text-foreground">
+    <div className="flex-1 bg-card flex flex-col h-full overflow-hidden font-inter text-foreground">
       
       {/* ── TOP NAVIGATION BAR (Screenshot 1) ────────────────────────── */}
       <header className="h-[72px] border-b border-border/40 bg-card/10 backdrop-blur-3xl flex items-center justify-between px-8 shrink-0 z-50">

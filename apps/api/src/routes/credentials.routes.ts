@@ -1,4 +1,5 @@
 import express from 'express';
+import axios from 'axios';
 import passport from '../middleware/auth.middleware.js';
 import { credentialsService } from '../services/credentials/credentials.service.js';
 import { pipedreamService } from '../services/pipedream/pipedream.service.js';
@@ -61,6 +62,71 @@ router.get('/pipedream/apps', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get('/pipedream/apps/:id', async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    
+    // 1. Try Local Redis Registry FIRST (Fast & Permanent)
+    const { results } = await pipedreamAppsService.searchApps(id.replace(/[-_]/g, ' '), 5);
+    const bestLocalMatch = results.find(a => {
+      const normalize = (s: string) => s.toLowerCase().replace(/[-_]/g, '');
+      return a.id === id || normalize(a.slug) === normalize(id);
+    });
+    
+    if (bestLocalMatch) {
+      return res.json({
+        id: bestLocalMatch.id,
+        name: bestLocalMatch.name,
+        slug: bestLocalMatch.slug,
+        logo_url: bestLocalMatch.icon || `https://assets.pipedream.net/s.v0/${bestLocalMatch.id}/logo/orig`
+      });
+    }
+
+    // 2. Fallback to External API if not in registry
+    const accessToken = await pipedreamService.getOAuthToken();
+    try {
+      const response = await axios.get(`https://api.pipedream.com/v1/apps/${id}`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      const d = response.data?.data;
+      return res.json({
+        ...d,
+        id: d?.id || d?.app_id || id,
+        logo_url: d?.logo_url || d?.icon || `https://assets.pipedream.net/s.v0/${d?.id}/logo/orig`
+      });
+    } catch (err: any) {
+      // If it's a 404 and has a hyphen, try with underscore (Pipedream API style)
+      if (err.response?.status === 404) {
+        const altId = id.includes('-') ? id.replace(/-/g, '_') : id.replace(/_/g, '-');
+        try {
+          const retryResponse = await axios.get(`https://api.pipedream.com/v1/apps/${altId}`, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          });
+          const d = retryResponse.data?.data;
+          return res.json({
+            ...d,
+            id: d?.id || d?.app_id || altId,
+            logo_url: d?.logo_url || d?.icon || `https://assets.pipedream.net/s.v0/${d?.id}/logo/orig`
+          });
+        } catch (retryErr) {
+          // Final fallback: Search in-memory cache for a name/slug match
+          const { results } = await pipedreamAppsService.searchApps(id.replace(/[-_]/g, ' '), 1);
+          const bestMatch = results[0];
+          if (bestMatch) {
+            return res.json({
+              id: bestMatch.id,
+              name: bestMatch.name,
+              slug: bestMatch.slug,
+              logo_url: bestMatch.icon || `https://assets.pipedream.net/s.v0/${bestMatch.id}/logo/orig`
+            });
+          }
+        }
+      }
+      throw err;
+    }
+  } catch (err) { next(err); }
+});
+
 /**
  * GET /credentials/pipedream/accounts?appSlug=<id-or-slug>
  * Returns connected Pipedream accounts for the current user + app.
@@ -72,6 +138,12 @@ router.get('/pipedream/accounts', async (req: any, res, next) => {
     const resolvedSlug = await pipedreamService.resolveAppSlug(rawSlug);
     const accounts = await pipedreamService.getConnectedAccounts(req.user.id, resolvedSlug);
     res.json({ accounts });
+  } catch (err) { next(err); }
+});
+
+router.delete('/pipedream/accounts/:id', async (req: any, res, next) => {
+  try {
+    res.json(await pipedreamService.deleteAccount(req.user.id, req.params.id));
   } catch (err) { next(err); }
 });
 

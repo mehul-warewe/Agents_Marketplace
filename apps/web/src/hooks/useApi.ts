@@ -241,6 +241,21 @@ export function usePipedreamTriggers(appSlug?: string) {
   });
 }
 
+export function usePipedreamAppDetails(appSlug: string) {
+  return useQuery({
+    queryKey: ['pd-app-details', appSlug],
+    queryFn: async () => {
+      if (!appSlug) return null;
+      const { data } = await api.get(`/credentials/pipedream/apps/${appSlug}`);
+      return data;
+    },
+    enabled: !!appSlug,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
+  });
+}
+
 export function useCreateCredential() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -250,6 +265,8 @@ export function useCreateCredential() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['credentials'] });
+      // Invalidate global store
+      window.dispatchEvent(new CustomEvent('warewe:refresh-connections'));
     },
   });
 }
@@ -262,6 +279,7 @@ export function useDeleteCredential() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['credentials'] });
+      window.dispatchEvent(new CustomEvent('warewe:refresh-connections'));
     },
   });
 }
@@ -316,6 +334,19 @@ export function usePipedreamToken() {
     mutationFn: async (appSlug: string) => {
       const { data } = await api.post('/credentials/pipedream/token', { appSlug });
       return data;
+    },
+  });
+}
+
+export function useDeletePdAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/credentials/pipedream/accounts/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pd-accounts'] });
+      window.dispatchEvent(new CustomEvent('warewe:refresh-connections'));
     },
   });
 }

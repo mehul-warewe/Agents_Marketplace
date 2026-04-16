@@ -42,7 +42,7 @@ export default function ModelSelector({ value, onChange, onClose }: ModelSelecto
         m.description.toLowerCase().includes(term)
       );
       
-      const providerId = m.id.split('/')[0];
+      const providerId = m.id.split('/')[0] || 'unknown';
       const matchProvider = selectedProviders.length === 0 || selectedProviders.includes(providerId);
       const promptPrice = parseFloat(m.pricing.prompt) * 1000000;
       const matchCredits = promptPrice <= maxCredits;

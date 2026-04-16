@@ -491,7 +491,7 @@ export default function NodeConfigPanel({ node, nodes, edges, onUpdate, onClose,
   const nodeColor = tool.color || 'text-indigo-500';
 
   return (
-    <aside className="w-[450px] shrink-0 bg-background border-l border-border flex flex-col h-full font-inter z-50 shadow-2xl animate-in slide-in-from-right duration-300">
+    <aside className="w-[450px] shrink-0 bg-card border-l border-border flex flex-col h-full font-inter z-50 shadow-2xl animate-in slide-in-from-right duration-300">
       {/* Header */}
       <div className="flex flex-col border-b border-border/60 bg-background/50 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border/40">

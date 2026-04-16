@@ -1,50 +1,79 @@
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Design Tokens ─────────────────────────────────────── */
+/* ─── Design Tokens (New Style) ─────────────────────────── */
 :root {
-  /* warewe Light - Sophisticated Off-White & Cream */
-  --background: #fdfdf5; 
-  --foreground: #111111;
+  --background: #e2e8f0; 
+  --foreground: #030213;
   --card: #ffffff;
-  --card-border: #eeede0;
-  --muted: #666666;
-  --primary: #d4ff3f;    /* warewe Lime */
-  --primary-rgb: 212, 255, 63;
-  --primary-foreground: #000000;
-  --accent: #f5f4e8;
-  --accent-foreground: #111111;
-  --border: #e8e6d1;
-  --sidebar: #fdfdf5;
-  --sidebar-border: #e8e6d1;
-  --radius: 1.5rem;   
-  --radius-lg: 2.25rem;
-  --radius-md: 1rem;
+  --card-border: rgba(0, 0, 0, 0.06);
+  --muted: #ebedf0;
+  --secondary: #f1f3f5;
+  --primary: #030213;
+  --primary-foreground: #ffffff;
+  --accent: #e5e7eb;
+  --accent-foreground: #030213;
+  --border: rgba(0, 0, 0, 0.08);
+  --sidebar: #ffffff;
+  --sidebar-border: rgba(0, 0, 0, 0.08);
+  --radius: 0.625rem;   
+  --radius-lg: 0.75rem;
+  --radius-md: 0.625rem;
   --radius-sm: 0.5rem;
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.05);
 }
 
 .dark {
-  /* warewe Dark - Charcoal & Lime */
-  --background: #080808; 
+  --background: #080809; 
   --foreground: #fcfcfc;
-  --card: #0c0c0c;      
-  --card-border: #161616;
-  --muted: #737373;     
-  --primary: #d4ff3f;    /* warewe Lime */
-  --primary-rgb: 212, 255, 63;
-  --primary-foreground: #000000;
-  --accent: #111111;    
+  --card: #121213;      
+  --card-border: #1d1d1f;
+  --muted: #1d1d1f;     
+  --secondary: #161617;
+  --primary: #fcfcfc;
+  --primary-foreground: #111111;
+  --accent: #1d1d1f;    
   --accent-foreground: #fcfcfc;
-  --border: #161616;
-  --sidebar: #050505;
-  --sidebar-border: #121212;
+  --border: #1d1d1f;
+  --sidebar: #121213;
+  --sidebar-border: #1d1d1f;
+}
+
+/* ─── V2 Theme Demo (Scoped) ────────────────────────────── */
+.theme-demo {
+  --background: #ffffff;
+  --foreground: #030213;
+  --card: #ffffff;
+  --muted: #ececf0;
+  --primary: #030213;
+  --primary-foreground: #ffffff;
+  --accent: #e9ebef;
+  --accent-foreground: #030213;
+  --border: rgba(0, 0, 0, 0.1);
+  --radius: 0.625rem;
+  
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+.dark .theme-demo {
+  --background: #111111;
+  --foreground: #fcfcfc;
+  --card: #151515;
+  --muted: #262626;
+  --primary: #fcfcfc;
+  --primary-foreground: #111111;
+  --accent: #262626;
+  --accent-foreground: #fcfcfc;
+  --border: #333333;
 }
 
 /* ─── Base Styles ────────────────────────────────────────── */
@@ -64,8 +93,15 @@ html {
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
-  letter-spacing: -0.01em;
+  font-family: 'Inter', -apple-system, font-sans, sans-serif;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Satoshi', 'Inter', sans-serif;
+  }
 }
 
 /* ─── Tailwind Utility Classes tied to CSS variables ──────── */
@@ -75,6 +111,8 @@ body {
   .bg-sidebar { background-color: var(--sidebar); }
   .bg-primary { background-color: var(--primary); }
   .bg-accent { background-color: var(--accent); }
+  .bg-muted { background-color: var(--muted); }
+  .bg-secondary { background-color: var(--secondary); }
 
   .text-foreground { color: var(--foreground); }
   .text-primary { color: var(--primary); }

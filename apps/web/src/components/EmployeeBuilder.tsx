@@ -224,22 +224,22 @@ export default function EmployeeBuilder() {
   // ─── RENDER ────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col h-screen bg-[#070708] text-[#e1e1e3] selection:bg-accent/30 font-sans">
+    <div className="flex flex-col h-screen bg-card text-foreground selection:bg-primary/30 transition-colors duration-500">
       
-      {/* 🏙️ TOP NAV: Industrial Glass */}
-      <nav className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-black/20 backdrop-blur-xl z-50">
+      {/* 🏙️ TOP NAV: Industrial Glass (Refined) */}
+      <nav className="h-16 border-b border-border flex items-center justify-between px-8 bg-card/40 backdrop-blur-xl z-50">
         <div className="flex items-center gap-6">
           <button 
             onClick={() => router.back()}
-            className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all border-b-2 active:translate-y-px"
+            className="size-9 rounded-xl bg-card border border-border flex items-center justify-center hover:bg-muted transition-all shadow-sm active:scale-95 focus-visible:ring-[3px] focus-visible:ring-primary/20"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={16} />
           </button>
           <div className="space-y-1">
             <input 
               value={name}
               onChange={e => setName(e.target.value)}
-              className="bg-transparent border-none outline-none text-xl font-bold placeholder:opacity-30 w-64 focus:ring-1 ring-accent/20 rounded px-1 -ml-1 transition-all"
+              className="bg-transparent border-none outline-none text-xl font-bold font-display placeholder:opacity-30 w-64 focus:ring-[3px] focus:ring-primary/20 rounded-xl px-2 py-1 -ml-2 transition-all"
             />
             <div className="flex items-center gap-2">
                <span className="text-[10px] uppercase tracking-[0.2em] font-black text-accent/60">Specialized Unit</span>
@@ -254,14 +254,14 @@ export default function EmployeeBuilder() {
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 p-1 bg-white/5 border border-white/10 rounded-xl">
+          <div className="flex items-center gap-2 p-1 bg-muted/40 border border-border rounded-[10px]">
              {MODEL_TYPES.slice(0, 3).map(m => (
                <button
                  key={m.id}
                  onClick={() => setSelectedModel(m.id)}
                  className={clsx(
-                   "px-3 py-1.5 text-[10px] uppercase font-bold tracking-wider rounded-lg transition-all",
-                   selectedModel === m.id ? "bg-accent text-white shadow-lg shadow-accent/20" : "text-white/40 hover:text-white/70"
+                   "px-3 py-1 text-xs font-medium rounded-lg transition-all",
+                   selectedModel === m.id ? "bg-card text-foreground shadow-sm" : "text-muted hover:text-foreground"
                  )}
                >
                  {m.label.split(' ')[0]}
@@ -271,10 +271,10 @@ export default function EmployeeBuilder() {
           <button 
             onClick={handleSave}
             disabled={isCreating}
-            className="h-11 px-6 bg-white text-black font-black text-sm rounded-xl flex items-center gap-2 hover:bg-accent hover:text-white transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] active:scale-95 disabled:opacity-50"
+            className="h-9 px-4 bg-primary text-primary-foreground font-medium text-sm rounded-[10px] flex items-center gap-2 hover:opacity-90 transition-all active:scale-95 disabled:opacity-50 focus-visible:ring-[3px] focus-visible:ring-primary/20"
           >
             {isCreating ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            INITIALIZE UNIT
+            Initialize Unit
           </button>
         </div>
       </nav>
@@ -296,7 +296,7 @@ export default function EmployeeBuilder() {
                    initial={{ opacity: 0, x: -20 }}
                    animate={{ opacity: 1, x: 0 }}
                    exit={{ opacity: 0, x: -20 }}
-                   className="group p-3 bg-white/[0.03] border border-white/5 rounded-xl hover:border-white/10 transition-all relative overflow-hidden"
+                   className="group p-3 bg-card border border-border rounded-[10px] shadow-sm hover:border-primary/20 transition-all relative overflow-hidden"
                  >
                    <div className="flex items-start justify-between">
                      <div className="space-y-1">
@@ -315,17 +315,17 @@ export default function EmployeeBuilder() {
              </AnimatePresence>
 
              {showInputForm ? (
-               <div className="p-4 bg-white/[0.02] border border-accent/20 rounded-xl space-y-3">
+               <div className="p-4 bg-muted/20 border border-primary/20 rounded-[10px] space-y-3">
                   <input 
                     autoFocus
                     placeholder="Field name..."
-                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:border-accent/50"
+                    className="w-full bg-card border border-border rounded-[10px] px-3 py-2 text-sm outline-none focus:border-ring focus:ring-[3px] focus:ring-primary/20 shadow-sm"
                     onKeyDown={e => e.key === 'Enter' && handleAddInput()}
                     value={newInput.key}
                     onChange={e => setNewInput({...newInput, key: e.target.value})}
                   />
                   <select 
-                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs text-white/60 outline-none"
+                    className="w-full bg-card border border-border rounded-[10px] px-3 py-2 text-sm text-foreground outline-none focus:ring-[3px] focus:ring-primary/20 shadow-sm"
                     value={newInput.type}
                     onChange={e => setNewInput({...newInput, type: e.target.value as any})}
                   >
@@ -334,17 +334,17 @@ export default function EmployeeBuilder() {
                     <option value="json">JSON Object</option>
                   </select>
                   <div className="flex gap-2">
-                    <button onClick={handleAddInput} className="flex-1 py-2 bg-accent text-white text-[10px] font-black rounded-lg">ADD</button>
-                    <button onClick={() => setShowInputForm(false)} className="px-3 py-2 bg-white/5 text-white/40 text-[10px] font-black rounded-lg">✕</button>
+                    <button onClick={handleAddInput} className="flex-1 py-2 h-9 bg-primary text-primary-foreground text-sm font-medium rounded-[10px]">Add</button>
+                    <button onClick={() => setShowInputForm(false)} className="px-3 h-9 py-2 bg-muted text-foreground text-sm font-medium rounded-[10px]">✕</button>
                   </div>
                </div>
              ) : (
                <button 
                  onClick={() => setShowInputForm(true)}
-                 className="w-full p-4 border border-dashed border-white/10 rounded-xl text-white/20 hover:text-white/50 hover:border-white/20 transition-all flex items-center justify-center gap-2 group"
+                 className="w-full h-9 border border-dashed border-border rounded-[10px] text-muted hover:text-foreground hover:border-primary/50 transition-all flex items-center justify-center gap-2 group"
                >
                  <Plus size={14} className="group-hover:rotate-90 transition-all" />
-                 <span className="text-[10px] font-bold uppercase tracking-wider">Add Input Parameter</span>
+                 <span className="text-xs font-medium">Add Input</span>
                </button>
              )}
           </div>
@@ -369,15 +369,15 @@ export default function EmployeeBuilder() {
                 
                 return (
                   <React.Fragment key={step.id}>
-                    <motion.div
+                      <motion.div
                       layout
                       initial={{ opacity: 0, y: 20, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       onClick={() => setSelectedStepId(step.id)}
                       className={clsx(
-                        "group relative p-6 bg-[#0c0c0e]/80 backdrop-blur-md border rounded-2xl cursor-pointer transition-all duration-300",
-                        isSelected ? "border-accent ring-1 ring-accent/20 shadow-[0_0_40px_rgba(99,102,241,0.1)]" : "border-white/5 hover:border-white/20"
+                        "group relative p-5 bg-card border rounded-[10px] shadow-sm cursor-pointer transition-all duration-300",
+                        isSelected ? "border-primary ring-[3px] ring-primary/20" : "border-border hover:border-primary/50"
                       )}
                     >
                       <div className="flex items-center gap-5">

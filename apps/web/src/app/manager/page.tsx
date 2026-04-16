@@ -52,124 +52,116 @@ export default function ManagerDashboard() {
 
   return (
     <SidebarLayout title="Managers">
-      <div className="flex-1 bg-background min-h-full text-foreground p-6 sm:p-10 lg:p-14 overflow-y-auto w-full no-scrollbar font-inter">
-        <div className="max-w-[1400px] mx-auto space-y-16">
+      <div className="flex-1 bg-secondary min-h-full text-foreground p-6 sm:p-10 lg:p-14 overflow-y-auto w-full no-scrollbar">
+        <div className="max-w-[1400px] mx-auto space-y-12">
           
           {/* Page Header */}
-          <header className="flex flex-col md:flex-row md:items-end justify-between gap-10 border-b border-border/60 pb-16">
-            <div className="space-y-6">
-              <div className="flex flex-col gap-4">
-                <h1 className="text-6xl font-black tracking-tighter uppercase italic leading-none">Managers</h1>
-                <div className="w-fit bg-foreground/5 text-foreground text-[10px] font-black px-5 py-2 uppercase tracking-[0.3em] border border-border/50 rounded-full">
-                  Count: {managers?.length || 0}/Unlimited
-                </div>
-              </div>
-              <p className="text-muted font-bold text-lg leading-tight uppercase opacity-40 max-w-xl">Orchestrate high-level autonomous managers to synthesize complex mission parameters with your employee fleet.</p>
+          <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 pb-12">
+            <div className="space-y-4">
+              <h1 className="text-5xl font-bold font-display tracking-tight leading-none text-foreground">Operational Managers</h1>
+              <p className="text-muted-foreground font-medium text-sm max-w-xl">
+                 Orchestrate high-level autonomous managers to synthesize complex parameters with your employee fleet.
+              </p>
             </div>
             <button
               onClick={() => router.push('/manager/builder')}
-              className="bg-foreground text-background hover:scale-[1.02] px-14 py-5 rounded-[1.75rem] font-black text-xs uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-4 shadow-2xl shadow-foreground/10 active:scale-[0.98]"
+              className="bg-primary text-primary-foreground hover:opacity-90 px-8 py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-[0.98]"
             >
-              <Plus size={18} strokeWidth={3} /> CREATE_MANAGER
+              <Plus size={18} strokeWidth={2.5} /> Create Manager
             </button>
           </header>
 
           {/* Managers List */}
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-40 text-muted">
-              <div className="w-10 h-10 border border-accent border-t-transparent animate-spin mb-6"></div>
-              <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">Loading...</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 gap-8">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-[400px] bg-card/60 border border-border rounded-2xl animate-pulse" />
+              ))}
             </div>
           ) : !managers || managers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-40 text-center border border-border/60 bg-card rounded-[3rem] shadow-2xl shadow-foreground/5 overflow-hidden relative">
-              <div className="absolute inset-0 bg-foreground/[0.01] pointer-events-none" />
-              <div className="w-24 h-24 bg-foreground/5 rounded-[2.5rem] flex items-center justify-center text-muted mb-12 border border-border/50 relative z-10 text-accent">
-                <Users size={40} strokeWidth={1} />
+            <div className="flex flex-col items-center justify-center py-32 text-center border border-border/40 bg-card rounded-3xl shadow-md overflow-hidden relative">
+              <div className="w-20 h-20 bg-secondary rounded-2xl flex items-center justify-center text-muted-foreground/20 mb-8 border border-border/20 relative z-10 shadow-sm">
+                <Users size={32} strokeWidth={1.5} />
               </div>
-              <h3 className="text-3xl font-black mb-4 uppercase tracking-tighter italic relative z-10">No managers</h3>
-              <p className="text-muted font-bold mb-12 max-w-sm mx-auto leading-tight uppercase opacity-40 relative z-10">No managers found. Create your first Manager to orchestrate your employee fleet.</p>
+              <h3 className="text-2xl font-bold font-display text-foreground mb-3 relative z-10">Deploy your first manager</h3>
+              <p className="text-muted-foreground font-medium text-sm mb-10 max-w-xs mx-auto relative z-10">No managers found in your current fleet instance.</p>
               <button
                 onClick={() => router.push('/manager/builder')}
-                className="bg-foreground text-background px-14 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:scale-[1.05] transition-all relative z-10 shadow-xl"
+                className="bg-primary text-primary-foreground px-8 py-3.5 rounded-xl text-sm font-bold hover:opacity-90 transition-all relative z-10 shadow-lg shadow-primary/20"
               >
-                Create_Manager
+                Create Manager
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 gap-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 gap-8">
               {managers.map((manager: any) => (
-                <div key={manager.id} className="bg-card p-12 group relative transition-all duration-500 rounded-[3.5rem] border border-border/60 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.05)] hover:border-foreground/20 hover:shadow-2xl hover:shadow-foreground/5 flex flex-col overflow-hidden cursor-pointer" onClick={() => router.push(`/manager/${manager.id}`)}>
-                  <div className="absolute top-0 right-0 w-48 h-48 bg-foreground/[0.02] rounded-full -mr-24 -mt-24 group-hover:scale-150 transition-transform duration-1000" />
-                  
+                <div 
+                  key={manager.id} 
+                  className="bg-card p-10 group relative transition-all duration-300 rounded-2xl border border-border/40 shadow-md hover:shadow-xl hover:border-primary/20 flex flex-col overflow-hidden cursor-pointer" 
+                  onClick={() => router.push(`/manager/${manager.id}`)}
+                >
                   {/* Status Badges */}
-                  <div className="flex items-center justify-between mb-12 relative z-10">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2.5 px-5 py-2 rounded-full border border-border/60 bg-foreground/[0.03] text-muted text-[9px] font-black uppercase tracking-[0.2em] shadow-inner">
-                        <Users size={12} strokeWidth={3} />
-                        MANAGER
+                  <div className="flex items-center justify-between mb-10 relative z-10">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-border/40 bg-secondary text-muted-foreground text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                        <Users size={12} strokeWidth={2.5} />
+                        Manager
                       </div>
-                      <div className="flex items-center gap-2.5 px-5 py-2 rounded-full border border-border/60 bg-foreground/[0.03] text-muted text-[9px] font-black uppercase tracking-[0.2em] shadow-inner">
-                        <Cpu size={12} strokeWidth={3} />
-                        {manager.workerIds?.length || 0} EMPLOYEES
+                      <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-border/40 bg-secondary text-muted-foreground text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                        <Cpu size={12} strokeWidth={2.5} />
+                        {manager.workerIds?.length || 0} Fleet
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-500">
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
                       <button
                         onClick={(e) => { e.stopPropagation(); router.push(`/manager/builder?id=${manager.id}`); }}
-                        className="w-12 h-12 bg-foreground/5 rounded-2xl border border-border/40 text-muted hover:bg-foreground hover:text-background transition-all flex items-center justify-center shadow-lg shadow-foreground/5"
+                        className="w-10 h-10 bg-secondary rounded-xl border border-border/40 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all flex items-center justify-center"
                         title="Edit Strategy"
                       >
-                        <Edit3 size={18} strokeWidth={2.5} />
+                        <Edit3 size={18} strokeWidth={2} />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); if(confirm('Delete this manager?')) deleteManager(manager.id); }}
-                        className="w-12 h-12 bg-red-500/5 rounded-2xl border border-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center shadow-lg shadow-red-500/5"
+                        className="w-10 h-10 bg-red-500/5 rounded-xl border border-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
                         title="Delete Manager"
                       >
-                        <Trash2 size={18} strokeWidth={2.5} />
+                        <Trash2 size={18} strokeWidth={2} />
                       </button>
                     </div>
                   </div>
 
                   {/* Header */}
-                  <div className="flex items-start gap-10 mb-12 relative z-10">
-                    <div className="w-20 h-20 rounded-[1.75rem] border border-border/60 bg-foreground/[0.03] flex items-center justify-center text-foreground shrink-0 group-hover:bg-foreground group-hover:text-background transition-all duration-700 shadow-inner group-hover:shadow-2xl group-hover:scale-105">
-                      <Users size={36} strokeWidth={2.5} />
+                  <div className="flex items-start gap-6 mb-10 relative z-10">
+                    <div className="w-16 h-16 rounded-xl border border-border/40 bg-secondary flex items-center justify-center text-foreground shrink-0 group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-all duration-300 shadow-sm overflow-hidden p-3.5">
+                      <Users size={32} strokeWidth={2} />
                     </div>
-                    <div className="min-w-0 pt-2 text-left">
-                       <span className="text-[9px] font-black text-muted uppercase tracking-[0.4em] mb-2 block opacity-30 italic">Manager ID</span>
-                      <h3 className="text-3xl font-black tracking-tighter uppercase italic leading-none truncate mb-4">{manager.name}</h3>
-                      <p className="text-[12px] text-muted font-bold uppercase tracking-tight opacity-50 leading-tight line-clamp-2 italic">
-                        {manager.goal || "No strategic standing objective currently synthesized for this node."}
+                    <div className="min-w-0 pt-1 text-left">
+                       <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest mb-1 block">Operational Identity</span>
+                      <h3 className="text-2xl font-bold font-display tracking-tight text-foreground leading-tight truncate mb-2">{manager.name}</h3>
+                      <p className="text-sm text-muted-foreground font-medium leading-relaxed line-clamp-2">
+                        {manager.goal || "Synthesizing strategic objectives for this operational node..."}
                       </p>
                     </div>
                   </div>
 
-                  {/* Strategy Info */}
-                  <div className="mt-auto space-y-6 pt-12 relative z-10 border-t border-border/40">
-                    <div className="flex items-center justify-between p-6 bg-foreground/[0.02] border border-border/40 rounded-3xl group-hover:bg-background transition-colors duration-500">
-                      <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.3em] text-muted opacity-60">
-                        <Network size={16} /> Employee Fleet
+                  {/* Footer Info */}
+                  <div className="mt-auto space-y-6 pt-10 relative z-10 border-t border-border/40">
+                    <div className="flex items-center justify-between p-4 bg-secondary/60 rounded-xl group-hover:bg-secondary transition-colors">
+                      <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                        <Network size={14} /> Fleet Size
                       </div>
-                      <div className="text-xs font-black italic">{manager.workerIds?.length || 0} Employees</div>
+                      <div className="text-xs font-bold text-foreground">{manager.workerIds?.length || 0} Specialized Units</div>
                     </div>
                     
-                    <button 
-                      className="w-full py-8 bg-foreground text-background rounded-3xl font-black text-[10px] uppercase tracking-[0.4em] shadow-xl shadow-foreground/10 hover:scale-[1.02] transition-all flex items-center justify-center gap-4"
-                    >
-                      Open manager <ChevronRight size={14} strokeWidth={3} />
-                    </button>
-                  </div>
-
-                  {/* Footer Metadata */}
-                  <div className="mt-10 flex items-center justify-between text-[10px] font-black text-muted uppercase tracking-[0.2em] opacity-30 italic">
-                    <div className="flex items-center gap-3">
-                      <Clock size={16} strokeWidth={3} />
-                      INITIATED::{new Date(manager.createdAt).toLocaleDateString().replace(/\//g, '-')}
-                    </div>
-                    <div className="text-foreground font-black bg-foreground/10 px-4 py-1.5 rounded-full not-italic tracking-[0.1em]">
-                      MODEL::{manager.model.split('/').pop().toUpperCase()}
+                    <div className="mt-4 flex items-center justify-between text-[10px] font-bold text-muted-foreground/40 uppercase tracking-wider">
+                      <div className="flex items-center gap-2">
+                        <Clock size={14} strokeWidth={2.5} />
+                        Updated {new Date(manager.createdAt).toLocaleDateString()}
+                      </div>
+                      <div className="text-primary font-bold bg-primary/5 px-2.5 py-1 rounded-full border border-primary/10">
+                        {manager.model.split('/').pop().toUpperCase()}
+                      </div>
                     </div>
                   </div>
                 </div>

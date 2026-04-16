@@ -3,7 +3,7 @@ import SkillDashboard from '@/components/SkillDashboard';
 
 export default function SkillLibraryPage() {
   return (
-    <SidebarLayout title="CAPABILITIES // SKILL_LIBRARY">
+    <SidebarLayout title="Skill Library">
       <SkillDashboard />
     </SidebarLayout>
   );

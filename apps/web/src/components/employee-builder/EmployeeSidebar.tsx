@@ -16,7 +16,7 @@ interface SidebarItem {
   soon?: boolean;
 }
 
-interface TacticalSidebarProps {
+interface EmployeeSidebarProps {
   activeSubTab: string;
   setActiveSubTab: (id: any) => void;
   isNew: boolean;
@@ -92,7 +92,7 @@ export function RightConfigPane({
   localEmployee, allSkills, myKnowledge,
   isPaneCollapsed,
   setIsPaneCollapsed
-}: Partial<TacticalSidebarProps> & { isPaneCollapsed?: boolean; setIsPaneCollapsed?: (val: boolean) => void }) {
+}: Partial<EmployeeSidebarProps> & { isPaneCollapsed?: boolean; setIsPaneCollapsed?: (val: boolean) => void }) {
   
   // Resolve assigned entities for UI display
   const assignedSkills = localEmployee?.skillIds?.map((sid: string) => allSkills?.find(s => s.id === sid)).filter(Boolean) || [];

@@ -15,6 +15,7 @@ node_modules
 # Testing
 coverage
 n8n
+newFrontend
 
 # Turbo
 .turbo

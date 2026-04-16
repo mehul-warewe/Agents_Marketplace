@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
 import SidebarLayout from '@/components/SidebarLayout';
 import { 
@@ -11,7 +12,9 @@ import {
   useTestCredential,
   useInfinitePipedreamApps,
   usePipedreamToken,
-  usePipedreamAccounts
+  usePipedreamAccounts,
+  useDeletePdAccount,
+  usePipedreamAppDetails
 } from '@/hooks/useApi';
 import { 
   Link2, Plus, Trash2, 
@@ -22,34 +25,177 @@ import {
   CheckCircle2,
   Activity,
   Layers,
-  ArrowRight
+  ArrowRight,
+  MoreVertical
 } from 'lucide-react';
 
-const iconMap: Record<string, any> = {
-  slack: <Slack size={20} />,
-  mail: <Mail size={20} />,
-  google: <img src="/iconSvg/google-gmail.svg" className="w-5 h-5 object-contain" />,
-  google_gmail: <img src="/iconSvg/google-gmail.svg" className="w-5 h-5 object-contain" />,
-  google_calendar: <img src="/iconSvg/google-calendar.svg" className="w-5 h-5 object-contain" />,
-  google_drive: <img src="/iconSvg/google-drive.svg" className="w-5 h-5 object-contain" />,
-  google_sheets: <img src="/iconSvg/google-sheets-icon.svg" className="w-5 h-5 object-contain" />,
-  youtube: <img src="/iconSvg/youtube-icon.svg" className="w-5 h-5 object-contain" />,
-  link: <Link2 size={20} />,
-  webhook: <Globe size={20} />,
-  sparkles: <Sparkles size={20} />,
-  openai: <img src="/iconSvg/openai.svg" className="w-5 h-5 object-contain invert" />,
-  gemini: <img src="/iconSvg/gemini-color.svg" className="w-5 h-5 object-contain" />,
-  claude: <img src="/iconSvg/claude-color.svg" className="w-5 h-5 object-contain" />,
-  openrouter: <img src="/iconSvg/openrouter.svg" className="w-5 h-5 object-contain invert" />,
-  mongodb_atlas: <img src="/iconSvg/mongodb-icon.svg" className="w-5 h-5 object-contain" />,
-  redis: <img src="/iconSvg/redis.svg" className="w-5 h-5 object-contain" />,
-  github: <img src="/iconSvg/github.svg" className="w-5 h-5 object-contain invert" />,
-  notion: <img src="/iconSvg/notion.svg" className="w-5 h-5 object-contain invert" />,
-  linear: <img src="/iconSvg/linear.svg" className="w-5 h-5 object-contain invert" />,
-  supabase: <img src="/iconSvg/supabase.svg" className="w-5 h-5 object-contain" />,
-  linkedin: <img src="/iconSvg/linkedin.svg" className="w-5 h-5 object-contain" />,
-  reddit: <img src="/iconSvg/reddit.svg" className="w-5 h-5 object-contain" />,
-};
+const iconMap: Record<string, any> = {};
+
+function ConnectedAppIcon({ slug, appId, defaultLogo, className }: any) {
+  const { data: appMeta } = usePipedreamAppDetails(slug);
+  const [fallbackIndex, setFallbackIndex] = useState(0);
+
+  // Pipedream API response can have logo_url or icon depending on which endpoint we hit
+  const finalLogo = appMeta?.logo_url || appMeta?.icon || defaultLogo;
+  const finalAppId = appMeta?.id || appId;
+
+  const logoFallbacks = [
+    finalLogo,
+    finalAppId ? `https://assets.pipedream.net/s.v0/${finalAppId}/logo/orig` : null,
+    `https://assets.pipedream.net/s.v0/app_logo/${slug}/64`,
+    `https://pipedream.com/s.v0/app_logo/${slug}/64`,
+    `https://unavatar.io/${slug}`,
+  ].filter(Boolean) as string[];
+
+  if (fallbackIndex >= logoFallbacks.length) {
+    return <Link2 size={16} className="text-muted-foreground/30 animate-pulse" />;
+  }
+
+  return (
+    <img 
+      key={fallbackIndex}
+      src={logoFallbacks[fallbackIndex]} 
+      className={className} 
+      onError={() => setFallbackIndex(i => i + 1)}
+    />
+  );
+}
+
+function ActiveConnectionCard({ cred, schemas, onDelete, iconMap, isDeleting }: any) {
+  const [showOptions, setShowOptions] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowOptions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const slug = cred.appSlug || cred.type.replace('pd:', '').replace('_oauth', '').replace(/_/g, '-');
+  const mappedIcon = iconMap[slug];
+
+  return (
+    <div className={`bg-card rounded-2xl border border-border/40 p-4 flex items-center gap-5 group relative transition-all duration-300 shadow-sm hover:shadow-md hover:border-primary/20 ${isDeleting ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
+      
+      {/* Big Logo Left */}
+      <div className="w-12 h-12 rounded-xl border flex items-center justify-center bg-secondary border-border/40 text-foreground shadow-inner overflow-hidden p-2 shrink-0 relative z-10">
+        {isDeleting ? (
+           <RefreshCw size={20} className="animate-spin text-primary/40" />
+        ) : mappedIcon ? (
+           React.cloneElement(mappedIcon as any, { className: 'w-full h-full object-contain' })
+        ) : (
+          <div className="w-full h-full relative flex items-center justify-center">
+            <ConnectedAppIcon 
+              slug={slug} 
+              appId={cred.appId} 
+              defaultLogo={cred.logoUrl} 
+              className="w-full h-full object-contain relative z-10" 
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col flex-1 min-w-0 pr-6 relative z-10">
+        <h3 className="text-base font-bold font-display tracking-tight truncate leading-tight">
+          {(cred.isPipedream ? cred.platformName : (schemas?.[cred.type]?.label || cred.platformName || cred.type.toUpperCase())).split(' ').map((s: string) => (s && s[0]) ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s).join(' ')}
+        </h3>
+
+        {cred.name && cred.name.toLowerCase() !== (cred.platformName || '').toLowerCase() && (
+          <p className="text-[11px] font-medium text-muted-foreground truncate opacity-70 leading-relaxed mt-0.5">
+            {cred.name}
+          </p>
+        )}
+      </div>
+
+      <div className="relative z-20" ref={dropdownRef}>
+        <button 
+          onClick={() => setShowOptions(!showOptions)}
+          className="w-8 h-8 rounded-lg hover:bg-secondary/50 flex items-center justify-center text-muted-foreground/40 hover:text-foreground transition-all active:scale-95"
+        >
+          <MoreVertical size={16} />
+        </button>
+
+        <AnimatePresence>
+          {showOptions && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              className="absolute right-0 mt-2 w-48 bg-card border border-border/60 rounded-xl shadow-2xl z-50 overflow-hidden py-1"
+            >
+               <button 
+                 onClick={() => {
+                   if (confirm('Are you sure you want to remove this connection?')) {
+                     onDelete();
+                   }
+                   setShowOptions(false);
+                 }}
+                 className="w-full px-4 py-2.5 text-left text-xs font-bold text-red-500 hover:bg-red-500/5 flex items-center gap-2 transition-colors"
+               >
+                 <Trash2 size={12} />
+                 Remove Connection
+               </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+function MarketplaceCard({ id, name, icon, logoUrl, isConnected, onClick, type = 'platform' }: any) {
+  return (
+    <motion.button 
+      whileHover={{ y: -5 }}
+      onClick={onClick}
+      className="bg-card rounded-3xl border border-border/40 p-6 flex flex-col items-center justify-center text-center group relative transition-all duration-300 shadow-sm hover:shadow-2xl hover:border-primary/30"
+    >
+      <div className="w-16 h-16 rounded-2xl bg-secondary border border-border/40 flex items-center justify-center text-foreground group-hover:scale-110 transition-all mb-4 relative z-10 p-4 shadow-inner overflow-hidden">
+         <div className="w-full h-full relative flex items-center justify-center">
+            {icon ? (
+              React.cloneElement(icon as any, { className: 'w-full h-full object-contain' })
+            ) : (
+             <>
+               <img 
+                 src={logoUrl} 
+                 className="w-full h-full object-contain transition-all relative z-10" 
+                 onError={(e: any) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+               />
+               <div className="absolute inset-0 items-center justify-center bg-secondary hidden">
+                  <Plus size={24} className="text-muted-foreground/20" />
+               </div>
+             </>
+           )}
+         </div>
+      </div>
+      
+      <h3 className="text-sm font-bold font-display text-foreground mb-4 relative z-10 truncate w-full px-2">
+        {name}
+      </h3>
+
+      <div className={`w-full flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider px-4 py-2 rounded-xl border transition-all ${isConnected ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 opacity-80' : 'bg-secondary border-border/40 text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary shadow-sm'}`}>
+        {isConnected ? (
+          <>
+            <CheckCircle2 size={12} className="fill-current" />
+            Connected
+          </>
+        ) : (
+          <>
+            <Plus size={12} strokeWidth={2.5} />
+            Connect
+          </>
+        )}
+      </div>
+
+      {/* Decorative gradient highlight on hover */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl pointer-events-none" />
+    </motion.button>
+  );
+}
 
 export default function ConnectionsPage() {
   const { data: credentials, isLoading: loadingCreds } = useCredentials();
@@ -57,8 +203,26 @@ export default function ConnectionsPage() {
   const { data: pdAccounts, isLoading: loadingPdAccounts } = usePipedreamAccounts();
   const createCredential = useCreateCredential();
   const deleteCredential = useDeleteCredential();
+  const deletePdAccount = useDeletePdAccount();
   const testCredential = useTestCredential();
   const generateToken = usePipedreamToken();
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (id: string, isPipedream: boolean) => {
+    setDeletingId(id);
+    try {
+      if (isPipedream) {
+        await deletePdAccount.mutateAsync(id);
+      } else {
+        await deleteCredential.mutateAsync(id);
+      }
+    } catch (err) {
+      console.error('Failed to delete connection:', err);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -66,6 +230,11 @@ export default function ConnectionsPage() {
   const [credName, setCredName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('All');
+
+  const categories = [
+    'All', 'Popular', 'AI', 'Communication', 'Database', 'CRM', 'DevTools', 'Social'
+  ];
   
   const exploreRef = useRef<HTMLDivElement>(null);
 
@@ -81,25 +250,68 @@ export default function ConnectionsPage() {
 
   // Merge native and Pipedream accounts
   const unifiedBridges = useMemo(() => {
-    const native = (credentials || []).map((c: any) => ({
-      ...c,
-      isPipedream: false
-    }));
+    // Create a lookup map from marketplace platforms for high-quality logos and accurate names
+    const platformMetaMap: Record<string, { logoUrl: string, name: string, icon?: string }> = {};
+    allPlatforms.forEach((app: any) => {
+      platformMetaMap[app.slug] = {
+        logoUrl: `https://assets.pipedream.net/s.v0/${app.id}/logo/orig`,
+        name: app.name,
+        icon: app.icon
+      };
+    });
+    const native = (credentials || []).map((c: any) => {
+      const slug = c.type.replace('_oauth', '').replace(/_/g, '-');
+      const meta = platformMetaMap[slug] || platformMetaMap[c.type.replace('_oauth', '')];
+      
+      const platformLabel = schemas?.[c.type]?.label || meta?.name || slug
+        .split('-')
+        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+
+      return {
+        ...c,
+        isPipedream: false,
+        platformName: platformLabel,
+        appSlug: slug,
+        logoUrl: meta?.logoUrl || meta?.icon || `https://pipedream.com/s.v0/app_logo/${slug}/64`
+      };
+    });
     
-    const pd = (pdAccounts || []).map((acc: any) => ({
-      id: acc.id,
-      // Pipedream usually returns name, slug, and sometimes an internal app id
-      name: acc.name || `Pipedream ${acc.app_slug}`,
-      type: `pd:${acc.app_slug}`,
-      isValid: true,
-      isPipedream: true,
-      appSlug: acc.app_slug,
-      // For connected accounts, we use slug-based logo as ID is often not provided in the same object
-      logoUrl: `https://pipedream.com/s.v0/app_logo/${acc.app_slug}/64`
-    }));
+    const pd = (pdAccounts || []).map((acc: any) => {
+      const rawSlug = acc.app_slug || (acc.app?.slug) || 'app';
+      const normalizedSlug = rawSlug.replace(/_/g, '-');
+      const meta = platformMetaMap[rawSlug] || platformMetaMap[normalizedSlug];
+
+      const platformLabel = meta?.name || rawSlug
+        .split('_')
+        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+
+      let displayName = acc.name || platformLabel;
+      if (displayName.toLowerCase().startsWith('pipedream')) {
+        displayName = displayName.replace(/^pipedream\s+/i, '') || platformLabel;
+      }
+
+      const appId = acc.app_id || acc.app?.id || acc.oauth_app_id || acc.app?.app_id;
+      const logoUrl = acc.logo_url || acc.app?.logo_url || meta?.logoUrl || meta?.icon || (appId 
+        ? `https://assets.pipedream.net/s.v0/${appId}/logo/orig`
+        : `https://pipedream.com/s.v0/app_logo/${normalizedSlug}/64`);
+
+      return {
+        id: acc.id,
+        name: displayName,
+        platformName: platformLabel,
+        type: `pd:${rawSlug}`,
+        isValid: true,
+        isPipedream: true,
+        appSlug: normalizedSlug,
+        appId: appId,
+        logoUrl: logoUrl
+      };
+    });
 
     return [...native, ...pd];
-  }, [credentials, pdAccounts]);
+  }, [credentials, pdAccounts, allPlatforms, schemas]);
 
   const connectedTypesSet = useMemo(() => {
     return new Set(unifiedBridges.map((b: any) => b.type));
@@ -152,35 +364,33 @@ export default function ConnectionsPage() {
   };
 
   return (
-    <SidebarLayout title="Connections">
+    <SidebarLayout title="Integrations">
       <div className="p-6 sm:p-10 lg:p-12 max-w-7xl mx-auto space-y-16 font-inter text-foreground">
         
         {/* Header */}
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 py-4">
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-               <div className="w-8 h-[2px] bg-foreground/20" />
-               <span className="text-[10px] font-black uppercase tracking-[0.4em] text-muted">Integrations</span>
-            </div>
-            <h1 className="text-6xl font-black tracking-tighter leading-none uppercase italic">Connections</h1>
-            <p className="text-muted font-bold text-sm max-w-xl opacity-50 uppercase tracking-tight">MANAGE YOUR SECURE ACCOUNTS.</p>
+            <h1 className="text-5xl font-bold font-display tracking-tight leading-none text-foreground">Cloud Integrations</h1>
+            <p className="text-muted-foreground font-medium text-sm max-w-xl">
+              Connect your professional accounts to extend the reach of your digital workforce.
+            </p>
           </div>
           
-          <button onClick={scrollToExplore} className="bg-foreground text-background px-8 py-5 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:scale-[1.05] transition-all flex items-center gap-3">
-            <Plus size={16} strokeWidth={3} /> Browse Marketplace
+          <button onClick={scrollToExplore} className="bg-primary text-primary-foreground px-8 py-4 rounded-xl font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2 shadow-lg shadow-primary/20">
+            <Plus size={18} strokeWidth={2.5} /> Browse Marketplace
           </button>
         </header>
 
-        {/* Active Bridges */}
+        {/* Active Connections */}
         <section className="space-y-8">
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-4">
-              <Activity size={20} className="text-foreground opacity-50" />
-              <h2 className="text-2xl font-black uppercase tracking-tighter italic">Active Connections</h2>
+              <Activity size={20} className="text-primary/60" />
+              <h2 className="text-2xl font-bold font-display tracking-tight text-foreground">Active Integrations</h2>
             </div>
             {unifiedBridges.length > 0 && (
-              <span className="text-[10px] font-black px-4 py-1.5 bg-foreground/5 border border-border/40 rounded-full uppercase tracking-wider">
-                {unifiedBridges.length} ACTIVE
+              <span className="text-[10px] font-bold px-3 py-1 bg-primary/5 text-primary border border-primary/20 rounded-full uppercase tracking-wider">
+                {unifiedBridges.length} Enabled
               </span>
             )}
           </div>
@@ -188,137 +398,136 @@ export default function ConnectionsPage() {
           {(loadingCreds || loadingPdAccounts) ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-48 bg-muted/5 border border-border rounded-[2rem] animate-pulse" />
+                <div key={i} className="h-48 bg-secondary/40 border border-border rounded-2xl animate-pulse" />
               ))}
             </div>
           ) : unifiedBridges.length === 0 ? (
-            <div className="bg-foreground/[0.01] rounded-[3rem] border border-border/40 border-dashed py-24 flex flex-col items-center justify-center text-center space-y-8 px-8 group overflow-hidden">
-              <div className="w-20 h-20 bg-foreground/5 rounded-[2rem] flex items-center justify-center text-muted/20 border border-border/20 group-hover:scale-110 transition-transform">
-                <Link2 size={40} strokeWidth={1} />
+            <div className="bg-secondary/40 rounded-3xl border border-border/40 border-dashed py-20 flex flex-col items-center justify-center text-center space-y-6 px-8 group overflow-hidden">
+              <div className="w-16 h-16 bg-card rounded-2xl flex items-center justify-center text-muted-foreground/20 border border-border/20 group-hover:scale-110 transition-transform shadow-sm">
+                <Link2 size={32} strokeWidth={1} />
               </div>
-              <div className="space-y-2 relative z-10">
-                <h3 className="text-2xl font-black uppercase tracking-tighter italic opacity-40">Zero Connectivity</h3>
-                <p className="text-muted font-bold text-[10px] uppercase opacity-30 tracking-widest">BRIDGE SEARCH MARKETPLACE TO INITIATE AUTHORIZATION.</p>
+              <div className="space-y-1 relative z-10">
+                <h3 className="text-xl font-bold font-display text-foreground/40">No connections detected</h3>
+                <p className="text-muted-foreground font-medium text-xs max-w-xs">Browse the marketplace below to initiate your first secure account link.</p>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {unifiedBridges.map((cred: any) => (
-                <div key={cred.id} className="bg-card rounded-[2rem] border border-border/60 p-6 flex flex-col group relative transition-all duration-300 hover:shadow-2xl hover:shadow-foreground/5 hover:border-foreground/30 overflow-hidden min-h-[220px]">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-foreground/[0.02] rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
-                  
-                  <div className="flex items-start justify-between mb-8 relative z-10">
-                    <div className="w-14 h-14 rounded-2xl border flex items-center justify-center transition-all bg-foreground/[0.02] border-border/40 text-foreground group-hover:bg-foreground group-hover:text-background shadow-inner overflow-hidden p-3">
-                      {cred.isPipedream ? (
-                        <img 
-                          src={cred.logoUrl} 
-                          className="w-full h-full object-contain filter group-hover:invert transition-all" 
-                          onError={(e: any) => { e.target.src = 'https://pipedream.com/s.v0/app_logo/pipedream/64'; }}
-                        />
-                      ) : (
-                        iconMap[schemas?.[cred.type]?.icon] || <Shield size={24} />
-                      )}
-                    </div>
-                    {!cred.isPipedream && (
-                      <button 
-                        onClick={() => confirm('Sever this bridge?') && deleteCredential.mutate(cred.id)}
-                        className="w-9 h-9 rounded-lg bg-red-500/5 hover:bg-red-500 hover:text-white flex items-center justify-center text-red-500 transition-all border border-red-500/10 opacity-0 group-hover:opacity-100"
-                      >
-                        <Trash2 size={14} strokeWidth={3} />
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="space-y-6 flex-1 flex flex-col uppercase relative z-10">
-                    <div className="space-y-1.5">
-                       <p className="text-[9px] font-black text-muted uppercase tracking-[0.2em] opacity-40">Alias / Device</p>
-                       <h3 className="text-xl font-black italic tracking-tighter truncate leading-tight">{cred.name}</h3>
-                    </div>
-
-                    <div className="mt-auto pt-6 border-t border-border/40 flex items-center justify-between">
-                      <div className="flex flex-col">
-                         <span className="text-[8px] font-black text-muted uppercase tracking-[0.3em] mb-1 opacity-40">Protocol</span>
-                         <span className="text-[10px] font-black tracking-wider leading-none">
-                            {cred.isPipedream ? 'PIPEDREAM MCP' : (schemas?.[cred.type]?.label || cred.type.toUpperCase())}
-                         </span>
-                      </div>
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-emerald-500/5 border-emerald-500/10 text-emerald-500">
-                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                         <span className="text-[9px] font-black uppercase tracking-[0.05em]">SYNCED</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <ActiveConnectionCard 
+                  key={cred.id} 
+                  cred={cred} 
+                  schemas={schemas} 
+                  onDelete={() => handleDelete(cred.id, cred.isPipedream)} 
+                  iconMap={iconMap} 
+                  isDeleting={deletingId === cred.id}
+                />
               ))}
             </div>
           )}
         </section>
 
         {/* Marketplace */}
-        <section ref={exploreRef} className="space-y-12">
-          <div className="space-y-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2 pt-8">
-              <div className="flex items-center gap-4">
-                <Layers size={20} className="text-foreground opacity-50" />
-                <h2 className="text-3xl font-black uppercase tracking-tighter italic">Marketplace</h2>
+        <section ref={exploreRef} className="space-y-12 pb-32">
+          <div className="space-y-10">
+            <div className="flex flex-col gap-10">
+              {/* Marketplace Stats & Search */}
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 px-2 pt-12">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-sm">
+                      <Layers size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-4xl font-black font-display tracking-tight text-foreground">Marketplace</h2>
+                      <p className="text-muted-foreground font-medium text-sm flex items-center gap-2 mt-1">
+                        Discover & bridge 100+ native agent skills 
+                        <span className="w-1 h-1 rounded-full bg-border" />
+                        <span className="text-primary/60">New platforms weekly</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="relative min-w-full md:min-w-[450px] group">
+                   <div className={`absolute -inset-1 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-2xl blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-500`} />
+                   <div className="relative">
+                    <Search size={20} className={`absolute left-6 top-1/2 -translate-y-1/2 transition-colors duration-300 ${searchFocused ? 'text-primary' : 'text-muted-foreground/30'}`} />
+                      <input 
+                        type="text"
+                        value={searchQuery}
+                        onFocus={() => setSearchFocused(true)}
+                        onBlur={() => setSearchFocused(false)}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        placeholder="Search for tools, CRM, AI, or storage..."
+                        className="w-full bg-card border border-border/60 rounded-2xl px-16 py-5 text-base font-semibold text-foreground outline-none focus:ring-0 transition-all shadow-xl placeholder:text-muted-foreground/30"
+                      />
+                      {searchQuery && (
+                        <button 
+                          onClick={() => setSearchQuery('')}
+                          className="absolute right-6 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-all"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                   </div>
+                </div>
               </div>
-              
-              <div className="relative min-w-[300px] md:min-w-[400px]">
-                 <Search size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-muted opacity-40" />
-                   <input 
-                     type="text"
-                     value={searchQuery}
-                     onChange={e => setSearchQuery(e.target.value)}
-                     placeholder="Search platforms..."
-                     className="w-full bg-foreground/[0.02] border border-border/40 rounded-2xl px-14 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-foreground outline-none focus:bg-background transition-all shadow-xl"
-                   />
+
+              {/* Category Chips */}
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 px-2">
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    className={`px-6 py-2.5 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all whitespace-nowrap border ${activeCategory === cat ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20' : 'bg-secondary/40 text-muted-foreground border-border/40 hover:bg-secondary hover:text-foreground'}`}
+                  >
+                    {cat}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {searchQuery && Object.entries(schemas || {})
-                .filter(([k, s]: [string, any]) => s.label.toLowerCase().includes(searchQuery.toLowerCase()))
-                .map(([key, s]: [string, any]) => (
-                <button 
-                  key={key}
-                  onClick={() => handlePlatformClick(key, s)}
-                  className="bg-card rounded-[2.5rem] border border-border/60 p-8 flex flex-col items-center justify-center text-center group relative transition-all duration-500 hover:border-foreground/40 overflow-hidden"
-                >
-                  <div className="w-20 h-20 rounded-[1.5rem] bg-foreground/[0.02] border border-border/40 flex items-center justify-center text-foreground group-hover:scale-110 transition-all shadow-inner mb-6 relative z-10">
-                    {iconMap[s.icon] || <Shield size={32} strokeWidth={1.5} />}
-                  </div>
-                  <h3 className="text-sm font-black italic tracking-tighter uppercase mb-4 relative z-10">{s.label}</h3>
-                  <div className={`flex items-center gap-2 text-[8px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-full border ${connectedTypesSet.has(key) ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-foreground/5 border-border/20 text-muted'}`}>
-                    {connectedTypesSet.has(key) ? 'SYNCED' : 'DIRECT'} <Zap size={10} className="fill-current" />
-                  </div>
-                </button>
-              ))}
-
+            {/* Marketplace Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+              {/* Pipedream Apps */}
               {allPlatforms.map((app: any) => (
-                <button 
+                <MarketplaceCard 
                   key={app.id}
+                  name={app.name}
+                  logoUrl={`https://assets.pipedream.net/s.v0/${app.id}/logo/orig`}
+                  isConnected={connectedTypesSet.has(`pd:${app.slug}`)}
                   onClick={() => handlePipedreamConnect(app)}
-                  className="bg-card rounded-[2.5rem] border border-border/60 p-8 flex flex-col items-center justify-center text-center group relative transition-all duration-500 hover:border-foreground/40 overflow-hidden"
-                >
-                  <div className="w-20 h-20 rounded-[1.5rem] bg-foreground/[0.02] border border-border/40 flex items-center justify-center text-foreground group-hover:scale-110 transition-all shadow-inner mb-6 relative z-10 p-5 overflow-hidden">
-                     <img 
-                       src={`https://assets.pipedream.net/s.v0/${app.id}/logo/orig`} 
-                       className="w-full h-full object-contain filter group-hover:grayscale-0 transition-all" 
-                       onError={(e: any) => { e.target.src = 'https://pipedream.com/s.v0/app_logo/pipedream/64'; }}
-                     />
-                  </div>
-                  <h3 className="text-sm font-black italic tracking-tighter uppercase mb-4 relative z-10 truncate w-full">{app.name}</h3>
-                  <div className={`flex items-center gap-2 text-[8px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-full border ${connectedTypesSet.has(`pd:${app.slug}`) ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-foreground/5 border-border/20 text-muted'}`}>
-                    {connectedTypesSet.has(`pd:${app.slug}`) ? 'CONNECTED' : 'CONNECT'} <Zap size={10} className="fill-current" />
-                  </div>
-                </button>
+                />
+              ))}
+
+              {/* Loading Skeletons */}
+              {isLoadingPd && [1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} className="h-48 bg-secondary/20 rounded-3xl border border-border border-dashed animate-pulse" />
               ))}
             </div>
 
-            {hasNextPage && (
-              <div className="flex justify-center py-12">
-                <button onClick={() => fetchNextPage()} className="bg-foreground text-background px-12 py-5 rounded-2xl font-black text-[10px] uppercase tracking-[0.4em] hover:scale-105 transition-all">
-                  {isFetchingNextPage ? 'SYNCING...' : 'LOAD MORE PLATFORMS'}
+            {hasNextPage && !searchQuery && (
+              <div className="flex justify-center py-16">
+                <button 
+                  onClick={() => fetchNextPage()} 
+                  disabled={isFetchingNextPage}
+                  className="group relative px-12 py-5 rounded-2xl bg-secondary border border-border/60 overflow-hidden transition-all hover:border-primary/30"
+                >
+                  <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/5 transition-colors" />
+                  <div className="relative flex items-center gap-3 font-bold text-sm tracking-tight text-foreground">
+                    {isFetchingNextPage ? (
+                      <>
+                        <RefreshCw size={18} className="animate-spin text-primary" />
+                        Syncing Ecosystem...
+                      </>
+                    ) : (
+                      <>
+                        Discover 1,200+ More Tools
+                        <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                      </>
+                    )}
+                  </div>
                 </button>
               </div>
             )}
@@ -328,17 +537,17 @@ export default function ConnectionsPage() {
         {isModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
             <div className="absolute inset-0 bg-background/60 backdrop-blur-xl" onClick={() => setIsModalOpen(false)} />
-            <div className="bg-card w-full max-w-xl rounded-[3rem] border border-border shadow-2xl overflow-hidden relative z-10 font-inter animate-in fade-in zoom-in-95 duration-500">
-              <div className="p-10 border-b border-border/40 bg-foreground/[0.01] relative">
-                <button onClick={() => setIsModalOpen(false)} className="absolute top-10 right-10 w-10 h-10 rounded-xl bg-foreground/5 hover:bg-foreground hover:text-background flex items-center justify-center text-muted transition-all border border-border/20">
-                  <X size={20} strokeWidth={3} />
+            <div className="bg-card w-full max-w-lg rounded-3xl border border-border/60 shadow-2xl overflow-hidden relative z-10 animate-in fade-in zoom-in-95 duration-500">
+              <div className="p-10 border-b border-border/40 relative">
+                <button onClick={() => setIsModalOpen(false)} className="absolute top-8 right-8 w-10 h-10 rounded-xl bg-secondary hover:bg-muted flex items-center justify-center text-muted-foreground transition-all">
+                  <X size={20} strokeWidth={2.5} />
                 </button>
-                <div className="flex items-center gap-3 mb-4">
-                   <div className="w-2 h-2 rounded-full bg-foreground" />
-                   <span className="text-[9px] font-black text-muted uppercase tracking-[0.4em] opacity-40">Configuration</span>
+                <div className="flex items-center gap-3 mb-3">
+                   <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Configuration</span>
                 </div>
-                <h2 className="text-3xl font-black tracking-tighter uppercase italic leading-none">
-                  {selectedType ? `Setup_${schemas?.[selectedType]?.label.toUpperCase().replace(/\s+/g, '_')}` : 'New Bridge'}
+                <h2 className="text-2xl font-bold font-display text-foreground tracking-tight">
+                  {selectedType ? `Setup ${schemas?.[selectedType]?.label}` : 'New Connection'}
                 </h2>
               </div>
               <div className="p-10 max-h-[70vh] overflow-y-auto no-scrollbar">
@@ -347,21 +556,21 @@ export default function ConnectionsPage() {
                     e.preventDefault();
                     createCredential.mutate({ name: credName, type: selectedType, data: formData });
                     setIsModalOpen(false);
-                  }} className="space-y-10">
-                    <div className="space-y-3">
-                      <label className="text-[9px] font-black text-muted uppercase tracking-[0.2em] px-2 opacity-50">Local_Alias</label>
-                      <input required type="text" value={credName} onChange={e => setCredName(e.target.value)} className="w-full bg-foreground/[0.03] border border-border/40 rounded-xl px-6 py-4 text-xs font-black uppercase tracking-widest text-foreground outline-none focus:bg-background focus:border-foreground transition-all shadow-lg" placeholder="e.g. My Workspace..." />
+                  }} className="space-y-8">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Workspace Alias</label>
+                      <input required type="text" value={credName} onChange={e => setCredName(e.target.value)} className="w-full bg-secondary border border-border/40 rounded-xl px-4 py-3 text-sm font-medium text-foreground outline-none focus:ring-4 focus:ring-primary/5 transition-all" placeholder="e.g. Production Account" />
                     </div>
                     <div className="space-y-6">
                        {schemas?.[selectedType]?.fields.map((f: any) => (
-                        <div key={f.key} className="space-y-3">
-                          <label className="text-[9px] font-black text-muted uppercase tracking-[0.2em] px-2 opacity-50">{f.label.toUpperCase()}</label>
-                          <input required type={f.type === 'password' ? 'password' : 'text'} value={formData[f.key] || ''} onChange={e => setFormData({ ...formData, [f.key]: e.target.value })} className="w-full bg-foreground/[0.03] border border-border/40 rounded-xl px-6 py-4 text-xs font-medium text-foreground outline-none focus:bg-background focus:border-foreground transition-all shadow-lg italic" placeholder={`Enter ${f.label.toLowerCase()}...`} />
+                        <div key={f.key} className="space-y-2">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">{f.label}</label>
+                          <input required type={f.type === 'password' ? 'password' : 'text'} value={formData[f.key] || ''} onChange={e => setFormData({ ...formData, [f.key]: e.target.value })} className="w-full bg-secondary border border-border/40 rounded-xl px-4 py-3 text-sm font-medium text-foreground outline-none focus:ring-4 focus:ring-primary/5 transition-all" placeholder={`Enter your ${f.label.toLowerCase()}...`} />
                         </div>
                       ))}
                     </div>
-                    <div className="pt-6">
-                      <button type="submit" className="w-full bg-foreground text-background px-10 py-5 rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] shadow-xl hover:scale-[1.02] transition-all">ESTABLISH BRIDGE</button>
+                    <div className="pt-4">
+                      <button type="submit" className="w-full bg-primary text-primary-foreground px-8 py-4 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-all">Enable Integration</button>
                     </div>
                   </form>
                 )}
