@@ -31,164 +31,168 @@ interface EmployeeSidebarProps {
 
 export function LeftSubNav({ activeSubTab, setActiveSubTab }: { activeSubTab: string, setActiveSubTab: (id: any) => void }) {
   const primaryItems: SidebarItem[] = [
-    { id: 'prompt', icon: MessageSquare, label: 'Identity & Prompt', desc: 'Define persona and rules' },
-    { id: 'tools', icon: Wrench, label: 'Skills', desc: 'Equip vertical workflows' },
-    { id: 'knowledge', icon: BookOpen, label: 'Knowledge', desc: 'Attach internal documents' },
-    { id: 'triggers', icon: Target, label: 'Triggers', desc: 'Set autonomous schedules', soon: true },
+    { id: 'prompt', icon: MessageSquare, label: 'Instructions', desc: 'Agent persona' },
+    { id: 'tools', icon: Wrench, label: 'Skills', desc: 'Capabilities' },
+    { id: 'knowledge', icon: BookOpen, label: 'Knowledge', desc: 'Context data' },
+    { id: 'triggers', icon: Target, label: 'Triggers', desc: 'Events', soon: true },
   ];
 
   const secondaryItems: SidebarItem[] = [
-    { id: 'variables', icon: Variable, label: 'Variables', desc: 'Dynamic values', soon: true },
-    { id: 'settings', icon: Settings, label: 'Settings', desc: 'Advanced configuration', soon: true },
+    { id: 'variables', icon: Variable, label: 'Variables', desc: 'State', soon: true },
+    { id: 'settings', icon: Settings, label: 'Settings', desc: 'Config', soon: true },
   ];
 
   return (
-    <aside className="w-[300px] border-r border-border/40 bg-card/10 flex flex-col py-8 shrink-0">
-      <div className="flex-1 space-y-8">
-        <div className="px-4 space-y-1">
-          {primaryItems.map((item) => (
-            <button 
-              key={item.id}
-              onClick={() => !item.soon && setActiveSubTab(item.id)}
-              className={`w-full text-left p-4 rounded-xl flex items-start gap-4 transition-all relative group ${activeSubTab === item.id ? 'bg-indigo-500/5 text-indigo-500' : 'text-muted hover:bg-foreground/5'} ${item.soon ? 'opacity-40 cursor-not-allowed' : ''}`}
-            >
-               <item.icon size={18} strokeWidth={2.5} className={`mt-1 transition-all ${activeSubTab === item.id ? 'text-indigo-500' : 'text-muted opacity-40 group-hover:opacity-100'}`} />
-               <div className="flex-1 text-left">
-                  <div className="flex items-center justify-between">
-                     <span className="text-xs font-bold uppercase tracking-tight leading-none">{item.label}</span>
-                     {item.soon && <span className="text-[7px] font-bold bg-foreground/10 px-2 py-0.5 rounded text-muted">SOON</span>}
-                  </div>
-                  <p className="text-[10px] font-medium opacity-50 mt-1.5 leading-tight">{item.desc}</p>
-               </div>
-               {activeSubTab === item.id && <motion.div layoutId="sidebar-active" className="absolute left-[-4px] top-2 bottom-2 w-1.5 bg-indigo-500 rounded-r-full shadow-xl" />}
-            </button>
-          ))}
+    <div className="flex flex-col py-2 h-full w-full bg-card">
+      <div className="flex-1 space-y-0.5">
+        <div className="px-2.5 space-y-0.5">
+          {primaryItems.map((item) => {
+            const isActive = activeSubTab === item.id;
+            return (
+              <button 
+                key={item.id}
+                onClick={() => !item.soon && setActiveSubTab(item.id)}
+                className={`w-full text-left p-1.5 rounded-lg flex items-center gap-2.5 transition-all duration-300 relative group
+                  ${isActive ? 'bg-primary/10 text-primary' : 'text-foreground/50 hover:bg-secondary'} 
+                  ${item.soon ? 'opacity-30 cursor-not-allowed' : ''}`}
+              >
+                 {isActive && <div className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-primary rounded-full transition-all" />}
+                 <item.icon size={14} strokeWidth={isActive ? 3 : 2} className={`transition-all duration-300 shrink-0 ${isActive ? 'text-primary' : 'text-foreground/30 group-hover:text-foreground'}`} />
+                 <span className={`text-[9px] font-bold uppercase tracking-wider leading-none transition-all ${isActive ? 'text-primary' : 'text-foreground/80'}`}>{item.label}</span>
+              </button>
+            );
+          })}
         </div>
 
-        <div className="border-t border-border/40 mx-4" />
+        <div className="border-t border-border/10 mx-3 my-1" />
 
-        <div className="px-4 space-y-1">
+        <div className="px-4 space-y-0.5 text-foreground/20 text-[7px] font-bold uppercase tracking-widest mb-1 mt-1.5">Settings</div>
+        <div className="px-2.5 space-y-0.5">
           {secondaryItems.map((item) => (
              <button 
                key={item.id}
                disabled={item.soon}
-               className={`w-full text-left p-4 rounded-xl flex items-center gap-4 transition-all opacity-40 hover:opacity-100 group cursor-not-allowed`}
+               className="w-full text-left p-1.5 rounded-lg flex items-center gap-2.5 transition-all opacity-40 hover:opacity-100 group cursor-not-allowed"
              >
-                <item.icon size={18} strokeWidth={2.5} className="text-muted" />
-                <div className="flex flex-1 items-center justify-between">
-                  <span className="text-xs font-black uppercase tracking-tighter leading-none">{item.label}</span>
-                   {item.id === 'variables' && <div className="w-4 h-4 rounded border border-indigo-500/40 text-indigo-500 flex items-center justify-center text-[8px] font-black shadow-lg shadow-indigo-500/10 italic">Δ</div>}
-                </div>
+                <item.icon size={14} strokeWidth={2} className="text-foreground/30 shrink-0" />
+                <span className="text-[9px] font-bold uppercase tracking-wider leading-none">{item.label}</span>
              </button>
           ))}
         </div>
       </div>
-      
-    </aside>
+    </div>
   );
 }
 
 export function RightConfigPane({
   localEmployee, allSkills, myKnowledge,
   isPaneCollapsed,
-  setIsPaneCollapsed
+  setIsPaneCollapsed,
+  setShowSkillPicker,
+  setShowKnowledgeCreator
 }: Partial<EmployeeSidebarProps> & { isPaneCollapsed?: boolean; setIsPaneCollapsed?: (val: boolean) => void }) {
   
-  // Resolve assigned entities for UI display
   const assignedSkills = localEmployee?.skillIds?.map((sid: string) => allSkills?.find(s => s.id === sid)).filter(Boolean) || [];
   const assignedKnowledge = localEmployee?.knowledgeIds?.map((kid: string) => myKnowledge?.find(k => k.id === kid)).filter(Boolean) || [];
 
   return (
-    <aside className={`border-l border-border/40 bg-card/10 flex flex-col shrink-0 overflow-y-auto custom-scrollbar no-scrollbar transition-all ${
-      isPaneCollapsed ? 'w-[48px]' : 'w-[400px]'
-    }`}>
-      <div className="p-6 border-b border-border/40 flex items-center justify-between shrink-0">
-         {!isPaneCollapsed && <span className="text-xs font-bold uppercase tracking-widest text-muted">ID Card & Status</span>}
-         <button
-           onClick={() => setIsPaneCollapsed?.(!isPaneCollapsed)}
-           className="p-2 hover:bg-foreground/5 rounded-lg text-muted transition-all active:scale-90 ml-auto"
-           title={isPaneCollapsed ? 'Expand' : 'Collapse'}
-         >
-           <ChevronRight size={20} className={`transition-transform ${isPaneCollapsed ? '' : 'rotate-180'}`} />
-         </button>
-      </div>
+    <div className={`h-full flex flex-col bg-card border-l border-border transition-all duration-500 ${isPaneCollapsed ? 'w-10' : 'w-full'}`}>
+      <div className="p-2 border-b border-border/10 flex items-center justify-between shrink-0 h-10">
+          {!isPaneCollapsed && <h3 className="text-[8px] font-bold uppercase tracking-widest text-foreground/20 ml-2">Snapshot</h3>}
+          <button
+            onClick={() => setIsPaneCollapsed?.(!isPaneCollapsed)}
+            className="p-1.5 bg-foreground/5 hover:bg-foreground/10 rounded-lg text-foreground/40 hover:text-foreground transition-all ml-auto border border-border/10"
+          >
+            <ChevronRight size={14} className={`transition-transform duration-500 ${isPaneCollapsed ? 'rotate-180' : ''}`} />
+          </button>
+       </div>
 
-      {!isPaneCollapsed && (
-      <div className="p-8 space-y-10 pb-32">
-         
-         {/* Profile Snapshot Area */}
-         <div className="flex flex-col items-center text-center space-y-4">
-            <div className="relative">
-               <div className="w-24 h-24 rounded-3xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center border border-indigo-500/20 shadow-xl overflow-hidden shrink-0">
-                  {localEmployee?.avatar ? (
-                     <span className="text-4xl">{localEmployee.avatar}</span>
-                  ) : (
-                     <Bot size={44} strokeWidth={2.5} />
-                  )}
-               </div>
-               <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-xl bg-background border border-border/40 flex items-center justify-center shadow-lg">
-                  <Activity size={14} className="text-emerald-500" />
-               </div>
-            </div>
-            
-            <div className="space-y-1">
-               <h2 className="text-xl font-bold tracking-tight text-foreground leading-none">
-                 {localEmployee?.name || 'Unnamed Agent'}
-               </h2>
-               <p className="text-xs font-medium text-muted/60 max-w-[250px] leading-snug">
-                 {localEmployee?.description || 'No role description provided.'}
-               </p>
-            </div>
-            
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-foreground/5 rounded-lg border border-border/40 text-[10px] font-bold uppercase tracking-wider text-muted">
-               <Brain size={12} /> {localEmployee?.model || 'google/gemini-2.0-flash-001'}
-            </div>
-         </div>
+       {!isPaneCollapsed && (
+        <div className="flex-1 overflow-y-auto p-3 space-y-4 no-scrollbar pb-32">
+          
+          {/* Agent Snapshot */}
+          <div className="flex flex-col items-center text-center space-y-2.5">
+             <div className="relative group">
+                <div className="size-11 rounded-xl bg-secondary text-foreground flex items-center justify-center border border-border group-hover:scale-105 transition-transform duration-500">
+                   {localEmployee?.avatar ? (
+                      <span className="text-xl">{localEmployee.avatar}</span>
+                   ) : (
+                      <Bot size={20} className="text-foreground/10" />
+                   )}
+                </div>
+                <div className="absolute -bottom-0.5 -right-0.5 size-4 rounded bg-card border border-border flex items-center justify-center shadow-sm">
+                   <Activity size={8} className="text-emerald-500" />
+                </div>
+             </div>
+             
+             <div className="space-y-0.5">
+                <h2 className="text-[11px] font-bold tracking-tight text-foreground truncate max-w-[150px]">
+                   {localEmployee?.name || 'New Agent'}
+                </h2>
+                <p className="text-[8px] font-bold text-foreground/20 uppercase tracking-widest leading-none">
+                   Active Protocol
+                </p>
+             </div>
+             
+             <div className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-secondary/80 rounded border border-border/40 text-[7px] font-black text-primary/60 uppercase tracking-tighter">
+                {localEmployee?.model?.split('/').pop()?.toUpperCase() || 'GEMINI FLASH'}
+             </div>
+          </div>
 
-         {/* Inventory List: Skills */}
-         <div className="space-y-4">
-            <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted opacity-60 border-b border-border/40 pb-2">Equipped Skills ({assignedSkills.length})</h3>
-            {assignedSkills.length > 0 ? (
-               <div className="flex flex-wrap gap-2">
-                 {assignedSkills.map((s: any) => (
-                    <div key={s.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/20 text-primary text-xs font-bold shadow-sm">
-                       <Zap size={12} className="fill-current opacity-60" />
-                       {s.name}
-                    </div>
-                 ))}
-               </div>
-            ) : (
-               <p className="text-xs font-medium text-muted/40 italic">Agent has no execution capabilities.</p>
-            )}
-         </div>
+          <div className="space-y-3 pt-2">
+             <div className="flex items-center justify-between border-b border-border/10 pb-2">
+                <h4 className="text-[8px] font-bold uppercase tracking-widest text-foreground/30">Skills</h4>
+                <button 
+                  onClick={() => setShowSkillPicker?.(true)}
+                  className="size-5 rounded bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all border border-primary/20 shadow-sm"
+                >
+                  <Plus size={10} strokeWidth={3} />
+                </button>
+             </div>
+             
+             <div className="space-y-1.5">
+                {assignedSkills.map((skill: any) => (
+                   <div key={skill.id} className="p-2 rounded-lg bg-secondary/30 border border-border/10 flex items-center gap-2.5 group transition-all hover:bg-secondary/50">
+                      <div className="size-6 rounded bg-card border border-border flex items-center justify-center text-primary shadow-sm">
+                         <Zap size={10} />
+                      </div>
+                      <span className="text-[10px] font-bold text-foreground/80 truncate">{skill.name}</span>
+                   </div>
+                ))}
+                {!assignedSkills.length && (
+                  <p className="text-[9px] text-foreground/20 font-medium italic text-center py-2">No skills enabled</p>
+                )}
+             </div>
+          </div>
 
-         {/* Inventory List: Knowledge */}
-         <div className="space-y-4">
-            <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted opacity-60 border-b border-border/40 pb-2">Knowledge Base ({assignedKnowledge.length})</h3>
-            {assignedKnowledge.length > 0 ? (
-               <div className="space-y-2">
-                 {assignedKnowledge.map((k: any) => (
-                    <div key={k.id} className="flex items-center gap-3 text-xs font-medium text-muted group">
-                       <FileText size={14} className="group-hover:text-foreground transition-colors" />
-                       <span className="truncate group-hover:text-foreground transition-colors">{k.title}</span>
-                    </div>
-                 ))}
-               </div>
-            ) : (
-               <p className="text-xs font-medium text-muted/40 italic">No semantic data attached.</p>
-            )}
-         </div>
+          <div className="space-y-3 pt-2">
+             <div className="flex items-center justify-between border-b border-border/10 pb-2">
+                <h4 className="text-[8px] font-bold uppercase tracking-widest text-foreground/30">Knowledge</h4>
+                <button 
+                  onClick={() => setShowKnowledgeCreator?.(true)}
+                  className="size-5 rounded bg-foreground/5 text-foreground/30 flex items-center justify-center hover:bg-foreground hover:text-background transition-all border border-border/10 shadow-sm"
+                >
+                  <Plus size={10} strokeWidth={3} />
+                </button>
+             </div>
+             
+             <div className="space-y-1.5">
+                {assignedKnowledge.map((item: any) => (
+                   <div key={item.id} className="p-2 rounded-lg bg-secondary/30 border border-border/10 flex items-center gap-2.5 group transition-all hover:bg-secondary/50">
+                      <div className="size-6 rounded bg-card border border-border flex items-center justify-center text-foreground/40 shadow-sm">
+                         <FileText size={10} />
+                      </div>
+                      <span className="text-[10px] font-bold text-foreground/80 truncate">{item.title}</span>
+                   </div>
+                ))}
+                {!assignedKnowledge.length && (
+                  <p className="text-[9px] text-foreground/20 font-medium italic text-center py-2">No data assets linked</p>
+                )}
+             </div>
+          </div>
 
-         {/* Test/Preview Action */}
-         <div className="pt-8">
-            <button className="w-full py-4 bg-foreground/5 hover:bg-foreground/10 border border-border/40 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3">
-               <MessageSquare size={16} /> Try Me
-            </button>
-            <p className="text-center text-[9px] font-medium text-muted/40 mt-3 uppercase tracking-widest">Connects to test sandbox</p>
-         </div>
-
-      </div>
-      )}
-    </aside>
+       </div>
+       )}
+    </div>
   );
 }

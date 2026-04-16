@@ -1,98 +1,81 @@
 'use client';
 
 import React from 'react';
-import { Zap, Settings, Trash2, Layers, BookOpen, Terminal } from 'lucide-react';
-import { usePublishedSkills } from '@/hooks/useSkills';
-import { useKnowledge } from '@/hooks/useKnowledge';
+import { Zap, BookOpen, Trash2, Layers, Terminal } from 'lucide-react';
 
-interface SkillAssignmentCardProps {
-  skillId: string;
-  instruction?: string;
-  allSkills?: any[];
-  onRemove: () => void;
-}
-
-export function SkillAssignmentCard({ skillId, instruction, allSkills, onRemove }: SkillAssignmentCardProps) {
+export function SkillAssignmentCard({ skillId, instruction, allSkills, onRemove }: any) {
   const skill = allSkills?.find((s: any) => s.id === skillId);
   if (!skill) return null;
 
   return (
-    <div className="bg-card rounded-3xl border border-border/60 p-8 flex flex-col gap-6 group hover:border-primary/30 transition-all duration-500 shadow-xl overflow-hidden relative">
-      <div className="flex items-center justify-between">
-         <div className="flex items-center gap-5">
-            <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center shadow-inner">
-               <Zap size={20} strokeWidth={3} className="fill-current" />
+    <div className="bg-card rounded-xl border border-border shadow-sm p-3 flex flex-col gap-2.5 group hover:border-primary/20 transition-all duration-300 relative">
+      <div className="flex items-center justify-between relative z-10">
+         <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-primary/10 text-primary rounded-lg flex items-center justify-center border border-primary/20 shadow-inner group-hover:scale-105 transition-transform duration-500">
+               <Zap size={14} strokeWidth={2.5} className="fill-current" />
             </div>
             <div>
-               <h4 className="text-lg font-black italic tracking-tighter uppercase leading-none">{skill.name}</h4>
-               <span className="text-[10px] font-bold text-muted uppercase tracking-wider opacity-60">Skill connected</span>
+               <h4 className="text-[13px] font-bold tracking-tight text-foreground truncate max-w-[150px]">{skill.name}</h4>
+               <span className="text-[8px] font-bold text-foreground/30 uppercase tracking-widest block leading-none">Functional Skill</span>
             </div>
          </div>
-         <button onClick={onRemove} className="p-3 bg-foreground/5 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-all">
-            <Trash2 size={14} />
+         <button onClick={onRemove} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 hover:text-red-500 text-foreground/20 rounded-md transition-all">
+            <Trash2 size={12} />
          </button>
       </div>
       
-      <div className="space-y-4">
-         <p className="text-muted text-[10px] font-bold uppercase tracking-widest line-clamp-2 opacity-50 leading-relaxed">{skill.description}</p>
+      <div className="space-y-2 relative z-10 flex-1">
+         <p className="text-foreground/40 text-[10px] font-medium leading-relaxed line-clamp-2 italic">{skill.description}</p>
          {instruction && (
-            <div className="bg-primary/[0.03] border border-primary/10 rounded-xl p-4 space-y-2">
-               <div className="flex items-center gap-2 text-[8px] font-black text-primary uppercase tracking-widest">
-                  <Terminal size={10} /> Directive
+            <div className="bg-secondary/50 border border-border/10 rounded-lg p-2.5 space-y-1 shadow-inner">
+               <div className="flex items-center gap-1.5 text-[8px] font-bold text-foreground/30 uppercase tracking-widest">
+                  <Terminal size={10} strokeWidth={3} /> Directive
                </div>
-               <p className="text-[10px] font-medium text-foreground/80 leading-relaxed">"{instruction}"</p>
+               <p className="text-[10px] font-bold text-foreground/70 leading-tight">"{instruction}"</p>
             </div>
          )}
       </div>
 
-      <div className="pt-6 border-t border-border/40 flex items-center justify-between">
-         <div className="flex items-center gap-3">
-            <Layers size={14} className="text-primary" />
-            <span className="text-[10px] font-black italic uppercase tracking-tighter">{skill.workflow?.nodes?.length || 0} Nodes</span>
+      <div className="pt-2 border-t border-border/10 flex items-center justify-between relative z-10 mt-auto">
+         <div className="flex items-center gap-1.5 text-foreground/20">
+            <Layers size={10} />
+            <span className="text-[8px] font-bold uppercase tracking-widest">{skill.workflow?.nodes?.length || 0} Nodes</span>
          </div>
-         <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="text-[8px] font-black uppercase text-muted">SECURED</span>
+         <div className="px-2 py-0.5 bg-secondary border border-border/10 text-primary rounded-md text-[8px] font-bold uppercase tracking-widest">
+            Verified
          </div>
       </div>
     </div>
   );
 }
 
-interface KnowledgeAssignmentCardProps {
-  knowledgeId: string;
-  onRemove: () => void;
-}
-
-export function KnowledgeAssignmentCard({ knowledgeId, onRemove }: KnowledgeAssignmentCardProps) {
-  const { data: allKnowledge } = useKnowledge();
-  const item = allKnowledge?.find((k: any) => k.id === knowledgeId);
+export function KnowledgeAssignmentCard({ knowledgeId, myKnowledge, onRemove }: any) {
+  const item = myKnowledge?.find((k: any) => k.id === knowledgeId);
   if (!item) return null;
 
   return (
-    <div className="bg-card rounded-3xl border border-border/60 p-8 flex flex-col gap-6 group hover:border-foreground/20 transition-all duration-500 shadow-xl relative overflow-hidden">
-      <div className="flex items-center justify-between">
-         <div className="flex items-center gap-5">
-            <div className="w-12 h-12 bg-foreground/5 text-foreground rounded-xl flex items-center justify-center">
-               <BookOpen size={20} strokeWidth={2.5} />
+    <div className="bg-card rounded-xl border border-border shadow-sm p-3 flex flex-col gap-2.5 group hover:border-primary/20 transition-all duration-300 relative overflow-hidden">
+      <div className="flex items-center justify-between relative z-10">
+         <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-secondary text-foreground/40 rounded-lg flex items-center justify-center border border-border/10 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500 shadow-inner">
+               <BookOpen size={14} strokeWidth={2} />
             </div>
             <div>
-               <h4 className="text-lg font-black italic tracking-tighter uppercase leading-none truncate max-w-[180px]">{item.title}</h4>
-               <span className="text-[10px] font-bold text-muted uppercase tracking-wider opacity-60">Knowledge integrated</span>
+               <h4 className="text-[13px] font-bold tracking-tight text-foreground uppercase truncate max-w-[140px]">{item.title}</h4>
+               <span className="text-[8px] font-bold text-foreground/10 uppercase tracking-widest block leading-none">Knowledge Asset</span>
             </div>
          </div>
-         <button onClick={onRemove} className="p-3 bg-foreground/5 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-all">
-            <Trash2 size={14} />
+         <button onClick={onRemove} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 hover:text-red-500 text-foreground/20 rounded-md transition-all">
+            <Trash2 size={12} />
          </button>
       </div>
-      <p className="text-muted text-[10px] font-bold uppercase tracking-widest line-clamp-2 opacity-10 leading-relaxed italic select-none">DATA_REDACTED_FOR_SECURITY_OVERSIGHT</p>
-      <div className="pt-6 border-t border-border/40 flex items-center justify-between">
-         <div className="flex items-center gap-3">
-            <span className="text-[8px] font-black uppercase text-muted tracking-widest">TYPE: DOCUMENT</span>
-         </div>
-         <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-[8px] font-black uppercase text-muted">INDEXED</span>
+      <p className="text-foreground/20 text-[8px] font-bold uppercase tracking-widest text-center py-2 bg-secondary/30 rounded-lg border border-dashed border-border/10 relative z-10">
+        Secure Context
+      </p>
+      <div className="pt-2 border-t border-border/10 flex items-center justify-between relative z-10">
+         <span className="text-[8px] font-bold uppercase text-foreground/10 tracking-widest">Data Store</span>
+         <div className="flex items-center gap-1 px-2 py-0.5 bg-secondary border border-border/10 text-foreground/40 rounded-full text-[7px] font-bold uppercase tracking-widest">
+            Indexed
          </div>
       </div>
     </div>

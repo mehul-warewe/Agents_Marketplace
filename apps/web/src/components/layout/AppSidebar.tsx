@@ -47,32 +47,32 @@ export function AppSidebar({
       } ${isCollapsed ? 'w-20' : 'w-64'}`}
     >
       {/* Logo & Toggle */}
-      <div className="flex items-center gap-3 px-5 h-20 shrink-0 relative">
+      <div className="flex items-center gap-3 px-5 h-14 shrink-0 relative">
         <div 
-          className="size-10 bg-primary text-primary-foreground rounded-xl flex items-center justify-center shadow-lg cursor-pointer shrink-0"
+          className="size-8 bg-primary text-primary-foreground rounded-lg flex items-center justify-center shadow-lg cursor-pointer shrink-0"
           onClick={() => router.push('/dashboard')}
         >
-          <Sparkles size={20} strokeWidth={2.5} />
+          <Sparkles size={16} strokeWidth={2.5} />
         </div>
         {!isCollapsed && (
           <div className="flex flex-col min-w-0 animate-in fade-in slide-in-from-left-2 duration-300">
-            <span className="font-bold text-lg font-display tracking-tight leading-none truncate">Agent Hub</span>
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mt-0.5 truncate">Workspace</span>
+            <span className="font-bold text-base font-display tracking-tight leading-none truncate">Agent Hub</span>
+            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5 truncate">Workspace</span>
           </div>
         )}
         
         {/* Toggle Button */}
         <button 
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute -right-3 top-1/2 -translate-y-1/2 size-6 bg-card border border-border shadow-sm rounded-full hidden lg:flex items-center justify-center text-muted-foreground hover:text-foreground transition-all z-10"
+          className="absolute -right-3 top-1/2 -translate-y-1/2 size-5 bg-card border border-border shadow-sm rounded-full hidden lg:flex items-center justify-center text-muted-foreground hover:text-foreground transition-all z-10"
         >
-          <ChevronUp className={`size-3.5 transition-transform duration-500 ${isCollapsed ? 'rotate-90' : '-rotate-90'}`} />
+          <ChevronUp className={`size-3 transition-transform duration-500 ${isCollapsed ? 'rotate-90' : '-rotate-90'}`} />
         </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 flex flex-col gap-1 px-3 py-4 overflow-y-auto no-scrollbar">
-        <div className="space-y-1">
+      <nav className="flex-1 flex flex-col gap-1 px-3 py-2 overflow-y-auto no-scrollbar">
+        <div className="space-y-0.5">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -80,14 +80,14 @@ export function AppSidebar({
                 key={item.href}
                 href={item.href}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-sm font-semibold tracking-tight relative group ${
+                className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-[11px] font-bold uppercase tracking-widest relative group ${
                   isActive
                     ? 'bg-primary text-primary-foreground shadow-lg'
                     : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                 } ${isCollapsed ? 'justify-center px-0' : ''}`}
                 title={isCollapsed ? item.name : ''}
               >
-                <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} className={`shrink-0 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-foreground transition-colors'}`} />
+                <item.icon size={16} strokeWidth={isActive ? 2.5 : 2} className={`shrink-0 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-foreground transition-colors'}`} />
                 {!isCollapsed && <span className="leading-none animate-in fade-in slide-in-from-left-2 duration-300">{item.name}</span>}
                 {isCollapsed && isActive && <div className="absolute left-0 top-2 bottom-2 w-1 bg-primary-foreground rounded-r-full" />}
               </Link>

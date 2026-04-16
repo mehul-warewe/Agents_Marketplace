@@ -32,11 +32,11 @@ export default function AgentDashboard() {
   }
 
   return (
-    <div className="flex-1 text-foreground space-y-8 p-8">
-      <div className="max-w-[1400px] mx-auto space-y-8">
+    <div className="flex-1 text-foreground space-y-3 p-2 lg:p-4 bg-secondary/5">
+      <div className="space-y-3">
         
         {/* Premium Dashboard Header & Graph Area */}
-        <Card className="p-10 relative overflow-hidden border-border/40 shadow-md bg-card">
+        <Card className="p-6 relative overflow-hidden border-border/40 shadow-sm bg-card rounded-2xl">
            <div className="absolute top-0 right-0 w-full h-full opacity-10 pointer-events-none">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent" />
               <svg className="w-full h-full" viewBox="0 0 1000 300" preserveAspectRatio="none">
@@ -61,26 +61,27 @@ export default function AgentDashboard() {
               </svg>
            </div>
 
-           <div className="relative z-10 flex flex-col md:flex-row justify-between gap-8 items-center">
-              <div className="space-y-2">
-                 <h1 className="text-3xl md:text-5xl font-bold tracking-tight font-display text-foreground">
+           <div className="relative z-10 flex flex-col md:flex-row justify-between gap-4 items-center">
+              <div className="space-y-1">
+                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-display text-foreground">
                    Welcome Back, <span className="text-primary">{user?.name?.split(' ')[0] || 'Operator'}</span>
                  </h1>
-                 <p className="text-muted-foreground font-medium">Here is what your workforce has been up to.</p>
+                 <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest leading-none">Status: All systems operational</p>
               </div>
               <div className="flex justify-end">
                  <Button 
-                    onClick={() => router.push('/skills/builder')}
-                    size="lg"
+                    onClick={() => router.push('/employees/new')}
+                    size="sm"
+                    className="h-9 px-6 rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-primary/20"
                  >
-                    <Plus size={16} strokeWidth={2.5} /> Initialize Agent
+                    <Plus size={14} strokeWidth={2.5} /> Deploy Agent
                  </Button>
               </div>
            </div>
         </Card>
         
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard 
             title="Active Fleet" 
             value={stats?.activeAgents || 0} 
@@ -94,26 +95,26 @@ export default function AgentDashboard() {
             value={stats?.totalRuns || 0} 
             loading={statsLoading} 
             icon={<Play size={28} />} 
-            trend="CYCLES_COMPLETE"
+            trend="CYCLES"
           />
           <StatCard 
-            title="AI Consumption" 
+            title="Consumption" 
             value={stats?.aiUsage || "0"} 
             loading={statsLoading} 
             icon={<Activity size={28} />} 
-            trend="LOGIC_TOKENS"
+            trend="TOKENS"
           />
           <StatCard 
-            title="Success Rate" 
+            title="Stability" 
             value={`${stats?.successRate || 98}%`} 
             loading={statsLoading} 
             icon={<Zap size={28} />} 
-            trend="STABILITY_PEAK"
+            trend="PEAK"
           />
         </div>
 
         {/* Intelligence Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           
           {/* Recent Activity Table */}
           <div className="lg:col-span-3 space-y-4">
@@ -248,7 +249,7 @@ function StatCard({ title, value, loading, icon, trend, color }: any) {
       <div className="flex flex-col relative z-10">
          <div className="flex items-center justify-between mb-4">
             <div className={`w-10 h-10 flex items-center justify-center rounded-lg shadow-sm border border-border/50 ${color === 'primary' ? 'bg-primary/5 text-primary border-primary/10' : 'bg-secondary text-muted-foreground'}`}>
-               {React.cloneElement(icon as React.ReactElement, { size: 20 })}
+               {React.cloneElement(icon as React.ReactElement<any>, { size: 20 })}
             </div>
             <div className={`text-xs font-bold px-2 py-0.5 rounded-md ${color === 'primary' ? 'text-primary bg-primary/5 border border-primary/10' : 'text-muted-foreground bg-secondary border border-border/40'}`}>{trend}</div>
          </div>

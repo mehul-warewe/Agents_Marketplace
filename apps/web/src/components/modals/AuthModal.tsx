@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, ArrowRight, ShieldCheck, Bot } from 'lucide-react';
+import { X, Mail, ArrowRight, ShieldCheck, Bot, Activity, Shield } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
@@ -53,7 +53,7 @@ export default function AuthModal() {
       login(data.token, data.user);
       router.push('/dashboard');
       closeAuthModal();
-      setStep('email'); // Reset for next time
+      setStep('email'); 
       setEmail('');
       setOtpCode('');
     } catch (err: any) {
@@ -72,109 +72,87 @@ export default function AuthModal() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={closeAuthModal}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/40 backdrop-blur-xl"
           />
           
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 40 }}
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 40 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="bg-card rounded-[3.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.4)] w-full max-w-5xl md:h-[680px] max-h-[90vh] overflow-hidden flex relative z-10 border border-border/60"
+            className="bg-card rounded-3xl shadow-2xl w-full max-w-4xl md:h-[600px] max-h-[90vh] overflow-hidden flex relative z-10 border border-border/10"
           >
             {/* Close Button */}
             <button 
               onClick={closeAuthModal}
-              className="absolute top-8 right-8 w-11 h-11 rounded-2xl bg-foreground/5 hover:bg-foreground hover:text-background transition-all border border-border/40 flex items-center justify-center z-50 group"
+              className="absolute top-6 right-6 w-10 h-10 rounded-xl bg-secondary/50 hover:bg-foreground hover:text-background transition-all border border-border/10 flex items-center justify-center z-50 group"
             >
-              <X size={18} strokeWidth={3} className="group-hover:rotate-90 transition-transform duration-500" />
+              <X size={18} />
             </button>
 
-            {/* Left Side: Illustration */}
-            <div className="hidden lg:block w-[45%] relative bg-background border-r border-border/40">
-               <img 
-                 src="/images/auth-bg-nature.png" 
-                 alt="Authentication background" 
-                 className="absolute inset-0 w-full h-full object-cover brightness-[0.9] contrast-[1.05]"
-               />
-               <div className="absolute inset-0 bg-gradient-to-r from-background via-background/20 to-transparent opacity-60" />
-               <div className="absolute top-10 left-10 flex items-center gap-4">
-                  <div className="w-11 h-11 bg-primary rounded-2xl flex items-center justify-center text-primary-foreground shadow-2xl shadow-primary/20">
-                     <Bot size={24} strokeWidth={2.5} />
-                  </div>
-                  <div className="flex flex-col">
-                     <span className="font-bold text-lg tracking-tight leading-none mb-1 text-foreground">warewe</span>
-                     <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Secure Access</span>
-                  </div>
-               </div>
-               <div className="absolute bottom-10 left-10 space-y-3">
-                  <div className="flex items-center gap-3">
-                     <div className="w-8 h-px bg-foreground/30" />
-                     <span className="text-[10px] font-bold text-foreground uppercase tracking-widest opacity-50">Active Sync</span>
-                  </div>
-                  <h3 className="text-xl font-bold text-foreground tracking-tight">Connected Workforce</h3>
-               </div>
+            <div className="hidden lg:block w-[40%] relative bg-black overflow-hidden border-r border-border/10">
+                <img 
+                  src="/images/auth-bg-nature.png" 
+                  alt="Auth Backdrop"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
             </div>
 
-            {/* Right Side: Auth UI */}
-            <div className="w-full lg:w-[55%] flex flex-col items-center justify-center p-8 sm:p-12 lg:p-14 bg-card overflow-y-auto no-scrollbar font-inter">
-              <div className="w-full max-w-sm space-y-12 text-center">
-                <div className="space-y-6">
-                  <div className="flex justify-center mb-4">
-                    <div className="w-3 h-3 rounded-full bg-foreground shadow-[0_0_15px_rgba(0,0,0,0.3)]" />
-                  </div>
-                  <h2 className="text-4xl font-bold tracking-tight text-foreground leading-tight">
-                    {step === 'email' ? 'Welcome back' : 'Verify Identity'}
+            {/* Right Side: High-Density Auth UI */}
+            <div className="w-full lg:w-[60%] flex flex-col items-center justify-center p-8 lg:p-12 bg-card overflow-y-auto no-scrollbar font-inter">
+              <div className="w-full max-w-sm space-y-8">
+                
+                <div className="space-y-1 text-center">
+                  <h2 className="text-3xl font-bold tracking-tight text-foreground">
+                    {step === 'email' ? 'Sign In' : 'Verify Identity'}
                   </h2>
-                  <p className="text-muted font-medium text-sm tracking-tight opacity-60">
+                  <p className="text-[10px] font-bold text-foreground/20 uppercase tracking-[0.2em]">
                     {step === 'email' 
-                      ? "Secure access to your professional agent dashboard"
-                      : `A verification code was sent to ${email}`}
+                      ? "Professional Dashboard Access"
+                      : `Email Verification sent`}
                   </p>
                 </div>
 
                 {error && (
-                  <div className="bg-foreground text-background p-6 rounded-[1.5rem] text-xs font-bold animate-shake shadow-2xl">
+                  <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg text-[9px] font-bold text-center tracking-widest uppercase">
                     {error}
                   </div>
                 )}
 
-                <div className="space-y-10">
+                <div className="space-y-6">
                   {step === 'email' ? (
                     <>
-                      {/* Google Login */}
                       <button
                         onClick={handleGoogleLogin}
-                        className="w-full h-16 flex items-center justify-center gap-5 bg-card hover:bg-primary hover:text-primary-foreground text-foreground font-bold rounded-[1.5rem] transition-all shadow-xl shadow-foreground/5 hover:scale-[1.02] active:scale-[0.98] tracking-wide text-xs border border-border/60"
+                        className="w-full h-11 flex items-center justify-center gap-3 bg-secondary/50 hover:bg-foreground hover:text-background text-foreground font-bold rounded-xl transition-all border border-border/10 shadow-sm hover:scale-[1.02] active:scale-[0.98] text-[10px] uppercase tracking-widest"
                       >
-                        <svg className="w-5 h-5" viewBox="0 0 24 24">
-                          <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                          <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                          <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                          <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                        <svg className="w-4 h-4" viewBox="0 0 48 48">
+                          <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z" />
+                          <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z" />
+                          <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z" />
+                          <path fill="#1976D2" d="M43.611,20.083L43.611,20.083L42,20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C43.344,35.045,44,30.344,44,24C44,22.659,43.862,21.35,43.611,20.083z" />
                         </svg>
                         Continue with Google
                       </button>
 
                       <div className="relative">
                         <div className="absolute inset-0 flex items-center">
-                          <div className="w-full border-t border-border/40" />
+                          <div className="w-full border-t border-border/10" />
                         </div>
-                        <div className="relative flex justify-center text-[10px] font-bold uppercase tracking-widest text-muted opacity-40">
-                          <span className="bg-card px-8">Or continue with email</span>
+                        <div className="relative flex justify-center text-[8px] font-bold uppercase tracking-widest text-foreground/20">
+                          <span className="bg-card px-4">Or use email</span>
                         </div>
                       </div>
 
-                      {/* Email Send OTP Form */}
-                      <form onSubmit={handleSendOTP} className="space-y-6">
+                      <form onSubmit={handleSendOTP} className="space-y-3">
                         <div className="relative group">
-                          <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-muted opacity-40 group-focus-within:text-foreground transition-all" size={18} strokeWidth={2.5} />
+                          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground/20 group-focus-within:text-primary transition-colors" size={14} />
                           <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="Email address"
-                            className="w-full h-14 bg-foreground/[0.03] border border-border/60 rounded-[1.25rem] pl-16 pr-6 text-sm font-medium placeholder:text-muted/40 focus:bg-background focus:border-foreground outline-none transition-all shadow-inner"
+                            className="w-full h-11 bg-secondary/30 border border-border/10 rounded-xl pl-11 pr-4 text-xs font-bold placeholder:text-foreground/10 outline-none focus:border-primary/50 transition-all shadow-inner placeholder:uppercase tracking-widest placeholder:text-[9px]"
                             required
                           />
                         </div>
@@ -182,61 +160,62 @@ export default function AuthModal() {
                         <button
                           type="submit"
                           disabled={loading}
-                          className="w-full h-14 bg-primary text-primary-foreground font-bold rounded-[1.25rem] flex items-center justify-center transition-all tracking-wider text-xs border border-primary/20 shadow-xl shadow-primary/10 hover:scale-[1.02] active:scale-[0.98]"
+                          className="w-full h-11 bg-primary text-primary-foreground font-bold rounded-xl flex items-center justify-center transition-all text-[10px] uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]"
                         >
                           {loading ? (
-                            <div className="w-5 h-5 border-4 border-primary-foreground/40 border-t-primary-foreground rounded-full animate-spin" />
+                            <Activity size={16} className="animate-spin" />
                           ) : (
-                            'Sign in'
+                            'Sign In'
                           )}
                         </button>
                       </form>
                     </>
                   ) : (
-                    /* OTP Verification Form */
-                    <form onSubmit={handleVerifyOTP} className="space-y-10">
-                      <div className="relative group">
-                        <ShieldCheck className="absolute left-6 top-1/2 -translate-y-1/2 text-muted opacity-40 group-focus-within:text-foreground transition-all" size={20} strokeWidth={2.5} />
+                    <form onSubmit={handleVerifyOTP} className="space-y-6">
+                      <div className="relative">
                         <input
                           type="text"
                           maxLength={6}
                           value={otpCode}
                           onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
                           placeholder="000000"
-                          className="w-full h-20 bg-foreground/[0.03] border border-border/60 rounded-[2rem] pl-16 pr-6 text-4xl tracking-[0.3em] font-bold placeholder:text-muted/10 focus:bg-background focus:border-foreground outline-none transition-all text-center shadow-inner"
+                          className="w-full h-16 bg-secondary/30 border border-border/10 rounded-xl text-3xl tracking-[0.4em] font-bold placeholder:text-foreground/5 outline-none focus:border-primary/50 transition-all text-center shadow-inner"
                           required
                           autoFocus
                         />
                       </div>
 
-                      <div className="space-y-6">
+                      <div className="space-y-3">
                         <button
                           type="submit"
                           disabled={loading}
-                          className="w-full h-14 bg-primary text-primary-foreground font-bold rounded-[1.25rem] flex items-center justify-center transition-all shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] tracking-widest text-xs"
+                          className="w-full h-11 bg-primary text-primary-foreground font-bold rounded-xl flex items-center justify-center transition-all text-[10px] uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]"
                         >
                           {loading ? (
-                            <div className="w-5 h-5 border-4 border-primary-foreground/40 border-t-primary-foreground rounded-full animate-spin" />
+                            <Activity size={16} className="animate-spin" />
                           ) : (
-                            'Continue'
+                            'Verify'
                           )}
                         </button>
                         
                         <button 
                           type="button"
                           onClick={() => setStep('email')}
-                          className="text-xs font-bold text-muted hover:text-foreground transition-colors underline underline-offset-8 decoration-border/60"
+                          className="w-full text-[9px] font-bold text-foreground/30 hover:text-foreground transition-colors uppercase tracking-[0.2em]"
                         >
-                          Go back
+                          Back
                         </button>
                       </div>
                     </form>
                   )}
                 </div>
 
-                <p className="text-[10px] leading-relaxed text-muted font-medium opacity-40 pt-8 leading-tight">
-                  By signing in, you agree to the <a href="/terms" className="text-foreground underline">Terms of Service</a> and <a href="/privacy" className="text-foreground underline">Privacy Policy</a>.
-                </p>
+                <div className="pt-6 text-center border-t border-border/5">
+                  <p className="text-[8px] font-bold text-foreground/10 uppercase tracking-[0.2em] leading-loose">
+                    Security enforced by identity registry <br/>
+                    and workspace privacy policy.
+                  </p>
+                </div>
               </div>
             </div>
           </motion.div>

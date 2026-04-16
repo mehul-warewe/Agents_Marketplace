@@ -365,54 +365,54 @@ export default function ConnectionsPage() {
 
   return (
     <SidebarLayout title="Integrations">
-      <div className="p-6 sm:p-10 lg:p-12 max-w-7xl mx-auto space-y-16 font-inter text-foreground">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8 font-inter text-foreground">
         
         {/* Header */}
-        <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 py-4">
-          <div className="space-y-4">
-            <h1 className="text-5xl font-bold font-display tracking-tight leading-none text-foreground">Cloud Integrations</h1>
-            <p className="text-muted-foreground font-medium text-sm max-w-xl">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 py-2">
+          <div className="space-y-1.5">
+            <h1 className="text-3xl font-bold font-display tracking-tight leading-none text-foreground">Cloud Integrations</h1>
+            <p className="text-muted-foreground font-medium text-[11px] max-w-xl leading-relaxed">
               Connect your professional accounts to extend the reach of your digital workforce.
             </p>
           </div>
           
-          <button onClick={scrollToExplore} className="bg-primary text-primary-foreground px-8 py-4 rounded-xl font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2 shadow-lg shadow-primary/20">
-            <Plus size={18} strokeWidth={2.5} /> Browse Marketplace
+          <button onClick={scrollToExplore} className="bg-primary text-primary-foreground h-9 px-6 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2 shadow-lg shadow-primary/20">
+            <Plus size={14} strokeWidth={2.5} /> Marketplace
           </button>
         </header>
 
         {/* Active Connections */}
-        <section className="space-y-8">
+        <section className="space-y-4">
           <div className="flex items-center justify-between px-2">
-            <div className="flex items-center gap-4">
-              <Activity size={20} className="text-primary/60" />
-              <h2 className="text-2xl font-bold font-display tracking-tight text-foreground">Active Integrations</h2>
+            <div className="flex items-center gap-3">
+              <Activity size={16} className="text-primary/60" />
+              <h2 className="text-lg font-bold font-display tracking-tight text-foreground uppercase tracking-wider">Active</h2>
             </div>
             {unifiedBridges.length > 0 && (
-              <span className="text-[10px] font-bold px-3 py-1 bg-primary/5 text-primary border border-primary/20 rounded-full uppercase tracking-wider">
+              <span className="text-[9px] font-bold px-2 py-0.5 bg-primary/5 text-primary border border-primary/20 rounded-lg uppercase tracking-widest">
                 {unifiedBridges.length} Enabled
               </span>
             )}
           </div>
 
           {(loadingCreds || loadingPdAccounts) ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-2">
               {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-48 bg-secondary/40 border border-border rounded-2xl animate-pulse" />
+                <div key={i} className="h-32 bg-secondary/40 border border-border rounded-xl animate-pulse" />
               ))}
             </div>
           ) : unifiedBridges.length === 0 ? (
-            <div className="bg-secondary/40 rounded-3xl border border-border/40 border-dashed py-20 flex flex-col items-center justify-center text-center space-y-6 px-8 group overflow-hidden">
-              <div className="w-16 h-16 bg-card rounded-2xl flex items-center justify-center text-muted-foreground/20 border border-border/20 group-hover:scale-110 transition-transform shadow-sm">
-                <Link2 size={32} strokeWidth={1} />
+            <div className="bg-secondary/40 rounded-2xl border border-border/40 border-dashed py-16 flex flex-col items-center justify-center text-center space-y-4 px-8 mx-2 group overflow-hidden">
+              <div className="w-12 h-12 bg-card rounded-xl flex items-center justify-center text-muted-foreground/20 border border-border/20 group-hover:scale-110 transition-transform shadow-sm">
+                <Link2 size={24} strokeWidth={1} />
               </div>
-              <div className="space-y-1 relative z-10">
-                <h3 className="text-xl font-bold font-display text-foreground/40">No connections detected</h3>
-                <p className="text-muted-foreground font-medium text-xs max-w-xs">Browse the marketplace below to initiate your first secure account link.</p>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold font-display text-foreground/40 uppercase tracking-tight">Empty Registry</h3>
+                <p className="text-muted-foreground font-medium text-[10px] max-w-xs leading-relaxed">Browse the marketplace below to initiate your first secure account link.</p>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 px-2">
               {unifiedBridges.map((cred: any) => (
                 <ActiveConnectionCard 
                   key={cred.id} 
@@ -428,20 +428,20 @@ export default function ConnectionsPage() {
         </section>
 
         {/* Marketplace */}
-        <section ref={exploreRef} className="space-y-12 pb-32">
-          <div className="space-y-10">
-            <div className="flex flex-col gap-10">
+        <section ref={exploreRef} className="space-y-6 pb-20">
+          <div className="space-y-6">
+            <div className="flex flex-col gap-6">
               {/* Marketplace Stats & Search */}
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 px-2 pt-12">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-sm">
-                      <Layers size={24} />
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2 pt-6">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm">
+                      <Layers size={18} />
                     </div>
                     <div>
-                      <h2 className="text-4xl font-black font-display tracking-tight text-foreground">Marketplace</h2>
-                      <p className="text-muted-foreground font-medium text-sm flex items-center gap-2 mt-1">
-                        Discover & bridge 100+ native agent skills 
+                      <h2 className="text-2xl font-bold font-display tracking-tight text-foreground uppercase tracking-wider">Marketplace</h2>
+                      <p className="text-muted-foreground font-medium text-[10px] flex items-center gap-2 mt-0.5 uppercase tracking-widest">
+                        Bridge 100+ native agent skills 
                         <span className="w-1 h-1 rounded-full bg-border" />
                         <span className="text-primary/60">New platforms weekly</span>
                       </p>
@@ -449,38 +449,29 @@ export default function ConnectionsPage() {
                   </div>
                 </div>
                 
-                <div className="relative min-w-full md:min-w-[450px] group">
-                   <div className={`absolute -inset-1 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-2xl blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-500`} />
+                <div className="relative min-w-full md:min-w-[400px] group">
                    <div className="relative">
-                    <Search size={20} className={`absolute left-6 top-1/2 -translate-y-1/2 transition-colors duration-300 ${searchFocused ? 'text-primary' : 'text-muted-foreground/30'}`} />
+                    <Search size={16} className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors duration-300 ${searchFocused ? 'text-primary' : 'text-muted-foreground/30'}`} />
                       <input 
                         type="text"
                         value={searchQuery}
                         onFocus={() => setSearchFocused(true)}
                         onBlur={() => setSearchFocused(false)}
                         onChange={e => setSearchQuery(e.target.value)}
-                        placeholder="Search for tools, CRM, AI, or storage..."
-                        className="w-full bg-card border border-border/60 rounded-2xl px-16 py-5 text-base font-semibold text-foreground outline-none focus:ring-0 transition-all shadow-xl placeholder:text-muted-foreground/30"
+                        placeholder="Search for tools..."
+                        className="w-full bg-card border border-border/60 rounded-xl px-12 py-3 text-sm font-bold text-foreground outline-none focus:ring-0 transition-all shadow-lg placeholder:text-muted-foreground/30"
                       />
-                      {searchQuery && (
-                        <button 
-                          onClick={() => setSearchQuery('')}
-                          className="absolute right-6 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-all"
-                        >
-                          <X size={14} />
-                        </button>
-                      )}
                    </div>
                 </div>
               </div>
 
               {/* Category Chips */}
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 px-2">
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 px-2">
                 {categories.map(cat => (
                   <button
                     key={cat}
                     onClick={() => setActiveCategory(cat)}
-                    className={`px-6 py-2.5 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all whitespace-nowrap border ${activeCategory === cat ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20' : 'bg-secondary/40 text-muted-foreground border-border/40 hover:bg-secondary hover:text-foreground'}`}
+                    className={`px-4 py-1.5 rounded-lg font-bold text-[9px] uppercase tracking-widest transition-all whitespace-nowrap border ${activeCategory === cat ? 'bg-primary text-primary-foreground border-primary shadow-md shadow-primary/10' : 'bg-secondary/40 text-muted-foreground border-border/40 hover:bg-secondary hover:text-foreground'}`}
                   >
                     {cat}
                   </button>
@@ -489,7 +480,7 @@ export default function ConnectionsPage() {
             </div>
 
             {/* Marketplace Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {/* Pipedream Apps */}
               {allPlatforms.map((app: any) => (
                 <MarketplaceCard 
@@ -503,30 +494,19 @@ export default function ConnectionsPage() {
 
               {/* Loading Skeletons */}
               {isLoadingPd && [1, 2, 3, 4, 5, 6].map(i => (
-                <div key={i} className="h-48 bg-secondary/20 rounded-3xl border border-border border-dashed animate-pulse" />
+                <div key={i} className="h-40 bg-secondary/20 rounded-2xl border border-border border-dashed animate-pulse" />
               ))}
             </div>
 
             {hasNextPage && !searchQuery && (
-              <div className="flex justify-center py-16">
+              <div className="flex justify-center py-10">
                 <button 
                   onClick={() => fetchNextPage()} 
                   disabled={isFetchingNextPage}
-                  className="group relative px-12 py-5 rounded-2xl bg-secondary border border-border/60 overflow-hidden transition-all hover:border-primary/30"
+                  className="group relative px-10 py-4 rounded-xl bg-secondary border border-border/60 overflow-hidden transition-all hover:border-primary/30"
                 >
-                  <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/5 transition-colors" />
-                  <div className="relative flex items-center gap-3 font-bold text-sm tracking-tight text-foreground">
-                    {isFetchingNextPage ? (
-                      <>
-                        <RefreshCw size={18} className="animate-spin text-primary" />
-                        Syncing Ecosystem...
-                      </>
-                    ) : (
-                      <>
-                        Discover 1,200+ More Tools
-                        <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                      </>
-                    )}
+                  <div className="relative flex items-center gap-3 font-bold text-[11px] uppercase tracking-widest text-foreground">
+                    {isFetchingNextPage ? 'Syncing...' : 'Show More Tools'}
                   </div>
                 </button>
               </div>
@@ -536,41 +516,41 @@ export default function ConnectionsPage() {
 
         {isModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-            <div className="absolute inset-0 bg-background/60 backdrop-blur-xl" onClick={() => setIsModalOpen(false)} />
-            <div className="bg-card w-full max-w-lg rounded-3xl border border-border/60 shadow-2xl overflow-hidden relative z-10 animate-in fade-in zoom-in-95 duration-500">
-              <div className="p-10 border-b border-border/40 relative">
-                <button onClick={() => setIsModalOpen(false)} className="absolute top-8 right-8 w-10 h-10 rounded-xl bg-secondary hover:bg-muted flex items-center justify-center text-muted-foreground transition-all">
-                  <X size={20} strokeWidth={2.5} />
+            <div className="absolute inset-0 bg-transparent" onClick={() => setIsModalOpen(false)} />
+            <div className="bg-card w-full max-w-md rounded-2xl border border-border/60 shadow-2xl overflow-hidden relative z-10 animate-in fade-in zoom-in-95 duration-500">
+              <div className="p-6 border-b border-border/40 relative bg-secondary/30">
+                <button onClick={() => setIsModalOpen(false)} className="absolute top-6 right-6 w-8 h-8 rounded-lg bg-card hover:bg-muted flex items-center justify-center text-muted-foreground transition-all border border-border/10">
+                  <X size={16} strokeWidth={2.5} />
                 </button>
-                <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-2 mb-2">
                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Configuration</span>
+                   <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Setup</span>
                 </div>
-                <h2 className="text-2xl font-bold font-display text-foreground tracking-tight">
-                  {selectedType ? `Setup ${schemas?.[selectedType]?.label}` : 'New Connection'}
+                <h2 className="text-lg font-bold font-display text-foreground tracking-tight uppercase tracking-wider">
+                  {selectedType ? schemas?.[selectedType]?.label : 'Protocol'}
                 </h2>
               </div>
-              <div className="p-10 max-h-[70vh] overflow-y-auto no-scrollbar">
+              <div className="p-8 max-h-[70vh] overflow-y-auto no-scrollbar">
                 {selectedType && (
                   <form onSubmit={(e) => {
                     e.preventDefault();
                     createCredential.mutate({ name: credName, type: selectedType, data: formData });
                     setIsModalOpen(false);
-                  }} className="space-y-8">
+                  }} className="space-y-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">Workspace Alias</label>
-                      <input required type="text" value={credName} onChange={e => setCredName(e.target.value)} className="w-full bg-secondary border border-border/40 rounded-xl px-4 py-3 text-sm font-medium text-foreground outline-none focus:ring-4 focus:ring-primary/5 transition-all" placeholder="e.g. Production Account" />
+                      <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Alias</label>
+                      <input required type="text" value={credName} onChange={e => setCredName(e.target.value)} className="w-full bg-secondary border border-border/40 rounded-xl px-4 py-2.5 text-[11px] font-bold text-foreground outline-none focus:ring-4 focus:ring-primary/5 transition-all" placeholder="e.g. Production" />
                     </div>
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                        {schemas?.[selectedType]?.fields.map((f: any) => (
                         <div key={f.key} className="space-y-2">
-                          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider ml-1">{f.label}</label>
-                          <input required type={f.type === 'password' ? 'password' : 'text'} value={formData[f.key] || ''} onChange={e => setFormData({ ...formData, [f.key]: e.target.value })} className="w-full bg-secondary border border-border/40 rounded-xl px-4 py-3 text-sm font-medium text-foreground outline-none focus:ring-4 focus:ring-primary/5 transition-all" placeholder={`Enter your ${f.label.toLowerCase()}...`} />
+                          <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest ml-1">{f.label}</label>
+                          <input required type={f.type === 'password' ? 'password' : 'text'} value={formData[f.key] || ''} onChange={e => setFormData({ ...formData, [f.key]: e.target.value })} className="w-full bg-secondary border border-border/40 rounded-xl px-4 py-2.5 text-[11px] font-bold text-foreground outline-none focus:ring-4 focus:ring-primary/5 transition-all" placeholder={`Enter ${f.label.toLowerCase()}...`} />
                         </div>
                       ))}
                     </div>
                     <div className="pt-4">
-                      <button type="submit" className="w-full bg-primary text-primary-foreground px-8 py-4 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-all">Enable Integration</button>
+                      <button type="submit" className="w-full bg-primary text-primary-foreground px-8 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-primary/20 hover:opacity-90 transition-all">Enable Bridge</button>
                     </div>
                   </form>
                 )}

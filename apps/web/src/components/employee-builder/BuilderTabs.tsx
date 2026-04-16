@@ -46,7 +46,7 @@ export function BuildTabContent({
 
   const handleDraftWithAI = async () => {
     if (!localEmployee.name || !localEmployee.description) {
-      toast.error('Please fill in agent name and description first.');
+      toast.error('Please enter a name and description first.');
       return;
     }
 
@@ -67,97 +67,108 @@ export function BuildTabContent({
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto min-h-full">
+    <div className="max-w-[1200px] mx-auto min-h-full">
       {activeSubTab === 'prompt' && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-12">
+        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-5 py-4">
           
-          {/* ── IDENTITY HEADER ────────────────────────── */}
-          <header className="flex items-start gap-6 pb-8 border-b border-border/40 group relative">
-             <div className="size-16 rounded-[10px] bg-primary text-primary-foreground flex items-center justify-center border border-border shadow-sm overflow-hidden shrink-0 relative">
-                <div className="absolute inset-0 bg-white/5 blur-xl pointer-events-none" />
-                <Bot size={28} strokeWidth={2.5} className="relative z-10" />
-             </div>
-             
-             <div className="flex-1 space-y-2 pt-1">
-                <div className="flex items-center gap-4">
-                   <input 
-                     value={localEmployee.name}
-                     onChange={e => setLocalEmployee({ ...localEmployee, name: e.target.value })}
-                     placeholder="Name your agent..."
-                     className="bg-transparent border-none text-3xl font-bold font-display tracking-tight text-foreground outline-none focus:ring-[3px] focus:ring-primary/20 rounded-[10px] px-2 py-1 -ml-2 transition-all placeholder:text-muted/40"
-                   />
-                   <div className="flex items-center gap-1.5 px-2 py-0.5 bg-muted rounded-[10px] border border-border text-[10px] font-bold text-muted-foreground">
-                     <Shield size={12} /> Verified identity
-                   </div>
-                </div>
-                <input 
-                  value={localEmployee.description || ''}
-                  onChange={e => setLocalEmployee({ ...localEmployee, description: e.target.value })}
-                  placeholder="Give this agent a short description..."
-                  className="w-full bg-transparent border-none text-sm font-medium text-muted outline-none px-2 py-1 -ml-2 rounded-[10px] focus:ring-[3px] focus:ring-primary/20 transition-all placeholder:text-muted/40 italic"
-                />
-             </div>
-             <button className="p-2 border border-border rounded-[10px] hover:bg-muted text-muted-foreground transition-all active:scale-95 focus-visible:ring-[3px] focus-visible:ring-primary/20 outline-none">
-               <MoreHorizontal size={20} />
-             </button>
-          </header>
-
-          {/* ── TOOLBAR ───────────────────────── */}
-          <div className="flex items-center gap-3 py-2">
-             <button 
-               onClick={() => setShowModelSelector(true)}
-               className="h-9 border border-border rounded-[10px] px-4 flex items-center justify-between gap-4 hover:bg-muted transition-all text-sm font-medium truncate max-w-sm group bg-background focus-visible:ring-[3px] focus-visible:ring-primary/20 outline-none"
-             >
-                <div className="flex items-center gap-2">
-                   <div className="w-5 h-5 rounded drop-shadow-sm flex items-center justify-center border border-border bg-card">
-                      <Zap size={12} className="text-foreground" />
-                   </div>
-                   <span className="text-foreground font-medium text-sm">
-                     {selectedModel?.name || 'Loading fleet...'}
-                   </span>
-                </div>
-                <ChevronDown size={14} className="text-muted group-hover:text-foreground transition-all shrink-0" />
-             </button>
-
-             <button
-               onClick={handleDraftWithAI}
-               disabled={isDrafting}
-               className="h-9 bg-primary text-primary-foreground hover:opacity-90 rounded-[10px] px-4 flex items-center gap-2 transition-all disabled:opacity-50 focus-visible:ring-[3px] focus-visible:ring-primary/20 outline-none text-sm font-medium"
-             >
-                {isDrafting ? <Activity size={14} className="animate-spin" /> : <Sparkles size={14} strokeWidth={2.5} />}
-                <span>{isDrafting ? 'Drafting...' : 'Draft with AI'}</span>
-             </button>
+          {/* ── AGENT IDENTITY ────────────────────────── */}
+          <div className="bg-secondary/20 rounded-xl border border-border/40 p-5 relative group">
+            <header className="flex items-center gap-6 relative z-10">
+               <div className="size-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-lg shrink-0 group-hover:scale-105 transition-transform duration-500">
+                  <Bot size={24} strokeWidth={2.5} />
+               </div>
+               
+               <div className="flex-1 space-y-1">
+                  <div className="flex flex-col">
+                     <span className="text-[8px] font-bold uppercase tracking-widest text-foreground/30">Agent Identity</span>
+                     <input 
+                       value={localEmployee.name}
+                       onChange={e => setLocalEmployee({ ...localEmployee, name: e.target.value })}
+                       placeholder="Enter agent name..."
+                       className="bg-transparent border-none text-2xl font-bold tracking-tight text-foreground outline-none w-full transition-all placeholder:text-foreground/10"
+                     />
+                  </div>
+               </div>
+               
+               <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-card text-foreground rounded-lg text-[8px] font-bold uppercase tracking-widest border border-border/10 shadow-sm">
+                    <Shield size={10} className="text-emerald-500" /> Active Registry
+                  </div>
+               </div>
+            </header>
           </div>
 
-          {/* ── INSTRUCTIONS ──────────────────────────── */}
-          <section className="relative group pt-4">
-            <textarea 
-              value={localEmployee.systemPrompt}
-              onChange={e => setLocalEmployee({ ...localEmployee, systemPrompt: e.target.value })}
-              placeholder="Provide instructions for the agent to follow..."
-              className="w-full min-h-[500px] bg-card border border-border rounded-[10px] text-sm leading-relaxed p-6 outline-none focus:border-border focus:ring-[3px] focus:ring-primary/20 transition-all resize-none shadow-sm placeholder:text-muted"
+          <div className="px-2 space-y-0.5">
+            <span className="text-[8px] font-bold uppercase tracking-widest text-foreground/20">Short Description</span>
+            <input 
+              value={localEmployee.description || ''}
+              onChange={e => setLocalEmployee({ ...localEmployee, description: e.target.value })}
+              placeholder="Briefly describe the agent's role..."
+              className="w-full bg-transparent border-none text-sm font-medium text-foreground/60 outline-none transition-all placeholder:text-foreground/10"
             />
-            
-            <div className="absolute bottom-6 right-6 flex items-center gap-4">
-               <div className="px-3 py-1.5 bg-background border border-border rounded-[10px] text-xs font-medium text-muted flex items-center gap-2 shadow-sm">
-                  <Terminal size={14} /> {localEmployee.systemPrompt?.length || 0} chars
-               </div>
-               <button
-                 onClick={handleDraftWithAI}
-                 disabled={isDrafting}
-                 className="p-3 bg-primary text-primary-foreground rounded-[10px] hover:opacity-90 active:scale-95 transition-all shadow-sm disabled:opacity-50 focus-visible:ring-[3px] focus-visible:ring-primary/20 outline-none"
-               >
-                  {isDrafting ? <Activity size={20} className="animate-spin" /> : <Wand2 size={20} strokeWidth={2.5} />}
-               </button>
-            </div>
-          </section>
+          </div>
 
-          {/* ── TEMPERATURE SLIDER ────────────────────────── */}
-          <section className="space-y-4 pt-6">
+          {/* ── MODEL CONFIG ───────────────────────── */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between border-b border-border/40 pb-6 px-4">
+               <div className="flex flex-col">
+                  <h3 className="text-sm font-bold text-foreground">Model Configuration</h3>
+                  <p className="text-[10px] font-medium text-foreground/20 uppercase tracking-widest">Configure base engine and behavior settings</p>
+               </div>
+               
+               <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => setShowModelSelector(true)}
+                    className="h-9 border border-border/40 bg-foreground/5 rounded-lg px-4 flex items-center justify-between gap-4 hover:bg-foreground/10 transition-all text-[11px] font-bold min-w-[200px] shadow-sm focus:bg-card"
+                  >
+                     <div className="flex items-center gap-2">
+                        <Zap size={12} className="text-foreground fill-current" />
+                        <span className="text-foreground tracking-tight">
+                          {selectedModel?.name?.replace('Google: ', '') || 'Select Model'}
+                        </span>
+                     </div>
+                     <ChevronDown size={12} className="text-foreground/20" />
+                  </button>
+
+                  <button
+                    onClick={handleDraftWithAI}
+                    disabled={isDrafting}
+                    className="h-9 bg-primary text-primary-foreground hover:scale-105 active:scale-95 rounded-lg px-6 flex items-center gap-2 transition-all disabled:opacity-50 shadow-lg text-[9px] font-bold uppercase tracking-widest"
+                  >
+                     {isDrafting ? <Activity size={12} className="animate-spin" /> : <Sparkles size={12} strokeWidth={2.5} />}
+                     <span>{isDrafting ? 'Generating...' : 'Assist with AI'}</span>
+                  </button>
+               </div>
+            </div>
+
+            {/* ── SYSTEM PROMPT EDITOR ──────────────────────────── */}
+            <div className="relative group">
+               <div className="absolute top-6 left-8 flex items-center gap-3 pointer-events-none z-10">
+                  <Terminal size={14} className="text-foreground/20" />
+                  <span className="text-[9px] font-bold text-foreground/20 uppercase tracking-widest">Behavioral Instructions</span>
+               </div>
+               
+               <textarea 
+                 value={localEmployee.systemPrompt}
+                 onChange={e => setLocalEmployee({ ...localEmployee, systemPrompt: e.target.value })}
+                 placeholder="Provide detailed instructions for the agent to follow..."
+                 className="w-full min-h-[350px] bg-secondary/50 border border-border/40 rounded-xl text-[11px] leading-relaxed p-6 pt-12 outline-none focus:border-border/60 focus:bg-card transition-all resize-none placeholder:text-foreground/5 font-medium font-mono shadow-inner"
+               />
+               
+               <div className="absolute bottom-6 right-6 flex items-center gap-4">
+                  <div className="px-3 py-1 bg-card border border-border/40 rounded-md text-[8px] font-bold text-foreground/40 flex items-center gap-2 shadow-sm uppercase tracking-widest">
+                     <Layers size={10} /> {localEmployee.systemPrompt?.length || 0} chars
+                  </div>
+               </div>
+            </div>
+          </div>
+
+          {/* ── TEMPERATURE ────────────────────────── */}
+          <section className="space-y-4 px-4">
             <div className="flex items-center justify-between">
               <div>
                 <label className="text-sm font-bold text-foreground">Temperature</label>
-                <p className="text-[10px] text-muted/60 mt-1">0 = precise and focused, 1 = creative and exploratory</p>
+                <p className="text-[10px] text-muted/60 mt-0.5">Focus vs Creativity</p>
               </div>
               <div className="text-right">
                 <span className="text-lg font-bold text-primary">{(localEmployee.temperature ?? 0.1).toFixed(2)}</span>
@@ -170,7 +181,7 @@ export function BuildTabContent({
               step="0.05"
               value={localEmployee.temperature ?? 0.1}
               onChange={(e) => setLocalEmployee({ ...localEmployee, temperature: parseFloat(e.target.value) })}
-              className="w-full h-2 bg-foreground/10 rounded-full appearance-none cursor-pointer accent-primary"
+              className="w-full h-1.5 bg-foreground/10 rounded-full appearance-none cursor-pointer accent-primary"
             />
           </section>
 
@@ -188,20 +199,20 @@ export function BuildTabContent({
 
       {activeSubTab === 'tools' && (
         <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-8 h-full flex flex-col pt-6">
-           <header className="flex justify-between items-end border-b border-border pb-6">
-              <div className="space-y-2">
-                 <h2 className="text-3xl font-bold font-display tracking-tight text-foreground">Skills and Tools</h2>
-                 <p className="text-muted text-sm font-medium">Equip your agent with specialized functional skill modules.</p>
+           <header className="flex justify-between items-end border-b border-border pb-6 px-4">
+              <div className="space-y-1">
+                 <h2 className="text-2xl font-bold tracking-tight text-foreground">Agent Skills</h2>
+                 <p className="text-muted text-sm font-medium">Enable specialized tools and functional capabilities for this agent.</p>
               </div>
               <button 
                 onClick={() => setShowSkillPicker(true)} 
-                className="h-9 px-4 bg-primary text-primary-foreground rounded-[10px] text-sm font-medium shadow-sm hover:opacity-90 active:scale-95 transition-all flex items-center gap-2 focus-visible:ring-[3px] focus-visible:ring-primary/20 outline-none"
+                className="h-10 px-6 bg-primary text-primary-foreground rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:opacity-90 active:scale-95 transition-all flex items-center gap-2 outline-none"
               >
                 <Plus size={16} strokeWidth={2.5} /> Add Skill
               </button>
            </header>
            
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-32">
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-32 px-4">
               {localEmployee.skillIds?.map((sid: string) => (
                  <SkillAssignmentCard 
                     key={sid} 
@@ -212,10 +223,10 @@ export function BuildTabContent({
                  />
               ))}
               {!localEmployee.skillIds?.length && (
-                 <div className="col-span-full py-40 bg-card rounded-[3rem] border border-border/60 border-dashed flex flex-col items-center justify-center text-center opacity-40">
-                    <Layers size={48} className="text-muted mb-8" />
-                    <p className="text-xl font-bold tracking-tight">No skills assigned</p>
-                    <p className="text-xs font-medium mt-2 max-w-xs uppercase tracking-widest">Connect functional expertise to enable complex tasks.</p>
+                 <div className="col-span-full py-40 border border-border/40 border-dashed rounded-3xl flex flex-col items-center justify-center text-center opacity-40">
+                    <Layers size={40} className="text-muted mb-6" />
+                    <p className="text-lg font-bold">No skills assigned</p>
+                    <p className="text-[10px] font-medium mt-1 uppercase tracking-widest">Add skills to enable complex task execution</p>
                  </div>
               )}
            </div>
@@ -223,20 +234,20 @@ export function BuildTabContent({
       )}
 
       {activeSubTab === 'knowledge' && (
-        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-8 pt-6">
+        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-8 pt-6 px-4">
            <header className="flex justify-between items-end border-b border-border pb-6">
-              <div className="space-y-2">
-                 <h2 className="text-3xl font-bold font-display tracking-tight text-foreground">Knowledge Base</h2>
-                 <p className="text-muted text-sm font-medium">Provide documentation and data for semantic grounding.</p>
+              <div className="space-y-1">
+                 <h2 className="text-2xl font-bold tracking-tight text-foreground">Knowledge Base</h2>
+                 <p className="text-muted text-sm font-medium">Attach documents and context to anchor the agent's knowledge.</p>
               </div>
               <button 
                 onClick={() => setShowKnowledgeCreator(true)}
-                className="h-9 px-4 bg-foreground text-background rounded-[10px] text-sm font-medium hover:opacity-90 active:scale-95 transition-all shadow-sm focus-visible:ring-[3px] focus-visible:ring-foreground/20 outline-none"
+                className="h-10 px-6 bg-foreground text-background rounded-xl text-[10px] font-bold uppercase tracking-widest hover:opacity-90 active:scale-95 transition-all shadow-lg outline-none"
               >
                 Upload Data
               </button>
            </header>
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-32">
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-32">
               {localEmployee.knowledgeIds?.map((kid: string) => (
                  <KnowledgeAssignmentCard 
                     key={kid} 
@@ -245,9 +256,9 @@ export function BuildTabContent({
                  />
               ))}
               {!localEmployee.knowledgeIds?.length && (
-                <div className="col-span-full py-40 border border-border/60 border-dashed rounded-[3rem] text-center opacity-40">
-                   <FileText size={48} className="mx-auto text-muted mb-8" />
-                   <p className="text-xl font-bold">No knowledge provided</p>
+                <div className="col-span-full py-40 border border-border/40 border-dashed rounded-3xl text-center opacity-40">
+                   <FileText size={40} className="mx-auto text-muted mb-6" />
+                   <p className="text-lg font-bold">No knowledge sources</p>
                 </div>
               )}
            </div>
@@ -259,15 +270,15 @@ export function BuildTabContent({
 
 export function MonitorTabContent({ runs, setSelectedRun }: any) {
   return (
-    <div className="max-w-[1400px] mx-auto space-y-8 pt-6 pb-32">
+    <div className="max-w-[1200px] mx-auto space-y-8 pt-6 pb-32 px-4">
        <header className="flex justify-between items-end border-b border-border pb-6">
-          <div className="space-y-2">
-             <h2 className="text-3xl font-bold font-display tracking-tight text-foreground">Activity History</h2>
-             <p className="text-muted text-sm font-medium">Review the execution logs and performance of your agent.</p>
+          <div className="space-y-1">
+             <h2 className="text-2xl font-bold tracking-tight text-foreground">Activity History</h2>
+             <p className="text-muted text-sm font-medium">Review execution logs and performance metrics for this agent.</p>
           </div>
           <div className="flex gap-3">
-             <button className="h-9 px-4 bg-muted text-foreground rounded-[10px] text-sm font-medium hover:bg-muted/80 transition-all focus-visible:ring-[3px] focus-visible:ring-primary/20 outline-none">Clear Logs</button>
-             <button className="h-9 px-4 bg-background text-foreground border border-border rounded-[10px] text-sm font-medium hover:bg-muted transition-all shadow-sm focus-visible:ring-[3px] focus-visible:ring-primary/20 outline-none">Export Activity</button>
+             <button className="h-9 px-4 bg-muted text-foreground rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-muted/80 transition-all outline-none">Clear Logs</button>
+             <button className="h-9 px-4 bg-card text-foreground border border-border rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-muted transition-all shadow-sm outline-none">Export</button>
           </div>
        </header>
        <TelemetryView runs={runs || []} onSelect={setSelectedRun} />

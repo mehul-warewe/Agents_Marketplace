@@ -32,7 +32,7 @@ export default function SidebarLayout({ children, title }: SidebarLayoutProps) {
   }, [initialized, fetchConnections]);
 
   return (
-    <div className="flex h-screen bg-background p-2 sm:p-4 gap-4 text-foreground overflow-hidden font-['Inter']">
+    <div className="flex h-screen bg-background p-1.5 sm:p-2 gap-2 text-foreground overflow-hidden font-['Inter']">
       
       {/* Mobile Backdrop */}
       {isMobileMenuOpen && (
@@ -53,7 +53,7 @@ export default function SidebarLayout({ children, title }: SidebarLayoutProps) {
       />
 
       {/* ── Right Side Panel Column ─────────────────── */}
-      <div className="flex-1 flex flex-col gap-4 overflow-hidden min-w-0">
+      <div className="flex-1 flex flex-col gap-2 overflow-hidden min-w-0">
         
         {/* ── Extracted Modular Header (Island 2) ─────── */}
         <AppHeader title={title} setIsMobileMenuOpen={setIsMobileMenuOpen} />

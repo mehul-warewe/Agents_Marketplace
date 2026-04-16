@@ -20,7 +20,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useCreateManager, useUpdateManager, useManager } from '@/hooks/useManager';
 import { useEmployees } from '@/hooks/useEmployees';
 import { useToast } from '@/components/ui/Toast';
-import { Save, ChevronLeft, Target, Cpu, Sparkles, Loader2, Bot, Info, Shield, Zap, X } from 'lucide-react';
+import { Save, ChevronLeft, Target, Cpu, Sparkles, Loader2, Bot, Info, Shield, Zap, X, ArrowLeft, Hammer, Activity } from 'lucide-react';
 
 import { ManagerHubNode, EmployeeNode, ToolNode, TriggerNode, ConditionNode, NoteNode } from './builder/ManagerFlowNodes';
 import UnitTray from './builder/UnitTray';
@@ -216,95 +216,112 @@ function ManagerBuilderInner() {
         await createManager(payload);
         toast.success('Strategic Manager initialized.');
       }
-      router.push('/manager');
+      router.push('/managers');
     } catch (err) {
       toast.error('Failed to sync strategy registry.');
     }
   };
 
-  const workforceCount = edges.filter(e => e.source === 'manager_hub').length;
-
   if (isManagerLoading && managerId) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-[#030303]">
-        <Loader2 className="w-12 h-12 text-accent animate-spin mb-6" />
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">Loading workspace...</p>
+      <div className="flex-1 flex flex-col items-center justify-center bg-background uppercase italic">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="mt-8 text-[10px] font-bold text-muted uppercase tracking-[0.4em]">Loading workspace...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#030303] text-foreground">
-      {/* Structural Top Bar - Matching Screenshot */}
-      <section className="h-16 border-b border-border/10 bg-card/40 backdrop-blur-xl flex items-center justify-between px-8 z-[60]">
-         <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3">
-               <button onClick={() => router.push('/manager')} className="w-8 h-8 flex items-center justify-center hover:bg-foreground/5 rounded-lg transition-all text-muted">
-                  <ChevronLeft size={16} strokeWidth={3} />
+    <div className="flex-1 bg-background flex flex-col h-full overflow-hidden font-inter text-foreground">
+      {/* ── TOP NAVIGATION BAR ────────────────────────── */}
+      <header className="h-11 bg-card border-b border-border flex items-center justify-between px-4 shrink-0 z-50">
+        <div className="flex items-center gap-4">
+           <button 
+             onClick={() => router.push('/managers')} 
+             className="p-1 px-2.5 bg-foreground/5 rounded-lg hover:bg-foreground/10 transition-all text-foreground/40 hover:text-foreground border border-border/10"
+           >
+              <ArrowLeft size={14} strokeWidth={2.5} />
+           </button>
+           <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-lg">
+                 <Shield size={14} strokeWidth={2.5} />
+              </div>
+              <div className="flex flex-col">
+                 <span className="text-[7px] uppercase font-bold tracking-widest text-foreground/30 leading-none">Protocol</span>
+                 <h1 className="text-[11px] font-bold tracking-tight text-foreground leading-none">
+                   {managerData?.name || 'New Orchestrator'}
+                 </h1>
+              </div>
+           </div>
+        </div>
+
+        {/* Center Navigation - Segmented Control */}
+        <nav className="flex items-center bg-secondary/50 rounded-lg p-0.5 border border-border/10 relative">
+           {[
+             { id: 'arch', label: 'Arch', icon: Hammer },
+             { id: 'sim', label: 'Sim', icon: Activity }
+           ].map(tab => {
+             const active = tab.id === 'arch';
+             return (
+               <button 
+                 key={tab.id} 
+                 className={`relative px-4 py-1.5 rounded-lg text-[8px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 z-10
+                   ${active ? 'text-primary' : 'text-foreground/30 hover:text-foreground/50'}`}
+               >
+                 {active && (
+                   <motion.div 
+                     layoutId="managerTab"
+                     className="absolute inset-0 bg-card rounded-lg shadow-sm border border-border/5"
+                     transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                   />
+                 )}
+                 <tab.icon size={11} strokeWidth={active ? 2.5 : 2} className="relative z-20" />
+                 <span className="relative z-20">{tab.label}</span>
                </button>
-               <h1 className="text-xs font-black uppercase tracking-widest italic">{managerData.name}</h1>
-               <div className="w-10 h-5 bg-accent/20 border border-accent/40 rounded-full flex items-center px-1">
-                  <div className="w-2.5 h-2.5 bg-accent rounded-full" />
-               </div>
-            </div>
-         </div>
+             );
+           })}
+        </nav>
 
-         {/* Build/Run Segment Control */}
-         <div className="flex items-center bg-foreground/[0.05] p-1 rounded-xl border border-border/10">
-            <button className="flex items-center gap-2 px-6 py-2 bg-background border border-border/20 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-lg italic">
-               <Sparkles size={14} className="text-accent" /> Build
-            </button>
-            <button className="flex items-center gap-2 px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-muted hover:text-foreground transition-all italic opacity-40">
-               <Zap size={14} /> Run
-            </button>
-         </div>
-
-         <div className="flex items-center gap-4">
-            <button className="p-2 text-muted hover:text-foreground transition-all">
-               <Shield size={18} />
-            </button>
-            <div className="w-[1px] h-6 bg-border/20" />
-            <button className="px-6 py-2.5 bg-accent/10 border border-accent/20 rounded-xl text-[10px] font-black uppercase tracking-widest text-accent hover:bg-accent hover:text-background transition-all">
-               Test
-            </button>
-            <button 
+        <div className="flex items-center gap-2">
+            <button
                onClick={handleSave}
-               className="px-8 py-2.5 bg-foreground text-background rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+               disabled={isCreating || isUpdating}
+               className="h-7 px-4 bg-primary text-primary-foreground rounded-lg text-[8px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.05] active:scale-95 transition-all flex items-center gap-2"
             >
-               {isCreating || isUpdating ? <Loader2 className="animate-spin" size={12} /> : 'Publish'}
+               {isCreating || isUpdating ? <Loader2 className="animate-spin" size={10} /> : (
+                 <>PUBLISH <Target size={10} strokeWidth={2.5} /></>
+               )}
             </button>
          </div>
-      </section>
+      </header>
 
-      <div className="flex-1 relative">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
-          onNodeClick={onNodeClick}
-          onEdgeClick={onEdgeClick}
-          onPaneClick={() => { setSelectedNode(null); setSelectedEdge(null); }}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          fitView
-          className="bg-[#030303]"
-        >
-          <Background 
-            variant={BackgroundVariant.Dots} 
-            gap={20} 
-            size={0.5} 
-            color="#ffffff08" 
-          />
-          
-          <Controls className="!bg-card/40 !backdrop-blur-xl !border-border/10 !rounded-xl !shadow-2xl overflow-hidden !m-8" />
-          
-          <UnitTray onDragStart={handleDragStart} />
+      <div className="flex-1 flex gap-1.5 p-1.5 overflow-hidden relative bg-secondary/5">
+         {/* THE STRATEGIC MESH SHEET */}
+         <div className="flex-1 bg-card rounded-2xl border border-border overflow-hidden shadow-sm relative">
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onDrop={onDrop}
+              onDragOver={onDragOver}
+              onNodeClick={onNodeClick}
+              onEdgeClick={onEdgeClick}
+              nodeTypes={nodeTypes}
+              fitView
+              className="bg-transparent"
+            >
+              <Background color="currentColor" className="text-foreground/5" gap={40} variant={BackgroundVariant.Dots} />
+              <Controls className="!bg-card !border-border/10 !rounded-xl !shadow-lg !fill-foreground" />
+            </ReactFlow>
 
-          <NodeInspector 
+            {/* Float HUD Over Sheet */}
+            <UnitTray onDragStart={handleDragStart} />
+         </div>
+
+         {/* INSPECTOR OVERLAY (Slide out) */}
+         <NodeInspector 
             selectedNode={selectedNode}
             selectedEdge={selectedEdge}
             onClose={() => { setSelectedNode(null); setSelectedEdge(null); }}
@@ -314,7 +331,6 @@ function ManagerBuilderInner() {
             workerFleet={employeeFleet || []}
             isFleetLoading={isFleetLoading}
           />
-        </ReactFlow>
       </div>
     </div>
   );

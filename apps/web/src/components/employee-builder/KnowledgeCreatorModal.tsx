@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, BookOpen, Upload, FileUp } from 'lucide-react';
+import { X, BookOpen, Upload, FileUp, Activity } from 'lucide-react';
 
 interface KnowledgeCreatorModalProps {
   onClose: () => void;
@@ -17,9 +17,9 @@ export default function KnowledgeCreatorModal({ onClose, onSave }: KnowledgeCrea
   const handleFileSelect = async (file: File) => {
     try {
       const text = await file.text();
-      const filename = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+      const filename = file.name.replace(/\.[^/.]+$/, ''); 
       setData({ title: filename, content: text });
-      setMode('write'); // Switch to write mode to show preview
+      setMode('write'); 
     } catch (err) {
       console.error('Error reading file:', err);
     }
@@ -35,111 +35,99 @@ export default function KnowledgeCreatorModal({ onClose, onSave }: KnowledgeCrea
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-background/95 backdrop-blur-3xl"
+        className="absolute inset-0 bg-transparent"
         onClick={onClose}
       />
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="relative w-full max-w-2xl bg-card border border-border/60 rounded-3xl shadow-2xl overflow-hidden flex flex-col p-10 space-y-8"
+        initial={{ opacity: 0, scale: 0.98, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.98, y: 10 }}
+        className="relative w-full max-w-lg bg-card border border-border/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col p-5 space-y-4 z-10"
       >
         <div className="flex justify-between items-center">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3 text-primary">
-              <BookOpen size={18} strokeWidth={2.5} />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Knowledge Base</span>
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2 text-primary">
+              <BookOpen size={13} />
+              <span className="text-[8px] font-bold uppercase tracking-widest leading-none">Knowledge</span>
             </div>
-            <h2 className="text-2xl font-bold font-display tracking-tight text-foreground">Add Context Record</h2>
+            <h2 className="text-base font-bold tracking-tight text-foreground uppercase leading-none">Link Data</h2>
           </div>
-          <button onClick={onClose} className="p-2.5 bg-secondary hover:bg-muted transition-all rounded-xl text-muted-foreground">
-            <X size={20} />
+          <button onClick={onClose} className="p-1.5 hover:bg-foreground/5 rounded-lg text-foreground/20 hover:text-foreground transition-all">
+            <X size={14} />
           </button>
         </div>
 
         {/* Mode Tabs */}
-        <div className="flex items-center gap-4 border-b border-border/40">
+        <div className="flex items-center bg-secondary/30 p-0.5 rounded-lg border border-border/10">
           <button
             onClick={() => setMode('write')}
-            className={`px-6 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${
-              mode === 'write'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted hover:text-foreground'
+            className={`flex-1 py-1 text-[8px] font-bold uppercase tracking-widest transition-all rounded-md ${
+              mode === 'write' ? 'bg-card text-foreground shadow-sm' : 'text-foreground/30 hover:text-foreground'
             }`}
           >
-            Write
+            Manual
           </button>
           <button
             onClick={() => setMode('upload')}
-            className={`px-6 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${
-              mode === 'upload'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted hover:text-foreground'
+            className={`flex-1 py-1 text-[8px] font-bold uppercase tracking-widest transition-all rounded-md ${
+              mode === 'upload' ? 'bg-card text-foreground shadow-sm' : 'text-foreground/30 hover:text-foreground'
             }`}
           >
-            Upload File
+            Upload
           </button>
         </div>
 
         {mode === 'write' ? (
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 ml-1">Document Title</label>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-[8px] font-bold uppercase tracking-widest text-foreground/20 px-1">Title</label>
               <input
                 value={data.title}
                 onChange={e => setData({ ...data, title: e.target.value })}
-                placeholder="e.g. Sales Report Q1"
-                className="w-full bg-secondary border border-border/40 rounded-xl px-4 py-3 text-sm font-medium focus:border-primary/40 focus:outline-none transition-all placeholder:text-muted/40"
+                placeholder="Asset title..."
+                className="w-full h-9 bg-secondary/30 border border-border/10 rounded-xl px-3 text-[11px] font-bold focus:border-primary/50 outline-none transition-all placeholder:text-foreground/5"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 ml-1">Content Body</label>
+            <div className="space-y-1">
+              <label className="text-[8px] font-bold uppercase tracking-widest text-foreground/20 px-1">Context</label>
               <textarea
                 value={data.content}
                 onChange={e => setData({ ...data, content: e.target.value })}
-                placeholder="Paste the documentation source here..."
-                className="w-full bg-secondary border border-border/40 rounded-xl px-4 py-4 text-sm font-medium focus:border-primary/40 focus:outline-none min-h-[220px] resize-none no-scrollbar placeholder:text-muted/40 leading-relaxed"
+                placeholder="Data payload..."
+                className="w-full bg-secondary/30 border border-border/10 rounded-xl px-3 py-3 text-[11px] font-medium focus:border-primary/50 outline-none min-h-[140px] resize-none no-scrollbar placeholder:text-foreground/5 leading-relaxed italic"
               />
             </div>
-            {data.content && (
-              <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
-                <p className="text-[10px] text-primary font-bold mb-2">PREVIEW:</p>
-                <p className="text-[10px] text-foreground/80 line-clamp-3 whitespace-pre-wrap">
-                  {data.content.slice(0, 200)}...
-                </p>
-              </div>
-            )}
           </div>
         ) : (
           <div
             onDrop={handleDrop}
             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
             onDragLeave={() => setIsDragging(false)}
-            className={`relative w-full min-h-[300px] border-2 border-dashed rounded-3xl flex items-center justify-center transition-all ${
+            className={`relative w-full min-h-[180px] border border-dashed rounded-xl flex items-center justify-center transition-all ${
               isDragging
                 ? 'border-primary bg-primary/10'
-                : 'border-border/40 bg-foreground/[0.02] hover:border-primary/50'
+                : 'border-border/10 bg-secondary/10 hover:border-primary/30'
             }`}
           >
-            <div className="text-center space-y-6 pointer-events-none">
+            <div className="text-center space-y-3 pointer-events-none p-4">
               <div className="flex justify-center">
-                <div className="p-6 rounded-2xl bg-primary/10 text-primary">
-                  <FileUp size={32} strokeWidth={2.5} />
+                <div className="p-3 rounded-xl bg-primary/10 text-primary">
+                  <FileUp size={20} />
                 </div>
               </div>
-              <div className="space-y-2">
-                <p className="text-sm font-bold uppercase tracking-wider">Drag & drop a file</p>
-                <p className="text-[10px] text-muted">or click to browse (txt, md, csv, json)</p>
+              <div className="space-y-1">
+                <p className="text-[9px] font-bold uppercase tracking-widest">Drop source</p>
+                <p className="text-[7px] font-bold text-foreground/20 uppercase tracking-widest">PDF, TXT, MD</p>
               </div>
             </div>
             <input
               type="file"
-              accept=".txt,.md,.csv,.json"
+              accept=".txt,.md,.csv,.json,.pdf"
               onChange={(e) => {
                 if (e.target.files?.[0]) {
                   handleFileSelect(e.target.files[0]);
@@ -153,9 +141,9 @@ export default function KnowledgeCreatorModal({ onClose, onSave }: KnowledgeCrea
         <button
           onClick={() => onSave(data)}
           disabled={!data.title || !data.content}
-          className="w-full h-14 bg-primary text-primary-foreground rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50 active:scale-[0.98]"
+          className="w-full h-9 bg-primary text-primary-foreground rounded-xl font-bold text-[9px] uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-primary/20 disabled:opacity-30"
         >
-          Add to Knowledge Base
+          Finalize Asset
         </button>
       </motion.div>
     </div>

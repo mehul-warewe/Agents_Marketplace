@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CheckCircle2, Zap, Star, Shield, Activity, CreditCard, ArrowRight, Sparkles, Terminal } from 'lucide-react';
+import { X, CheckCircle2, Zap, Star, Shield, Activity, CreditCard, ArrowRight, Sparkles, Terminal, Rocket } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/api';
 
@@ -16,7 +16,7 @@ const tiers = [
     id: 'free',
     name: 'Starter',
     price: '$0',
-    description: 'Perfect for individual builders.',
+    description: 'Individual builders.',
     credits: '100',
     features: ['Basic nodes', 'Standard priority', 'Public access'],
     buttonText: 'Current Plan',
@@ -25,25 +25,25 @@ const tiers = [
   },
   {
     id: 'pro',
-    name: 'Pro Explorer',
+    name: 'Professional',
     price: '$19',
-    description: 'Production-grade tools for scaling.',
+    description: 'Production-grade tools.',
     credits: '1,500',
     features: ['Premium nodes', 'Elevated priority', 'Private storage', 'Unlimited flows'],
-    buttonText: 'Initialise_Pro',
+    buttonText: 'Get Pro',
     highlight: true,
     icon: Zap
   },
   {
     id: 'ultra',
-    name: 'Elite Scale',
+    name: 'Enterprise',
     price: '$49',
-    description: 'Maximum performance deployments.',
+    description: 'Maximum performance.',
     credits: '5,000',
     features: ['Top-tier priority', 'Dedicated API', 'Team tools', 'Institutional SLA'],
-    buttonText: 'Initialise_Elite',
+    buttonText: 'Get Enterprise',
     highlight: false,
-    icon: Star
+    icon: Rocket
   }
 ];
 
@@ -82,94 +82,91 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-10">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-background/80 backdrop-blur-xl"
+          className="absolute inset-0 bg-black/40 backdrop-blur-xl"
         />
         
         <motion.div 
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, scale: 0.98, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-6xl max-h-[90vh] bg-card border border-border shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] rounded-[3.5rem] overflow-hidden flex flex-col"
+          exit={{ opacity: 0, scale: 0.98, y: 10 }}
+          className="relative w-full max-w-5xl max-h-[90vh] bg-card border border-border/10 shadow-2xl rounded-3xl overflow-hidden flex flex-col z-10"
         >
           {/* Close Button */}
           <button 
             onClick={onClose}
-            className="absolute top-8 right-8 p-3 bg-foreground/5 hover:bg-foreground hover:text-background rounded-2xl transition-all z-20"
+            className="absolute top-6 right-6 p-2 bg-foreground/5 hover:bg-foreground hover:text-background rounded-xl transition-all z-20"
           >
-            <X size={20} strokeWidth={3} />
+            <X size={18} />
           </button>
 
           {/* Header */}
-          <div className="p-8 md:p-10 border-b border-border/60 bg-foreground/[0.02] relative shrink-0">
+          <div className="p-8 md:px-12 border-b border-border/10 bg-secondary/5 shrink-0">
              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div className="space-y-1">
-                   <div className="flex items-center gap-3">
-                      <Sparkles size={16} className="text-primary" />
-                      <span className="text-[9px] font-black text-primary uppercase tracking-[0.4em] italic">System_Expansion</span>
-                   </div>
-                   <h2 className="text-3xl md:text-4xl font-black tracking-tighter uppercase italic leading-none">Upgrade_Protocol</h2>
-                   <p className="text-muted font-bold text-[11px] uppercase opacity-50 tracking-widest max-w-md italic">
-                      Enhance your processing power and unlock specialized logic nodes.
+                   <h2 className="text-3xl font-bold tracking-tight text-foreground">Upgrade Plan</h2>
+                   <p className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest max-w-md">
+                      Unlock unlimited concurrent runs and specialized functional skills.
                    </p>
                 </div>
 
                 <div className="flex bg-foreground/5 p-1 rounded-xl">
                    <button 
                      onClick={() => setView('plans')}
-                     className={`px-6 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${view === 'plans' ? 'bg-background text-foreground shadow-lg' : 'text-muted hover:text-foreground'}`}
+                     className={`px-6 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${view === 'plans' ? 'bg-card text-foreground shadow-sm' : 'text-foreground/30 hover:text-foreground'}`}
                    >
-                     Access_Plans
+                     Plans
                    </button>
                    <button 
                      onClick={() => setView('credits')}
-                     className={`px-6 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${view === 'credits' ? 'bg-background text-foreground shadow-lg' : 'text-muted hover:text-foreground'}`}
+                     className={`px-6 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${view === 'credits' ? 'bg-card text-foreground shadow-sm' : 'text-foreground/30 hover:text-foreground'}`}
                    >
-                     Logic_Units
+                     Credits
                    </button>
                 </div>
              </div>
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-8 md:p-10 no-scrollbar">
+          <div className="flex-1 overflow-y-auto p-8 md:px-12 no-scrollbar">
             {view === 'plans' ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {tiers.map((tier) => (
                   <div 
                     key={tier.id}
-                    className={`relative p-8 rounded-[2.5rem] border-2 flex flex-col transition-all duration-500 group ${
+                    className={`relative p-6 rounded-2xl border flex flex-col transition-all duration-500 group ${
                       tier.highlight 
-                        ? 'border-primary bg-primary/[0.02] shadow-2xl shadow-primary/5' 
-                        : 'border-border/60 hover:border-primary/40'
+                        ? 'border-primary/50 bg-primary/5 shadow-xl' 
+                        : 'border-border/10 bg-card hover:border-primary/20'
                     }`}
                   >
-                    <div className="mb-6 flex justify-between items-start">
-                       <div className={`p-4 rounded-xl border border-border/40 ${tier.highlight ? 'bg-primary text-primary-foreground' : 'bg-foreground/5 text-muted'}`}>
-                          <tier.icon size={24} strokeWidth={2.5} />
+                    <div className="mb-4 flex justify-between items-start">
+                       <div className={`p-3 rounded-xl border border-border/10 ${tier.highlight ? 'bg-primary text-primary-foreground shadow-lg' : 'bg-secondary/50 text-foreground/40'}`}>
+                          <tier.icon size={20} />
                        </div>
                        {tier.highlight && (
-                         <div className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest italic">Recommended</div>
+                         <div className="bg-primary text-primary-foreground px-2 py-0.5 rounded-md text-[8px] font-bold uppercase tracking-widest">Recommended</div>
                        )}
                     </div>
 
-                    <div className="space-y-1 mb-6">
-                       <h3 className="text-[9px] font-black text-muted uppercase tracking-[0.3em] italic opacity-40">{tier.name}_Series</h3>
-                       <div className="flex items-baseline gap-2">
-                          <span className="text-4xl font-black italic tracking-tighter">{tier.price}</span>
-                          <span className="text-[9px] font-black text-muted uppercase tracking-widest opacity-40">/ MO</span>
+                    <div className="space-y-1 mb-4">
+                       <h3 className="text-[9px] font-bold text-foreground/20 uppercase tracking-[0.2em]">{tier.id} Plan</h3>
+                       <div className="flex items-baseline gap-1">
+                          <span className="text-3xl font-bold tracking-tight">{tier.price}</span>
+                          <span className="text-[9px] font-bold text-foreground/20 uppercase tracking-widest">/ MO</span>
                        </div>
+                       <p className="text-[10px] font-medium text-foreground/40 italic">{tier.description}</p>
                     </div>
 
-                    <ul className="space-y-3 mb-8 flex-1">
+                    <ul className="space-y-2 mb-6 flex-1">
                        {tier.features.map(f => (
-                         <li key={f} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-tight text-muted/60 italic">
-                           <CheckCircle2 size={14} strokeWidth={3} className="text-primary" />
+                         <li key={f} className="flex items-center gap-2 text-[10px] font-bold text-foreground/50 uppercase tracking-tight">
+                           <CheckCircle2 size={12} className="text-primary" />
                            {f}
                          </li>
                        ))}
@@ -178,43 +175,41 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                     <button
                       disabled={user?.tier === tier.id || loading !== null}
                       onClick={() => handleCheckout('subscription', tier.id)}
-                      className={`w-full py-4 rounded-xl font-black text-[9px] uppercase tracking-[0.3em] transition-all italic flex items-center justify-center gap-2 ${
+                      className={`w-full py-3 rounded-lg font-bold text-[9px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
                         user?.tier === tier.id
-                          ? 'bg-foreground/5 text-muted cursor-default'
-                          : 'bg-primary text-primary-foreground hover:scale-[1.05] shadow-xl shadow-primary/20'
+                          ? 'bg-foreground/5 text-foreground/20 cursor-default border border-border/5'
+                          : 'bg-primary text-primary-foreground hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-primary/20'
                       }`}
                     >
                       {loading === tier.id ? (
-                        <div className="w-4 h-4 border-2 border-primary-foreground/20 border-t-primary-foreground rounded-full animate-spin" />
-                      ) : user?.tier === tier.id ? 'ACTIVE_SESSION' : tier.buttonText}
+                        <Activity size={14} className="animate-spin" />
+                      ) : user?.tier === tier.id ? 'Active Plan' : tier.buttonText}
                     </button>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {creditPacks.map((pack) => (
                    <button
                     key={pack.id}
                     disabled={loading !== null}
                     onClick={() => handleCheckout('credits', pack.id)}
-                    className="group relative flex flex-col p-8 bg-foreground/[0.02] border border-border/60 rounded-[2.5rem] hover:bg-foreground hover:text-background transition-all duration-700 text-left overflow-hidden h-fit shadow-lg"
+                    className="group relative flex flex-col p-6 bg-secondary/30 border border-border/10 rounded-2xl hover:bg-primary transition-all duration-300 text-left overflow-hidden shadow-sm"
                   >
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-150 duration-1000" />
-                    
                     {pack.discount && (
-                      <div className="bg-primary text-primary-foreground text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest mb-6 relative z-10">
+                      <div className="w-fit bg-primary text-primary-foreground text-[8px] font-bold px-2 py-0.5 rounded-md uppercase tracking-widest mb-4 group-hover:bg-card group-hover:text-foreground">
                         {pack.discount}
                       </div>
                     )}
                     
-                    <div className="text-[9px] font-black text-muted uppercase tracking-[0.3em] mb-2 relative z-10 group-hover:text-background/60">Logic_Units</div>
-                    <div className="text-5xl font-black mb-4 tracking-tighter relative z-10 italic">{pack.amount}</div>
+                    <div className="text-[9px] font-bold text-foreground/40 uppercase tracking-[0.2em] mb-1 group-hover:text-card/60">Execution Credits</div>
+                    <div className="text-4xl font-bold mb-4 tracking-tight group-hover:text-card">{pack.amount}</div>
                     
-                    <div className="mt-auto pt-6 border-t border-foreground/5 group-hover:border-background/20 w-full flex items-center justify-between relative z-10">
-                      <span className="text-3xl font-black italic tracking-tighter">{pack.price}</span>
-                      <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center group-hover:bg-background group-hover:text-foreground transition-all duration-500 shadow-xl">
-                         <ArrowRight size={20} strokeWidth={3} />
+                    <div className="mt-auto pt-4 border-t border-border/10 group-hover:border-card/20 w-full flex items-center justify-between">
+                      <span className="text-2xl font-bold tracking-tight group-hover:text-card">{pack.price}</span>
+                      <div className="w-9 h-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center group-hover:bg-card group-hover:text-foreground shadow-lg transition-all group-hover:scale-110">
+                         <ArrowRight size={16} />
                       </div>
                     </div>
                   </button>
@@ -224,12 +219,9 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
           </div>
 
           {/* Footer Info */}
-          <div className="p-6 border-t border-border/60 bg-foreground/[0.01] flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0 px-10">
-             <div className="flex items-center gap-4 text-[8px] font-black text-muted uppercase tracking-widest italic opacity-40">
-                <Shield size={14} /> Secure_Encrypted_Gateway :: Stripe_Protected
-             </div>
-             <div className="text-[8px] font-black text-muted uppercase tracking-[0.3em] italic opacity-40">
-                Protocol: PR-99-ALPHA-UPGRADE
+          <div className="p-6 border-t border-border/10 bg-secondary/5 flex flex-col sm:flex-row items-center justify-between gap-4 px-12">
+             <div className="flex items-center gap-2 text-[8px] font-bold text-foreground/20 uppercase tracking-widest">
+                <Shield size={12} /> Secure Payments via Stripe
              </div>
           </div>
         </motion.div>

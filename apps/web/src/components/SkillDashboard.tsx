@@ -39,53 +39,53 @@ export default function SkillDashboard() {
   }
 
   return (
-    <div className="flex-1 text-foreground space-y-8 p-8">
-      <div className="max-w-[1400px] mx-auto space-y-8">
+    <div className="flex-1 text-foreground space-y-3 p-2 lg:p-4 bg-secondary/5">
+      <div className="space-y-3">
         
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 px-4">
-           <div className="space-y-4">
-              <h1 className="text-4xl md:text-5xl font-bold font-display tracking-tight text-foreground">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 px-2">
+           <div className="space-y-1">
+              <h1 className="text-2xl md:text-3xl font-bold font-display tracking-tight text-foreground">
                 Skill Library
               </h1>
-              <p className="text-muted-foreground font-medium text-sm max-w-md">
-                Discrete vertical logic units. Assign these functional blocks to your AI employees to extend their operational capabilities.
+              <p className="text-muted-foreground font-medium text-[11px] uppercase tracking-widest leading-none">
+                Deployable vertical logic units
               </p>
            </div>
            
            <Button 
               onClick={() => router.push('/skills/builder')}
-              size="lg"
-              className="gap-2"
+              size="sm"
+              className="h-9 px-6 rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-primary/20"
            >
-              <Plus size={16} /> 
-              Create Skill
+              <Plus size={14} strokeWidth={2.5} /> 
+              New Skill
            </Button>
         </div>
 
 
         {/* Skills Grid */}
         {skillsLoading ? (
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4">
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-2">
               {[1, 2, 3, 4, 5, 6].map(i => (
-                 <div key={i} className="h-48 bg-muted rounded-[10px] animate-pulse" />
+                 <div key={i} className="h-40 bg-card rounded-xl border border-border/40 animate-pulse" />
               ))}
            </div>
         ) : !skills || skills.length === 0 ? (
-           <div className="flex flex-col items-center justify-center py-32 text-center px-12 border border-border border-dashed rounded-[10px] mx-4 bg-card shadow-sm">
-              <div className="w-16 h-16 bg-muted rounded-[10px] flex items-center justify-center text-muted-foreground mb-6">
-                 <Zap size={32} />
+           <div className="flex flex-col items-center justify-center py-24 text-center px-12 border border-border/40 border-dashed rounded-2xl mx-2 bg-card/50">
+              <div className="w-12 h-12 bg-secondary rounded-xl flex items-center justify-center text-muted-foreground/30 mb-6">
+                 <Zap size={24} />
               </div>
-              <h3 className="text-xl font-bold font-display mb-2">Registry Empty</h3>
-              <p className="text-muted-foreground mb-8 max-w-sm mx-auto text-sm">
-                No vertical workflows detected in the vault. Initialise your first capability using the visual builder.
+              <h3 className="text-lg font-bold font-display mb-2 uppercase tracking-tight">Vault Empty</h3>
+              <p className="text-muted-foreground mb-8 max-w-sm mx-auto text-[10px] font-medium uppercase tracking-widest">
+                No custom capabilities detected in the registry.
               </p>
-              <Button onClick={() => router.push('/skills/builder')}>
-                Create First Skill
+              <Button onClick={() => router.push('/skills/builder')} size="sm">
+                Initialize Skill
               </Button>
            </div>
         ) : (
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 px-4">
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-2">
               {skills.map((skill: any) => (
                  <SkillCard 
                     key={skill.id} 
