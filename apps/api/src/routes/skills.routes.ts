@@ -49,6 +49,10 @@ router.post('/:id/publish', async (req: any, res, next) => {
     try { res.json(await skillsService.publishSkill(req.params.id, req.user.id, req.body)); } catch (err) { next(err); }
 });
 
+router.post('/:id/update-from-original', async (req: any, res, next) => {
+    try { res.json(await skillsService.updateFromOriginal(req.params.id, req.user.id)); } catch (err) { next(err); }
+});
+
 // Architect loop (moved from agents/architect)
 router.post('/architect', async (req, res, next) => {
     try {

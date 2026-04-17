@@ -26,7 +26,7 @@ import 'reactflow/dist/style.css';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useTheme } from 'next-themes';
-import { useCreateAgent, useUpdateAgent, useArchitect, useAgent, useRunAgent, useAgentRun } from '@/hooks/useApi';
+import { useCreateAgent, useUpdateAgent, useArchitect, useAgent, useRunAgent, useAgentRun, usePublishAgent } from '@/hooks/useApi';
 import { useCreateSkill, useUpdateSkill, useSkill, useRunSkill, useSkillArchitect } from '@/hooks/useSkills';
 import { usePublishAsWorker } from '@/hooks/useApi'; // Legacy
 import { useToast } from '@/components/ui/Toast';
@@ -40,7 +40,7 @@ import EmployeeMetadataPanel from './builder/EmployeeMetadataPanel';
 import { makeNode, getToolById, getToolByExecutionKey, INITIAL_NODES, INITIAL_EDGES, MODEL_TYPES, TOOL_REGISTRY } from './builder/toolRegistry';
 
 import { EDGE_DEFAULTS } from './builder/toolRegistry';
-import { PublishModal } from './builder/PublishModal';
+import { SaveModal } from './builder/SaveModal';
 
 // ─── Deletable edge with ✕ button ──────────────────────────────────────────────
 function DeletableEdge({
@@ -300,6 +300,24 @@ function WorkflowBuilderInner() {
   const [showSkillInputsPanel, setShowSkillInputsPanel] = useState(false);
   const isEmployeeMode = mode === 'employee' || (existingItem?.isWorker === true);
 
+  // Task: Dynamic Socket Sync
+  useEffect(() => {
+    if (!isSkillMode) return;
+    setNodes(ns => ns.map(n => {
+      if (n.id === 'skill_input' || n.data.toolId === 'skill.input') {
+        if (JSON.stringify(n.data.inputSchema) === JSON.stringify(skillInputSchema)) return n;
+        return { 
+          ...n, 
+          data: { 
+            ...n.data, 
+            inputSchema: skillInputSchema 
+          } 
+        };
+      }
+      return n;
+    }));
+  }, [skillInputSchema, isSkillMode, setNodes]);
+
   // ── Dynamic Scroll Bounds: Stop indefinite scrolling ──
   const dynamicTranslateExtent = useMemo<[[number, number], [number, number]]>(() => {
     if (!nodes || nodes.length === 0) return [[-200, -200], [1000, 1000]];
@@ -340,7 +358,9 @@ function WorkflowBuilderInner() {
   }, [nodes.length, fitView]); // Only trigger on structural changes to avoid jitter
 
   // ── Save ──────────────────────────────────────────────────────────────────
-  const handleSave = useCallback(async (options: { silent?: boolean, nodesOverride?: any[] } = {}) => {
+  const { mutateAsync: publishSkill } = usePublishAgent();
+
+  const handleSave = useCallback(async (options: { silent?: boolean, nodesOverride?: any[], publishOptions?: { published: boolean, price: number } } = {}) => {
     // Validate employee mode: description is required
     if (isEmployeeMode && !options.silent && !employeeDescription.trim()) {
       toast.error('Capability Description is required. Managers use it to discover and call this employee.');
@@ -355,10 +375,31 @@ function WorkflowBuilderInner() {
       ...n,
       data: rest
     }));
+
+    // ── Pre-Save Audit ──────────────────────────────────────────────────────────
+    const requiredCredentials = nodes.flatMap(node => {
+      const toolId = node.data?.toolId || '';
+      const config = node.data?.config || {};
+      const credentialId = config.credentialId;
+      
+      if (!credentialId) return [];
+
+      let provider = toolId.split('.')[0]; // e.g., 'github' from 'github.pull_request'
+      if (toolId.startsWith('pipedream') || toolId.startsWith('pd:')) {
+        provider = config.appSlug || 'pipedream';
+      }
+
+      return [{
+        nodeId: node.id,
+        provider,
+        credentialId
+      }];
+    });
+
     const payload = {
       name,
       description,
-      workflow: { nodes: cleanNodes, edges, model },
+      workflow: { nodes: cleanNodes, edges, model, requiredCredentials },
       category: 'Automation',
       // Skill tool contract — only included in skill mode
       ...(isSkillMode ? {
@@ -406,7 +447,18 @@ function WorkflowBuilderInner() {
           toast.error('Invalid JSON schema');
           return savedItem;
         }
-      } else if (!options.silent) {
+      }
+
+      if (!options.silent) {
+        // If we have publish options, call the separate publish endpoint
+        if (isSkillMode && options.publishOptions && savedItem?.id) {
+          await publishSkill({ 
+            id: savedItem.id, 
+            published: options.publishOptions.published, 
+            price: options.publishOptions.price 
+          });
+        }
+
         if (isSkillMode) {
           router.push('/skills');
         } else if (isEmployeeMode) {
@@ -421,7 +473,7 @@ function WorkflowBuilderInner() {
       console.error("Save failed:", err);
       throw err;
     }
-  }, [nodes, edges, name, description, model, itemId, updateAgent, createAgent, router, isEmployeeMode, employeeDescription, employeeInputSchema, publishAsWorker, toast]);
+  }, [nodes, edges, name, description, model, itemId, updateAgent, createAgent, router, isEmployeeMode, employeeDescription, employeeInputSchema, publishAsWorker, publishSkill, toast]);
 
   const handleTrigger = useCallback(async (nodeId?: string, inputDataOverride?: any) => {
     if (isRunning) return;
@@ -863,6 +915,53 @@ function WorkflowBuilderInner() {
     return () => window.removeEventListener('warewe:open-contract-tab', handleOpenContract);
   }, []);
 
+  // ── Upstream Variable Resolution ──────────────────────────────────────────
+  // IMPORTANT: Must be above the early return below to obey Rules of Hooks.
+  const getUpstreamVariables = useCallback((targetNodeId: string) => {
+    const upstreamNodes = new Set<string>();
+    const stack = [targetNodeId];
+
+    while (stack.length > 0) {
+      const current = stack.pop()!;
+      const incomingEdges = edges.filter(e => e.target === current);
+      for (const edge of incomingEdges) {
+        if (!upstreamNodes.has(edge.source)) {
+          upstreamNodes.add(edge.source);
+          stack.push(edge.source);
+        }
+      }
+    }
+
+    const variables: any[] = [];
+
+    const sortedUpstream = Array.from(upstreamNodes)
+      .map(id => nodes.find(n => n.id === id))
+      .filter(Boolean)
+      .sort((a: any, b: any) => a.position.y - b.position.y);
+
+    for (const node of sortedUpstream) {
+      if (!node) continue;
+      const tool = getToolById(node.data.toolId);
+
+      let vars: string[] = [];
+      if (node.data.toolId === 'skill.input') {
+        vars = skillInputSchema.map(p => p.name);
+      } else if (tool) {
+        vars = tool.outputs.map(o => o.name);
+      }
+
+      if (vars.length > 0) {
+        variables.push({
+          nodeId: node.id,
+          nodeLabel: node.data.label,
+          vars
+        });
+      }
+    }
+
+    return variables;
+  }, [nodes, edges, skillInputSchema]);
+
   const deleteSelectedNode = useCallback((nodeId?: string) => {
     const idToDelete = nodeId || selectedNode?.id;
     if (!idToDelete) return;
@@ -1007,7 +1106,7 @@ function WorkflowBuilderInner() {
         isEmployeeMode={isEmployeeMode}
       />
 
-{/* ── Body */}
+      {/* ── Body */}
       <div className="flex flex-1 overflow-hidden p-4">
 
         {/* Left: Node palette */}
@@ -1147,6 +1246,8 @@ function WorkflowBuilderInner() {
           onInputSchemaChange={setSkillInputSchema}
           outputDescription={skillOutputDescription}
           onOutputDescriptionChange={setSkillOutputDescription}
+          // Variable Intelligence
+          upstreamVariables={selectedNode ? getUpstreamVariables(selectedNode.id) : []}
         />
       </div>
 
@@ -1246,18 +1347,18 @@ function WorkflowBuilderInner() {
         )}
       </AnimatePresence>
 
-      <PublishModal 
+      <SaveModal 
         isOpen={isPublishModalOpen}
         onClose={() => setIsPublishModalOpen(false)}
         name={name}
         onNameChange={setName}
         description={description}
         onDescriptionChange={setDescription}
-        onPublish={() => {
+        onSave={() => {
           setIsPublishModalOpen(false);
           handleSave();
         }}
-        isPublishing={isSaving}
+        isSaving={isSaving}
         isEditMode={!!itemId}
       />
     </div>

@@ -122,7 +122,7 @@ export default function EmployeeDetail() {
                  <ArrowLeft size={14} strokeWidth={2.5} />
               </button>
               <div className="flex items-center gap-2.5">
-                 <div className="size-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-lg">
+                 <div className="size-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-lg">
                     <Bot size={14} strokeWidth={2.5} />
                  </div>
                  <div className="flex flex-col">
@@ -147,7 +147,7 @@ export default function EmployeeDetail() {
                  key={tab.id} 
                  onClick={() => setActiveTab(tab.id as TabType)}
                  className={`relative px-4 py-1.5 rounded-lg text-[8px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 z-10
-                   ${active ? 'text-primary' : 'text-foreground/30 hover:text-foreground/50'}`}
+                   ${active ? 'text-indigo-500' : 'text-foreground/30 hover:text-foreground/50'}`}
                >
                  {active && (
                    <motion.div 
@@ -174,7 +174,7 @@ export default function EmployeeDetail() {
             {!isNew && (
               <button
                 onClick={() => publishEmployee({ id, published: !localEmployee?.isPublished })}
-                className="h-7 px-4 bg-primary text-primary-foreground rounded-lg text-[8px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.05] active:scale-95 transition-all flex items-center gap-1.5"
+                className="h-7 px-4 bg-indigo-600 text-white rounded-lg text-[8px] font-bold uppercase tracking-widest shadow-lg shadow-indigo-500/20 hover:scale-[1.05] active:scale-95 transition-all flex items-center gap-1.5 border-none"
               >
                  {localEmployee?.isPublished ? 'Draft' : 'Deploy'} 
                  <Rocket size={10} strokeWidth={2.5} />

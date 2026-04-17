@@ -32,6 +32,7 @@ interface FlowNodeProps {
     onUpdate?: (id: string, newData: any) => void;
     config?: Record<string, any>;
     isEmployeeMode?: boolean;
+    inputSchema?: any[];
   };
   selected?: boolean;
 }
@@ -82,7 +83,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   // ─── Sticky Note Variant ───────────────────────────────────────────────────
   if (isStickyNote) {
     const content = data.config?.content || "";
-    const noteColor = data.config?.noteColor || '#FFD233';
+    const noteColor = data.config?.noteColor || '#468feeff';
 
     return (
       <div className="group relative w-full h-full">
@@ -143,17 +144,23 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
 
   if (!tool) return null;
 
-  // ─── Standard Normalized Action Card ───────────────────────────────────────
-  const Icon = tool.icon as any;
+  // ─── Status & Security Detection ──────────────────────────────────────────
   const isTrigger = data.isTrigger || tool.isTrigger;
+  const config = data.config || {};
   
+  // Detect "Missing Credential" state
+  const needsCredential = !!(tool.credentialTypes?.length || tool.configFields?.some(f => f.type === 'credential'));
+  const isMissingCredential = needsCredential && !config.credentialId;
+
   const statusStyles = {
-    idle: 'border-border/40 bg-card',
+    idle: isMissingCredential ? 'border-red-500/50 bg-red-500/5' : 'border-border/40 bg-card',
     pending: 'border-primary/20 bg-card',
     running: 'border-primary shadow-lg shadow-primary/10 bg-primary/5',
     completed: 'border-primary/20 bg-card shadow-md',
     failed: 'border-red-500/30 bg-card',
   };
+
+  const Icon = tool.icon as any;
 
   return (
     <div className={`group relative transition-all duration-300 ${selected ? 'scale-[1.02]' : ''}`}>
@@ -206,7 +213,15 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
            {status === 'completed' && <CheckCircle size={14} className="text-primary" />}
            {status === 'failed' && <AlertCircle size={14} className="text-red-500" />}
            {status === 'running' && <Loader2 size={14} className="animate-spin text-primary" />}
-           {isTrigger && status === 'idle' && <Zap size={10} className="text-amber-500 fill-amber-500 animate-pulse" />}
+           {isTrigger && status === 'idle' && !isMissingCredential && <Zap size={10} className="text-amber-500 fill-amber-500 animate-pulse" />}
+           {isMissingCredential && status === 'idle' && (
+             <div className="group/warn relative">
+                <AlertCircle size={14} className="text-red-500 animate-pulse" />
+                <div className="absolute bottom-full right-0 mb-2 px-2 py-1 bg-red-500 text-white text-[8px] font-black uppercase rounded opacity-0 group-hover/warn:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                  Credential Required
+                </div>
+             </div>
+           )}
         </div>
       </div>
 
@@ -220,7 +235,44 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
         />
       )}
       
-      {tool.outputs.map((socket: any) => {
+      {/* Dynamic Sockets for Skill Input / Output */}
+      {data.toolId === 'skill.input' && data.inputSchema && (data.inputSchema as any[]).map((param, idx) => {
+        const socketName = param.name;
+        const isConnected = edges.some(e => e.source === id && e.sourceHandle === socketName);
+        
+        // Distribute handles along the bottom or sides
+        // For a more professional look, we can stack them on the right or bottom
+        return (
+          <React.Fragment key={socketName}>
+            <Handle
+              type="source"
+              position={Position.Bottom}
+              id={socketName}
+              className="!w-3 !h-3 !bg-indigo-500 !border-2 !border-background !opacity-100"
+              style={{ 
+                left: `${((idx + 1) / ((data.inputSchema as any[]).length + 1)) * 100}%`,
+                bottom: -6
+              }}
+            />
+            {/* Label for the socket */}
+            {!isConnected && (
+              <div 
+                className="absolute text-[8px] font-black uppercase tracking-tighter text-indigo-500/60 whitespace-nowrap"
+                style={{ 
+                  left: `${((idx + 1) / ((data.inputSchema as any[]).length + 1)) * 100}%`,
+                  bottom: -22,
+                  transform: 'translateX(-50%)'
+                }}
+              >
+                {socketName}
+              </div>
+            )}
+          </React.Fragment>
+        );
+      })}
+
+      {/* Standard Handles */}
+      {(!data.inputSchema || (data.inputSchema as any[]).length === 0) && tool.outputs.map((socket: any) => {
         const isConnected = data.isEmployeeMode 
           ? edges.some(e => e.source === id) 
           : edges.some(e => e.source === id && (e.sourceHandle === socket.name || tool.outputs.length === 1));

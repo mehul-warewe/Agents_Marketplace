@@ -83,5 +83,18 @@ export const billingService = {
       }
     }
     return { received: true };
+  },
+
+  async deductCredits(userId: string, amount: number, description: string) {
+    return await db.transaction(async (tx) => {
+      const [user] = await tx.select().from(users).where(eq(users.id, userId));
+      if (!user || user.credits < amount) {
+        return { success: false, error: 'Insufficient credits' };
+      }
+
+      await tx.update(users).set({ credits: sql`${users.credits} - ${amount}` }).where(eq(users.id, userId));
+      await tx.insert(transactions).values({ userId, amount: -amount, type: 'usage', description });
+      return { success: true };
+    });
   }
 };

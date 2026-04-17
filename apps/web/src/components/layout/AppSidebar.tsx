@@ -49,7 +49,7 @@ export function AppSidebar({
       {/* Logo & Toggle */}
       <div className="flex items-center gap-3 px-5 h-14 shrink-0 relative">
         <div 
-          className="size-8 bg-primary text-primary-foreground rounded-lg flex items-center justify-center shadow-lg cursor-pointer shrink-0"
+          className="size-8 bg-indigo-600 text-white rounded-lg flex items-center justify-center shadow-lg cursor-pointer shrink-0"
           onClick={() => router.push('/dashboard')}
         >
           <Sparkles size={16} strokeWidth={2.5} />
@@ -82,14 +82,14 @@ export function AppSidebar({
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-[11px] font-bold uppercase tracking-widest relative group ${
                   isActive
-                    ? 'bg-primary text-primary-foreground shadow-lg'
-                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                    : 'text-muted-foreground hover:bg-muted font-bold hover:text-foreground'
                 } ${isCollapsed ? 'justify-center px-0' : ''}`}
                 title={isCollapsed ? item.name : ''}
               >
-                <item.icon size={16} strokeWidth={isActive ? 2.5 : 2} className={`shrink-0 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-foreground transition-colors'}`} />
+                <item.icon size={16} strokeWidth={isActive ? 2.5 : 2} className={`shrink-0 ${isActive ? 'text-white' : 'text-muted-foreground group-hover:text-indigo-500 transition-colors'}`} />
                 {!isCollapsed && <span className="leading-none animate-in fade-in slide-in-from-left-2 duration-300">{item.name}</span>}
-                {isCollapsed && isActive && <div className="absolute left-0 top-2 bottom-2 w-1 bg-primary-foreground rounded-r-full" />}
+                {isCollapsed && isActive && <div className="absolute left-0 top-2 bottom-2 w-1 bg-white rounded-r-full" />}
               </Link>
             );
           })}
@@ -112,7 +112,7 @@ export function AppSidebar({
                   </Button>
                   <Button 
                     variant="ghost" 
-                    className="w-full justify-start text-[11px] font-bold h-9 gap-3 text-primary uppercase tracking-wider"
+                    className="w-full justify-start text-[11px] font-bold h-9 gap-3 text-indigo-500 uppercase tracking-wider"
                     onClick={() => setIsUpgradeOpen(true)}
                   >
                      <Zap size={14} /> Upgrade Tier
@@ -143,7 +143,7 @@ export function AppSidebar({
              onClick={() => setShowSettings(!showSettings)}
              className={`flex items-center gap-3 p-2 rounded-xl transition-all border outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20 ${isCollapsed ? 'w-10 h-10 justify-center' : 'w-full'} ${showSettings ? 'bg-muted border-border' : 'border-transparent hover:bg-muted'}`}
            >
-              <div className="size-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs shadow-sm shrink-0">
+              <div className="size-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-sm shrink-0">
                  {user?.name?.charAt(0).toUpperCase()}
               </div>
               {!isCollapsed && (

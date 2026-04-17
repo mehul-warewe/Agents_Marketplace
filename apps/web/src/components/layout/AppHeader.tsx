@@ -35,7 +35,7 @@ export function AppHeader({ title, setIsMobileMenuOpen }: AppHeaderProps) {
              <span className="text-[11px] font-black tracking-tight text-foreground">{user?.credits?.toLocaleString() || 0}</span>
           </div>
           
-          <div className="size-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 text-primary-foreground flex items-center justify-center font-bold text-xs shadow-lg shadow-primary/20 cursor-pointer hover:scale-105 transition-all border border-white/10 shrink-0">
+          <div className="size-8 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-lg shadow-indigo-500/20 cursor-pointer hover:scale-105 transition-all border border-white/5 shrink-0">
              {user?.name?.charAt(0).toUpperCase()}
           </div>
        </div>

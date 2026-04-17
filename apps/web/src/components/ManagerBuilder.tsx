@@ -13,6 +13,7 @@ import ReactFlow, {
   ReactFlowProvider,
   useReactFlow,
   Panel,
+  ConnectionLineType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -20,7 +21,8 @@ import { useAuthStore } from '@/store/authStore';
 import { useCreateManager, useUpdateManager, useManager } from '@/hooks/useManager';
 import { useEmployees } from '@/hooks/useEmployees';
 import { useToast } from '@/components/ui/Toast';
-import { Save, ChevronLeft, Target, Cpu, Sparkles, Loader2, Bot, Info, Shield, Zap, X, ArrowLeft, Hammer, Activity } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Save, ChevronLeft, Target, Cpu, Sparkles, Loader2, Bot, Info, Shield, Zap, X, ArrowLeft, Hammer, Activity, ChevronRight, LayoutGrid } from 'lucide-react';
 
 import { ManagerHubNode, EmployeeNode, ToolNode, TriggerNode, ConditionNode, NoteNode } from './builder/ManagerFlowNodes';
 import UnitTray from './builder/UnitTray';
@@ -235,22 +237,28 @@ function ManagerBuilderInner() {
     <div className="flex-1 bg-background flex flex-col h-full overflow-hidden font-inter text-foreground">
       {/* ── TOP NAVIGATION BAR ────────────────────────── */}
       <header className="h-11 bg-card border-b border-border flex items-center justify-between px-4 shrink-0 z-50">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
            <button 
              onClick={() => router.push('/managers')} 
-             className="p-1 px-2.5 bg-foreground/5 rounded-lg hover:bg-foreground/10 transition-all text-foreground/40 hover:text-foreground border border-border/10"
+             className="p-1 px-1 text-foreground/20 hover:text-foreground transition-all"
            >
-              <ArrowLeft size={14} strokeWidth={2.5} />
+              <ArrowLeft size={16} strokeWidth={3} />
            </button>
-           <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-lg">
-                 <Shield size={14} strokeWidth={2.5} />
+           
+           <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-foreground/20">
+                 <LayoutGrid size={12} strokeWidth={3} />
+                 <span>Workforce</span>
+                 <ChevronRight size={10} strokeWidth={4} className="opacity-40" />
+                 <span className="text-foreground/40">Registry</span>
+                 <ChevronRight size={10} strokeWidth={4} className="opacity-40" />
               </div>
-              <div className="flex flex-col">
-                 <span className="text-[7px] uppercase font-bold tracking-widest text-foreground/30 leading-none">Protocol</span>
-                 <h1 className="text-[11px] font-bold tracking-tight text-foreground leading-none">
-                   {managerData?.name || 'New Orchestrator'}
-                 </h1>
+              <div className="flex items-center gap-2.5">
+                 <div className="flex flex-col">
+                    <h1 className="text-[11px] font-black tracking-tighter text-indigo-500 uppercase leading-none">
+                      {managerData?.name || 'New Orchestrator'}
+                    </h1>
+                 </div>
               </div>
            </div>
         </div>
@@ -266,7 +274,7 @@ function ManagerBuilderInner() {
                <button 
                  key={tab.id} 
                  className={`relative px-4 py-1.5 rounded-lg text-[8px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 z-10
-                   ${active ? 'text-primary' : 'text-foreground/30 hover:text-foreground/50'}`}
+                   ${active ? 'text-indigo-500' : 'text-foreground/30 hover:text-foreground/50'}`}
                >
                  {active && (
                    <motion.div 
@@ -286,7 +294,7 @@ function ManagerBuilderInner() {
             <button
                onClick={handleSave}
                disabled={isCreating || isUpdating}
-               className="h-7 px-4 bg-primary text-primary-foreground rounded-lg text-[8px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.05] active:scale-95 transition-all flex items-center gap-2"
+               className="h-7 px-4 bg-indigo-600 text-white rounded-lg text-[8px] font-bold uppercase tracking-widest shadow-lg shadow-indigo-500/20 hover:scale-[1.05] active:scale-95 transition-all flex items-center gap-2 border-none"
             >
                {isCreating || isUpdating ? <Loader2 className="animate-spin" size={10} /> : (
                  <>PUBLISH <Target size={10} strokeWidth={2.5} /></>
@@ -309,6 +317,7 @@ function ManagerBuilderInner() {
               onNodeClick={onNodeClick}
               onEdgeClick={onEdgeClick}
               nodeTypes={nodeTypes}
+              connectionLineType={ConnectionLineType.Step}
               fitView
               className="bg-transparent"
             >

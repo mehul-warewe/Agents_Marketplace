@@ -62,7 +62,7 @@ export default function NodeInspector({
       <header className="p-6 pb-2">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-             <div className="size-10 bg-primary text-primary-foreground rounded-xl flex items-center justify-center shadow-lg">
+             <div className="size-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 border-none">
                 {isManager ? <Users size={20} strokeWidth={2.5} /> : isEdge ? <MessageSquare size={20} strokeWidth={2.5} /> : <Bot size={20} strokeWidth={2.5} />}
              </div>
              <div className="flex flex-col gap-0.5">
@@ -82,11 +82,11 @@ export default function NodeInspector({
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`pb-3 text-[10px] font-bold uppercase tracking-widest transition-all relative ${
-                    activeTab === tab ? 'text-primary' : 'text-foreground/30 hover:text-foreground'
+                    activeTab === tab ? 'text-indigo-500' : 'text-foreground/30 hover:text-foreground'
                   }`}
                 >
                   {tab}
-                  {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-full" />}
+                  {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-500 rounded-full" />}
                 </button>
              ))}
           </div>
@@ -125,7 +125,7 @@ export default function NodeInspector({
                             triggerType: t.id,
                             workerDescription: t.description 
                           })}
-                          className="w-full p-5 bg-card border border-border/10 rounded-2xl hover:border-primary/40 transition-all text-left flex items-start gap-4 group shadow-sm"
+                          className="w-full p-5 bg-card border border-border/10 rounded-2xl hover:border-indigo-500/40 transition-all text-left flex items-start gap-4 group shadow-sm"
                         >
                           <div className={`size-12 bg-secondary rounded-xl flex items-center justify-center ${t.color} group-hover:scale-105 transition-transform`}>
                             {t.icon}
@@ -149,7 +149,7 @@ export default function NodeInspector({
                                 placeholder="Search connectors..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="w-full bg-card border border-border rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-primary/40 transition-all font-bold text-[10px] uppercase tracking-widest text-foreground placeholder:text-foreground/10"
+                                className="w-full bg-card border border-border rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-indigo-500/40 transition-all font-bold text-[10px] uppercase tracking-widest text-foreground placeholder:text-foreground/10"
                               />
                             </div>
                             
@@ -235,7 +235,7 @@ export default function NodeInspector({
                       placeholder="Search agents..."
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      className="w-full bg-card border border-border rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-primary/40 transition-all font-bold text-[10px] uppercase tracking-widest text-foreground placeholder:text-foreground/10"
+                      className="w-full bg-card border border-border rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-indigo-500/40 transition-all font-bold text-[10px] uppercase tracking-widest text-foreground placeholder:text-foreground/10"
                     />
                   </div>
 
@@ -272,8 +272,8 @@ export default function NodeInspector({
              <div className="space-y-6">
                 {isTrigger ? (
                   <div className="space-y-8">
-                     <div className="p-6 bg-primary/5 border border-primary/10 rounded-2xl shadow-inner">
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-primary/60 mb-2 block">Trigger Settings</span>
+                     <div className="p-6 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl shadow-inner">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-indigo-500/60 mb-2 block">Trigger Settings</span>
                         <div className="text-xl font-bold text-foreground uppercase tracking-tight">{selectedNode.data.name}</div>
                         <p className="text-[10px] font-medium text-foreground/40 italic mt-2 leading-relaxed">{selectedNode.data.workerDescription}</p>
                      </div>
@@ -284,7 +284,7 @@ export default function NodeInspector({
                              <label className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest px-1">{prop.description || key}</label>
                              <input 
                                type="text"
-                               className="w-full bg-card border border-border rounded-xl px-4 py-3 outline-none focus:border-primary/40 transition-all font-bold text-[10px] text-foreground font-mono"
+                               className="w-full bg-card border border-border rounded-xl px-4 py-3 outline-none focus:border-indigo-500/40 transition-all font-bold text-[10px] text-foreground font-mono"
                                placeholder={`Value for ${key}...`}
                              />
                           </div>
@@ -298,11 +298,11 @@ export default function NodeInspector({
                   </div>
                 ) : (
                   <div className="space-y-4">
-                     <label className="text-[10px] font-bold text-primary uppercase tracking-widest px-1">Behavioral Instructions</label>
+                     <label className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest px-1">Behavioral Instructions</label>
                       <textarea 
                         value={isManager ? selectedNode?.data.goal : selectedNode?.data.description}
                         onChange={(e) => isManager ? onUpdateNode(selectedNode.id, { ...selectedNode.data, goal: e.target.value }) : null}
-                        className="w-full h-80 bg-card border border-border rounded-2xl px-6 py-6 outline-none focus:border-primary/40 transition-all font-bold text-[11px] italic resize-none text-foreground/70 leading-relaxed shadow-sm"
+                        className="w-full h-80 bg-card border border-border rounded-2xl px-6 py-6 outline-none focus:border-indigo-500/40 transition-all font-bold text-[11px] italic resize-none text-foreground/70 leading-relaxed shadow-sm"
                         placeholder="Define agent behavior and objectives..."
                       />
                   </div>

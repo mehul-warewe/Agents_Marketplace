@@ -64,7 +64,7 @@ export default function AgentDashboard() {
            <div className="relative z-10 flex flex-col md:flex-row justify-between gap-4 items-center">
               <div className="space-y-1">
                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-display text-foreground">
-                   Welcome Back, <span className="text-primary">{user?.name?.split(' ')[0] || 'Operator'}</span>
+                   Welcome Back, <span className="text-indigo-500">{user?.name?.split(' ')[0] || 'Operator'}</span>
                  </h1>
                  <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest leading-none">Status: All systems operational</p>
               </div>
@@ -72,7 +72,7 @@ export default function AgentDashboard() {
                  <Button 
                     onClick={() => router.push('/employees/new')}
                     size="sm"
-                    className="h-9 px-6 rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-primary/20"
+                    className="h-9 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/20 border-none transition-all"
                  >
                     <Plus size={14} strokeWidth={2.5} /> Deploy Agent
                  </Button>
@@ -126,7 +126,7 @@ export default function AgentDashboard() {
                 onClick={() => router.push('/employees')}
                 className="text-muted-foreground"
                >
-                Full Fleet <ArrowUpRight size={14} />
+                Full Fleet <ArrowUpRight size={14} className="text-indigo-500" />
                </Button>
             </div>
 
@@ -143,7 +143,7 @@ export default function AgentDashboard() {
                    </div>
                    <h3 className="text-xl font-bold font-display mb-2">No Runs Detected</h3>
                    <p className="text-muted-foreground mb-8 max-w-xs mx-auto text-sm">You haven't run any logic units yet. Head to the dashboard to start.</p>
-                   <Button onClick={() => router.push('/marketplace')} size="lg">
+                   <Button onClick={() => router.push('/marketplace')} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest px-6 h-10 shadow-lg shadow-indigo-500/20">
                      Open Registry
                    </Button>
                 </div>
@@ -248,10 +248,10 @@ function StatCard({ title, value, loading, icon, trend, color }: any) {
     <Card className="p-6 transition-all shadow-md hover:shadow-lg border-border/40 relative overflow-hidden group bg-card">
       <div className="flex flex-col relative z-10">
          <div className="flex items-center justify-between mb-4">
-            <div className={`w-10 h-10 flex items-center justify-center rounded-lg shadow-sm border border-border/50 ${color === 'primary' ? 'bg-primary/5 text-primary border-primary/10' : 'bg-secondary text-muted-foreground'}`}>
+            <div className={`w-10 h-10 flex items-center justify-center rounded-lg shadow-sm border border-border/50 ${color === 'primary' ? 'bg-indigo-500/10 text-indigo-500 border-indigo-500/10' : 'bg-secondary text-muted-foreground'}`}>
                {React.cloneElement(icon as React.ReactElement<any>, { size: 20 })}
             </div>
-            <div className={`text-xs font-bold px-2 py-0.5 rounded-md ${color === 'primary' ? 'text-primary bg-primary/5 border border-primary/10' : 'text-muted-foreground bg-secondary border border-border/40'}`}>{trend}</div>
+            <div className={`text-xs font-bold px-2 py-0.5 rounded-md ${color === 'primary' ? 'text-indigo-500 bg-indigo-500/10 border border-indigo-500/10' : 'text-muted-foreground bg-secondary border border-border/40'}`}>{trend}</div>
          </div>
          <div className="text-sm font-medium text-muted-foreground mb-1">{title}</div>
          {loading ? (

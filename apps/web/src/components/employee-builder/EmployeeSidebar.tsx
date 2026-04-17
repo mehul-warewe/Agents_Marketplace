@@ -53,7 +53,7 @@ export function LeftSubNav({ activeSubTab, setActiveSubTab }: { activeSubTab: st
                 key={item.id}
                 onClick={() => !item.soon && setActiveSubTab(item.id)}
                 className={`w-full text-left p-1.5 rounded-lg flex items-center gap-2.5 transition-all duration-300 relative group
-                  ${isActive ? 'bg-primary/10 text-primary' : 'text-foreground/50 hover:bg-secondary'} 
+                  ${isActive ? 'bg-indigo-500/10 text-indigo-500' : 'text-foreground/50 hover:bg-secondary'} 
                   ${item.soon ? 'opacity-30 cursor-not-allowed' : ''}`}
               >
                  {isActive && <div className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-primary rounded-full transition-all" />}
@@ -144,7 +144,7 @@ export function RightConfigPane({
                 <h4 className="text-[8px] font-bold uppercase tracking-widest text-foreground/30">Skills</h4>
                 <button 
                   onClick={() => setShowSkillPicker?.(true)}
-                  className="size-5 rounded bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all border border-primary/20 shadow-sm"
+                  className="size-5 rounded bg-indigo-500/10 text-indigo-500 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all border border-indigo-500/20 shadow-sm"
                 >
                   <Plus size={10} strokeWidth={3} />
                 </button>
@@ -153,7 +153,7 @@ export function RightConfigPane({
              <div className="space-y-1.5">
                 {assignedSkills.map((skill: any) => (
                    <div key={skill.id} className="p-2 rounded-lg bg-secondary/30 border border-border/10 flex items-center gap-2.5 group transition-all hover:bg-secondary/50">
-                      <div className="size-6 rounded bg-card border border-border flex items-center justify-center text-primary shadow-sm">
+                      <div className="size-6 rounded bg-card border border-border flex items-center justify-center text-indigo-500 shadow-sm">
                          <Zap size={10} />
                       </div>
                       <span className="text-[10px] font-bold text-foreground/80 truncate">{skill.name}</span>

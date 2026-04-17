@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { useAuthStore } from '@/store/authStore';
 
 export function useAgents() {
   return useQuery({
@@ -8,6 +9,28 @@ export function useAgents() {
       const { data } = await api.get('/skills'); // Marketplace now lists published skills
       return data;
     },
+  });
+}
+
+export function useUser() {
+  const { setUser, token, logout } = useAuthStore();
+  return useQuery({
+    queryKey: ['user-profile'],
+    queryFn: async () => {
+      if (!token) return null;
+      try {
+        const { data } = await api.get('/auth/me');
+        setUser(data);
+        return data;
+      } catch (err) {
+        if ((err as any).response?.status === 401) {
+          logout();
+        }
+        throw err;
+      }
+    },
+    enabled: !!token,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
 
@@ -131,6 +154,23 @@ export function useAcquireAgent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['skills'] });
+      queryClient.invalidateQueries({ queryKey: ['my-agents'] });
+      queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+    },
+  });
+}
+
+export function useUpdateSkillFromOriginal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.post(`/skills/${id}/update-from-original`);
+      return data;
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['skills'] });
+      queryClient.invalidateQueries({ queryKey: ['my-agents'] });
+      queryClient.invalidateQueries({ queryKey: ['agent', id] });
     },
   });
 }

@@ -13,6 +13,7 @@ import {
   Lock,
   Zap
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { getToolById } from './toolRegistry';
 import DynamicParameterForm from './DynamicParameterForm';
 import PipedreamNodeSettings from './PipedreamNodeSettings';
@@ -475,9 +476,62 @@ interface UnifiedSidebarProps {
   onInputSchemaChange: (val: InputParam[]) => void;
   outputDescription: string;
   onOutputDescriptionChange: (val: string) => void;
+  // Variable Intelligence
+  upstreamVariables?: { nodeId: string; nodeLabel: string; vars: string[] }[];
 }
 
 type TabType = 'setup' | 'settings' | 'debug';
+
+// ─── Sub-Component: Variable Picker ──────────────────────────────────────────
+
+interface VariablePickerProps {
+  variables: { nodeId: string; nodeLabel: string; vars: string[] }[];
+  onSelect: (nodeId: string, varName: string) => void;
+  onClose: () => void;
+}
+
+function VariablePicker({ variables, onSelect, onClose }: VariablePickerProps) {
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      className="absolute right-0 top-full mt-2 w-72 bg-[#1a1a1a] border border-white/10 rounded-3xl shadow-2xl z-[100] overflow-hidden"
+    >
+      <div className="p-4 border-b border-white/5 bg-white/[0.02]">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Signal Library</span>
+          <X size={14} className="text-muted/40 cursor-pointer hover:text-white" onClick={onClose} />
+        </div>
+      </div>
+      <div className="max-h-[300px] overflow-y-auto custom-scrollbar p-3 space-y-3">
+        {variables.length === 0 ? (
+          <div className="py-12 text-center">
+            <p className="text-[11px] text-muted/40 italic">No upstream variables found within this neural branch</p>
+          </div>
+        ) : variables.map(node => (
+          <div key={node.nodeId} className="space-y-2">
+            <div className="px-2 py-1 bg-white/[0.03] rounded-md flex items-center gap-2">
+              <div className="size-1 rounded-full bg-indigo-500/40" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-muted/60">{node.nodeLabel}</span>
+            </div>
+            <div className="grid grid-cols-1 gap-1 pl-2">
+              {node.vars.map(v => (
+                <button
+                  key={v}
+                  onClick={() => onSelect(node.nodeId, v)}
+                  className="flex items-center gap-2 px-3 py-2.5 hover:bg-indigo-500/10 rounded-xl text-left group transition-all"
+                >
+                  <Database size={14} className="text-muted/20 group-hover:text-indigo-500" />
+                  <span className="text-[12px] font-bold text-muted/80 group-hover:text-white leading-none">{v}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
 
 export default function UnifiedSidebar({
   context,
@@ -495,7 +549,8 @@ export default function UnifiedSidebar({
   inputSchema,
   onInputSchemaChange,
   outputDescription,
-  onOutputDescriptionChange
+  onOutputDescriptionChange,
+  upstreamVariables = []
 }: UnifiedSidebarProps) {
   const [activeTab, setActiveTab] = useState<TabType>(context === 'NODE' ? 'setup' : 'settings');
   
@@ -527,6 +582,22 @@ export default function UnifiedSidebar({
     }
   }, [node]);
 
+  const [showPicker, setShowPicker] = useState<{ field: string; type: 'textarea' | 'input' } | null>(null);
+
+  const handleVariableSelect = (nodeId: string, varName: string) => {
+    if (!showPicker) return;
+    const { field } = showPicker;
+    const currentVal = nodeValues[field] || '';
+    const variableTag = `{{${nodeId}.${varName}}}`;
+    
+    const combined = typeof currentVal === 'string' 
+      ? currentVal + variableTag 
+      : variableTag;
+      
+    handleUpdate({ [field]: combined });
+    setShowPicker(null);
+  };
+
   const selectedTool = pipedreamToolsData?.find((t: any) => t.key === nodeValues.actionName || t.name === nodeValues.actionName);
   const toolSchema = selectedTool?.inputSchema || null;
 
@@ -544,10 +615,10 @@ export default function UnifiedSidebar({
   // Tabs for Unified Sidebar
   const isGateway = isSkillInput || isSkillOutput;
   const tabs = [
-    { id: 'setup' as TabType, label: 'Configure', icon: SlidersHorizontal },
+    { id: 'setup' as TabType, label: 'Protocol', icon: SlidersHorizontal },
     ...(isGateway ? [] : [
-      { id: 'settings' as TabType, label: 'Settings', icon: Settings2 },
-      ...(context === 'NODE' ? [{ id: 'debug' as TabType, label: 'Debug', icon: Terminal }] : []),
+      { id: 'settings' as TabType, label: 'Identity', icon: Settings2 },
+      ...(context === 'NODE' ? [{ id: 'debug' as TabType, label: 'Execution', icon: Terminal }] : []),
     ]),
   ];
 
@@ -561,46 +632,48 @@ export default function UnifiedSidebar({
   if (!node) return null;
 
   return (
-    <div className="fixed right-0 top-14 h-[calc(100vh-3.5rem)] w-[480px] bg-card/95 backdrop-blur-xl border-l border-white/5 shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] z-40 flex flex-col animate-in slide-in-from-right duration-500 overflow-hidden font-inter">
+    <div className="fixed right-0 top-14 h-[calc(100vh-3.5rem)] w-[480px] bg-card/60 backdrop-blur-3xl border-l border-border/40 shadow-2xl z-40 flex flex-col animate-in slide-in-from-right duration-500 overflow-hidden font-inter">
       
       {/* ── HEADER ────────────────────────────────────────────── */}
-      <div className="p-8 border-b border-white/5 bg-[#0c0c0e]/80 backdrop-blur-md relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent" />
-        <div className="flex items-start justify-between mb-6">
+      <div className="p-8 pb-8 border-b border-border/20 bg-background/20 backdrop-blur-md relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/5 rounded-full -mr-20 -mt-20 blur-3xl opacity-50" />
+        
+        <div className="flex items-start justify-between mb-8">
           <div className="flex-1 min-w-0">
-             <div className="flex items-center gap-2 mb-2">
-                <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${node.data.bg || 'bg-indigo-500/10'}`}>
+             <div className="flex items-center gap-3 mb-4">
+                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-lg border border-border/10 ${node.data.bg || 'bg-indigo-500/10'}`}>
                     {tool ? (
                       typeof tool.icon === 'string' ? (
-                        <img src={tool.icon} alt={node.data.label} className="w-5 h-5 object-contain" />
+                        <img src={tool.icon} alt={node.data.label} className="w-6 h-6 object-contain" />
                       ) : (
-                        <tool.icon size={18} className={node.data.color || 'text-indigo-500'} />
+                        <tool.icon size={22} strokeWidth={2.5} className={node.data.color || 'text-indigo-500'} />
                       )
                     ) : (
-                      <Layout size={18} className="text-indigo-500" />
+                      <Layout size={22} className="text-indigo-500" />
                     )}
                 </div>
                 <div className="flex flex-col">
-                    {isSkillInput ? 'Skill entry' : 'Action step'}
-                  <div className="flex items-center gap-2">
-                    <div className="w-1 h-1 rounded-full bg-indigo-500/40" />
-                    <span className="text-[10px] font-bold text-muted/50 uppercase tracking-widest">{node.id}</span>
-                  </div>
+                   <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest leading-none">
+                        {isSkillInput ? 'Entry Protocol' : (isSkillOutput ? 'Terminal Protocol' : 'Instructional Step')}
+                      </span>
+                      <div className="size-1 rounded-full bg-indigo-500/30" />
+                   </div>
+                   <h2 className="text-[20px] font-black text-foreground tracking-tighter italic leading-none uppercase truncate">
+                     {node.data.label}
+                   </h2>
                 </div>
              </div>
-             <h2 className="text-2xl font-black text-foreground tracking-tighter italic leading-tight uppercase truncate mt-2">
-               {node.data.label}
-             </h2>
           </div>
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-full bg-foreground/[0.03] border border-white/5 flex items-center justify-center hover:bg-foreground/[0.08] hover:scale-110 active:scale-95 transition-all text-muted/40 hover:text-foreground"
+            className="w-9 h-9 rounded-xl bg-foreground/[0.03] border border-border/20 flex items-center justify-center hover:bg-foreground/[0.08] hover:scale-110 active:scale-95 transition-all text-muted/40 hover:text-foreground"
           >
-            <X size={18} />
+            <X size={16} strokeWidth={3} />
           </button>
         </div>
 
-        {/* Global Action: Context Switcher / Action Button */}
+        {/* Action Controls */}
         <div className="flex items-center gap-3">
             {(!isSkillInput && !isSkillOutput) ? (
               <button
@@ -608,43 +681,55 @@ export default function UnifiedSidebar({
                 className="flex-1 px-4 py-3 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-red-500/80 transition-all flex items-center justify-center gap-2 group"
               >
                 <Trash2 size={12} className="group-hover:rotate-12 transition-transform" />
-                Delete Step
+                Purge Step
               </button>
             ) : (
               <div className="flex-1 px-4 py-3 bg-indigo-500/5 border border-indigo-500/20 rounded-2xl flex items-center justify-center gap-2.5">
                  <ShieldCheck size={14} className="text-indigo-500" />
-                 <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500/80">Permanent Step</span>
+                 <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500/80">Permanent Matrix Gateway</span>
               </div>
+            )}
+            {context === 'NODE' && !isGateway && (
+              <button
+                onClick={() => onTriggerNode?.(node.id)}
+                className="w-12 h-12 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20 active:scale-95 transition-all"
+              >
+                <Play size={16} fill="white" />
+              </button>
             )}
         </div>
       </div>
 
       {/* ── TABS ── */}
-      <div className="flex px-6 pt-4 gap-2 bg-[#0c0c0e]/40 backdrop-blur-sm border-b border-white/5">
+      <div className="flex px-8 gap-6 bg-background/20 backdrop-blur-sm border-b border-border/10">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`
-              relative px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2.5 rounded-t-xl
-              ${activeTab === tab.id ? 'text-foreground bg-foreground/[0.03] border border-white/5 border-b-transparent' : 'text-muted/40 hover:text-muted/60'}
+              relative py-5 text-[9px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2.5
+              ${activeTab === tab.id ? 'text-foreground' : 'text-muted/30 hover:text-muted/60'}
             `}
           >
             <tab.icon size={13} strokeWidth={activeTab === tab.id ? 3 : 2} className={activeTab === tab.id ? 'text-indigo-500' : ''} />
             {tab.label}
             {activeTab === tab.id && (
-              <div className="absolute -bottom-[1px] left-0 right-0 h-[2px] bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
+              <motion.div 
+                layoutId="activeSideTab"
+                className="absolute bottom-0 left-0 right-0 h-[3px] bg-indigo-500 rounded-full"
+                transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+              />
             )}
           </button>
         ))}
       </div>
 
       {/* ── CONTENT ───────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#09090b]">
+      <div className="flex-1 overflow-y-auto custom-scrollbar bg-transparent">
         
         {/* SETUP TAB */}
         {activeTab === 'setup' && (
-          <div className="p-8 pb-32">
+          <div className="p-8 pb-32 space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
             {isSkillInput ? (
               <ContractEditor 
                 mode="INPUT"
@@ -666,46 +751,75 @@ export default function UnifiedSidebar({
                 }}
               />
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-8">
                  <div className="space-y-1">
-                    <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                    <div className="flex items-center gap-2 mb-1">
+                       <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest font-mono">STEP_PARAMS</span>
+                       <div className="flex-1 h-px bg-indigo-500/10" />
+                    </div>
+                    <h3 className="text-[14px] font-black text-foreground flex items-center gap-3 italic uppercase italic tracking-tight">
                       Logic Parameters
                     </h3>
-                    <p className="text-[10px] text-muted/50 font-medium">Configure how this step processes data</p>
+                    <p className="text-[10px] text-muted/40 font-medium italic">Configure how this unit processes data matrix</p>
                  </div>
+
                  {isPreconfigured ? (
-                    <DynamicParameterForm
-                      schema={toolSchema || {}}
-                      values={nodeValues}
-                      onChange={handleUpdate}
-                    />
+                    <div className="bg-foreground/[0.02] border border-border/40 rounded-3xl p-6">
+                      <DynamicParameterForm
+                        schema={toolSchema || {}}
+                        values={nodeValues}
+                        onChange={handleUpdate}
+                      />
+                    </div>
                  ) : isPipedreamNode ? (
-                    <div className="py-20 flex flex-col items-center justify-center text-center px-6 border border-dashed border-border/40 rounded-3xl">
-                       <Lock size={24} className="text-muted/20 mb-4" />
-                       <p className="text-[11px] text-muted/60 font-medium leading-relaxed">
-                         Activate authentication in the <span className="text-foreground font-black">SETTINGS</span> tab to unlock step parameters
+                    <div className="py-20 flex flex-col items-center justify-center text-center px-10 border border-dashed border-indigo-500/20 rounded-[3rem] bg-indigo-500/[0.02]">
+                       <div className="w-14 h-14 rounded-2xl bg-indigo-500/5 flex items-center justify-center text-indigo-500/40 mb-6">
+                          <Lock size={28} />
+                       </div>
+                       <p className="text-[11px] text-muted/50 font-medium leading-relaxed italic">
+                         Registry authorization required. Activate credentials in the <span className="text-indigo-500 font-black tracking-widest uppercase ml-1">Identity</span> tab to unlock protocol parameters
                        </p>
                     </div>
                  ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                       {tool?.configFields?.filter(f => !['notice', 'hidden'].includes(f.type)).map(field => (
-                        <div key={field.key} className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-muted/60 pl-1">{field.label}</label>
+                        <div key={field.key} className="space-y-3 relative group/field">
+                          <div className="flex items-center justify-between pl-1">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-muted/40">{field.label}</label>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowPicker(showPicker?.field === field.key ? null : { field: field.key, type: field.type as any });
+                              }}
+                              className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-indigo-500/5 hover:bg-indigo-500/10 border border-indigo-500/10 text-[9px] font-black uppercase tracking-widest text-indigo-500 transition-all opacity-0 group-hover/field:opacity-100"
+                            >
+                              <Database size={10} />
+                              Variable
+                            </button>
+                          </div>
+                          
+                          {showPicker?.field === field.key && (
+                            <VariablePicker
+                              variables={upstreamVariables}
+                              onSelect={handleVariableSelect}
+                              onClose={() => setShowPicker(null)}
+                            />
+                          )}
+
                           {field.type === 'textarea' ? (
                             <textarea
                               value={nodeValues[field.key] || ''}
                               onChange={(e) => handleUpdate({ [field.key]: e.target.value })}
-                              className="w-full px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-2xl text-[11px] font-medium outline-none focus:border-foreground/40 resize-none min-h-[100px]"
-                              placeholder={field.placeholder}
+                              className="w-full px-5 py-4 bg-foreground/[0.02] border border-border/40 rounded-[1.5rem] text-[12px] font-medium text-foreground placeholder:text-muted/20 outline-none focus:border-indigo-500/40 focus:bg-background transition-all resize-none min-h-[120px] leading-relaxed"
+                              placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}...`}
                             />
                           ) : (
                             <input
                               type="text"
                               value={nodeValues[field.key] || ''}
                               onChange={(e) => handleUpdate({ [field.key]: e.target.value })}
-                              className="w-full px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-2xl text-[11px] font-medium outline-none focus:border-foreground/40"
-                              placeholder={field.placeholder}
+                              className="w-full px-5 py-4 bg-foreground/[0.02] border border-border/40 rounded-[1rem] text-[12px] font-medium text-foreground placeholder:text-muted/20 outline-none focus:border-indigo-500/40 focus:bg-background transition-all"
+                              placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}...`}
                             />
                           )}
                         </div>
@@ -717,81 +831,110 @@ export default function UnifiedSidebar({
           </div>
         )}
 
-        {/* SETTINGS TAB */}
+        {/* IDENTITY TAB */}
         {activeTab === 'settings' && (
-          <div className="p-8 space-y-10 pb-32">
-            <div className="space-y-8">
+          <div className="p-8 space-y-10 pb-32 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="space-y-10">
               {/* Visual Identity */}
-              <div className="space-y-4">
-                <div className="space-y-1 pl-1">
-                  <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground">Visual Identity</h3>
-                  <p className="text-[10px] text-muted/50 font-medium italic">Customise step appearance</p>
+              <div className="space-y-6">
+                <div className="space-y-1">
+                   <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest font-mono">ENTITY_ID</span>
+                      <div className="flex-1 h-px bg-indigo-500/10" />
+                   </div>
+                   <h3 className="text-[14px] font-black text-foreground uppercase italic tracking-tight">Step Identity</h3>
+                   <p className="text-[10px] text-muted/40 font-medium italic">Customise operative's visual heartbeat</p>
                 </div>
+                
                 <div className="space-y-3">
-                  <div className="space-y-2">
-                     <label className="text-[10px] font-bold text-muted/60">Step Title</label>
-                     <input 
-                       value={nodeValues.label || ''}
-                       onChange={(e) => handleUpdate({ label: e.target.value })}
-                       className="w-full px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-2xl text-[11px] font-black uppercase tracking-widest text-foreground outline-none"
-                     />
-                  </div>
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted/40 pl-1">Protocol Label</label>
+                      <input 
+                        value={nodeValues.label || ''}
+                        onChange={(e) => handleUpdate({ label: e.target.value })}
+                        className="w-full px-5 py-4 bg-foreground/[0.02] border border-border/40 rounded-[1rem] text-[12px] font-black uppercase tracking-widest text-foreground outline-none focus:border-indigo-500/40 focus:bg-background transition-all"
+                      />
+                   </div>
                 </div>
               </div>
 
               {/* Authentication (Pipedream Only) */}
               {isPipedreamNode && (
-                <div className="space-y-4">
-                  <div className="space-y-1 pl-1">
-                    <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-indigo-500">Security Credentials</h3>
-                    <p className="text-[10px] text-muted/50 font-medium italic">Grant access to internal platform data</p>
+                <div className="space-y-6">
+                  <div className="space-y-1">
+                     <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest font-mono">SEC_OAUTH_2</span>
+                        <div className="flex-1 h-px bg-emerald-500/10" />
+                     </div>
+                     <h3 className="text-[14px] font-black text-foreground uppercase italic tracking-tight">Security Credentials</h3>
+                     <p className="text-[10px] text-muted/40 font-medium italic">Grant access to internal platform data matrix</p>
                   </div>
-                  <PipedreamNodeSettings
-                    appSlug={nodeValues.appSlug}
-                    platformName={nodeValues.platformName}
-                    actionName={nodeValues.actionName}
-                    credentialId={nodeValues.credentialId}
-                    onCredentialSelect={(credentialId) => handleUpdate({ credentialId })}
-                  />
+                  <div className="bg-emerald-500/[0.02] border border-emerald-500/20 rounded-[2rem] p-6">
+                    <PipedreamNodeSettings
+                      appSlug={nodeValues.appSlug}
+                      platformName={nodeValues.platformName}
+                      actionName={nodeValues.actionName}
+                      credentialId={nodeValues.credentialId}
+                      onCredentialSelect={(credentialId) => handleUpdate({ credentialId })}
+                    />
+                  </div>
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* DEBUG TAB */}
+        {/* EXECUTION TAB */}
         {activeTab === 'debug' && (
-          <div className="p-8 space-y-8 pb-32">
-             <div className="space-y-1 pl-1">
-                <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-500">Execution Stream</h3>
-                <p className="text-[10px] text-muted/50 font-medium italic">Real-time step output mapping</p>
+          <div className="p-8 space-y-10 pb-32 animate-in fade-in slide-in-from-bottom-2 duration-500">
+             <div className="space-y-1">
+                <div className="flex items-center gap-2 mb-1">
+                   <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest font-mono">XEC_RUNTIME</span>
+                   <div className="flex-1 h-px bg-emerald-500/10" />
+                </div>
+                <h3 className="text-[14px] font-black text-foreground uppercase italic tracking-tight">Execution Stream</h3>
+                <p className="text-[10px] text-muted/40 font-medium italic">Real-time telemetry and data mirroring</p>
              </div>
              
              {onTriggerNode && (
                 <button
                   onClick={() => onTriggerNode(node.id)}
-                  className="w-full px-4 py-4 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500 transition-all flex items-center justify-center gap-3 group"
+                  className="w-full px-6 py-5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-[1.75rem] text-[11px] font-black uppercase tracking-[0.2em] text-emerald-500 transition-all flex items-center justify-center gap-4 group shadow-lg shadow-emerald-500/5"
                 >
-                  <Play size={14} fill="currentColor" className="group-hover:scale-125 transition-transform" />
-                  Execute Logic Step
+                  <Play size={16} fill="currentColor" className="group-hover:scale-110 transition-transform" />
+                  Test Logic Protocol
                 </button>
              )}
 
              {node.data.result ? (
-                <div className="p-6 bg-[#070708] border border-white/5 rounded-3xl font-mono text-[10px] text-emerald-400/80 shadow-inner group relative">
-                   <div className="absolute top-2 right-4 text-[8px] font-bold text-emerald-500/40 uppercase tracking-widest">JSON Output</div>
-                   <pre className="whitespace-pre-wrap break-words leading-relaxed overflow-x-auto">
-                    {JSON.stringify(node.data.result, null, 2)}
-                  </pre>
+                <div className="space-y-4">
+                  <div className="bg-[#070708] border border-border/40 rounded-[2.5rem] p-8 font-mono text-[11px] text-emerald-400 shadow-2xl relative group overflow-hidden">
+                     <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-16 -mt-16 blur-3xl" />
+                     <div className="flex items-center justify-between mb-6 relative z-10">
+                        <div className="flex items-center gap-2">
+                           <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                           <span className="text-[9px] font-black text-emerald-500/60 uppercase tracking-widest">Live Output Mirror</span>
+                        </div>
+                        <CheckCircle size={14} className="text-emerald-500/40" />
+                     </div>
+                     <pre className="whitespace-pre-wrap break-words leading-relaxed overflow-x-auto custom-scrollbar relative z-10">
+                        {JSON.stringify(node.data.result, null, 2)}
+                     </pre>
+                  </div>
+                  <div className="p-4 bg-foreground/[0.02] border border-border/10 rounded-2xl flex items-center justify-between">
+                     <span className="text-[9px] font-black text-muted/30 uppercase tracking-widest">Protocol success</span>
+                     <span className="text-[9px] font-black text-emerald-500/40 uppercase tracking-widest">Runtime 24ms</span>
+                  </div>
                 </div>
              ) : (
-                <div className="py-20 flex flex-col items-center justify-center text-center gap-4 bg-foreground/[0.02] border border-dashed border-border/40 rounded-3xl">
-                   <div className="w-12 h-12 rounded-2xl bg-muted/5 flex items-center justify-center text-muted/20">
-                      <Zap size={24} />
+                <div className="py-24 flex flex-col items-center justify-center text-center gap-6 bg-foreground/[0.01] border border-dashed border-border/40 rounded-[3rem]">
+                   <div className="w-16 h-16 rounded-[2rem] bg-indigo-500/5 flex items-center justify-center text-indigo-500/10 relative">
+                      <Zap size={32} />
+                      <div className="absolute inset-0 rounded-[2rem] border border-indigo-500/10 animate-pulse" />
                    </div>
-                   <div className="space-y-1">
-                      <p className="text-[11px] font-black uppercase tracking-widest text-muted/40">Waiting for trigger...</p>
-                      <p className="text-[9px] text-muted/20 font-medium italic">Execution results will appear here</p>
+                   <div className="space-y-2">
+                      <p className="text-[12px] font-black uppercase tracking-[0.2em] text-muted/40">Waiting for Signal</p>
+                      <p className="text-[10px] text-muted/20 font-medium italic">Telemetry data will materialize upon trigger</p>
                    </div>
                 </div>
              )}

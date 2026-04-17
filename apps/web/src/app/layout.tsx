@@ -20,13 +20,13 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-inter antialiased bg-background text-foreground`}>
-        <AuthProvider>
-          <Providers>
+        <Providers>
+          <AuthProvider>
             <ToastProvider>
               {children}
             </ToastProvider>
-          </Providers>
-        </AuthProvider>
+          </AuthProvider>
+        </Providers>
       </body>
     </html>
   );

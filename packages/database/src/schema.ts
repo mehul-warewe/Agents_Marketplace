@@ -1,24 +1,19 @@
-import { pgTable, text, timestamp, uuid, jsonb, pgEnum, integer, doublePrecision, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
-
-export const agentStatusEnum = pgEnum('agent_status', ['running', 'completed', 'failed', 'pending']);
-export const userTierEnum = pgEnum('user_tier', ['free', 'pro', 'ultra']);
-export const transactionTypeEnum = pgEnum('transaction_type', ['subscription_reset', 'purchase', 'usage', 'node_unlock']);
-
+import { pgTable, text, uuid, timestamp, jsonb, boolean, integer, doublePrecision, serial } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
-  email: text('email').unique().notNull(),
+  email: text('email').notNull().unique(),
+  name: text('name').notNull(),
   password: text('password'),
-  provider: text('provider').default('local').notNull(),
-  name: text('name'),
   avatarUrl: text('avatar_url'),
-  tier: userTierEnum('tier').default('free').notNull(),
-  credits: integer('credits').default(100).notNull(), // Initial 100 free credits
-  stripeCustomerId: text('stripe_customer_id').unique(),
+  provider: text('provider').notNull(),
+  credits: integer('credits').default(100).notNull(),
+  tier: text('tier').default('free').notNull(),
+  stripeCustomerId: text('stripe_customer_id'),
   stripeSubscriptionId: text('stripe_subscription_id'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
-
 
 export const agents = pgTable('agents', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -26,54 +21,57 @@ export const agents = pgTable('agents', {
   description: text('description'),
   creatorId: uuid('creator_id').references(() => users.id).notNull(),
   workflow: jsonb('workflow').notNull(),
-  price: doublePrecision('price').default(0),
-  category: text('category'),
   isPublished: boolean('is_published').default(false).notNull(),
-  isWorker: boolean('is_worker').default(false).notNull(), // Flag for Manager discovery
-  workerDescription: text('worker_description'),          // AI-readable capability description
-  workerInputSchema: jsonb('worker_input_schema'),        // Expected inputs for the Manager
-  originalId: uuid('original_id'), // Reference to the marketplace agent it was cloned from
+  isWorker: boolean('is_worker').default(false).notNull(),
+  workerDescription: text('worker_description'),
+  workerInputSchema: jsonb('worker_input_schema'),
+  category: text('category'),
+  price: doublePrecision('price').default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-
-// NEW 3-TIER ARCHITECTURE TABLES
+export const agentRuns = pgTable('agent_runs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  agentId: uuid('agent_id').references(() => agents.id),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  status: text('status').notNull(),
+  startTime: timestamp('start_time').defaultNow().notNull(),
+  endTime: timestamp('end_time'),
+  duration: integer('duration'),
+  logs: jsonb('logs'),
+  output: jsonb('output'),
+});
 
 export const skills = pgTable('skills', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').notNull(),
   description: text('description'),
   creatorId: uuid('creator_id').references(() => users.id).notNull(),
-  workflow: jsonb('workflow').notNull(),  // The ReactFlow nodes + edges JSON
+  workflow: jsonb('workflow').notNull(),
   isPublished: boolean('is_published').default(false).notNull(),
   category: text('category'),
-  // Tool contract: defines typed input parameters for agent invocation
-  inputSchema: jsonb('input_schema').$type<{
-    name: string;
-    type: 'string' | 'number' | 'boolean';
-    description: string;
-    required: boolean;
-  }[]>().default([]),
-  // Human-readable description of what this skill returns (used by AI to decide when to call it)
+  version: integer('version').default(1).notNull(),
+  inputSchema: jsonb('input_schema').default([]),
   outputDescription: text('output_description'),
+  price: doublePrecision('price').default(0),
+  originalId: uuid('original_id'),
+  originalVersion: integer('original_version'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 export const employees = pgTable('employees', {
   id: uuid('id').defaultRandom().primaryKey(),
-  name: text('name').notNull(),                       // e.g. "Sarah, Marketing Lead"
-  description: text('description'),                   // What this employee specialises in
-  avatar: text('avatar'),                             // Emoji or URL
-  systemPrompt: text('system_prompt'),                // Custom personality/instructions
-  model: text('model').default('google/gemini-2.0-flash-001'),
-  temperature: doublePrecision('temperature').default(0.1),  // Model temperature (0 = precise, 1 = creative)
-  skillIds: jsonb('skill_ids').$type<string[]>().default([]),  // Assigned skills
-  knowledgeIds: jsonb('knowledge_ids').$type<string[]>().default([]), // Assigned RAG knowledge
-  skillInstructions: jsonb('skill_instructions').$type<Record<string, string>>().default({}),
-  // ^ Maps skillId → "Use this skill when the user asks for X"
+  name: text('name').notNull(),
+  description: text('description'),
+  avatar: text('avatar'),
   creatorId: uuid('creator_id').references(() => users.id).notNull(),
+  systemPrompt: text('system_prompt'),
+  model: text('model'),
+  skillIds: jsonb('skill_ids').default([]),
+  skillInstructions: jsonb('skill_instructions').default({}),
+  knowledgeIds: jsonb('knowledge_ids').default([]),
   isPublished: boolean('is_published').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -81,109 +79,73 @@ export const employees = pgTable('employees', {
 
 export const employeeRuns = pgTable('employee_runs', {
   id: uuid('id').defaultRandom().primaryKey(),
-  employeeId: uuid('employee_id').references(() => employees.id, { onDelete: 'cascade' }),
-  skillId: uuid('skill_id'),                          // Which skill was invoked
+  employeeId: uuid('employee_id').references(() => employees.id),
   userId: uuid('user_id').references(() => users.id).notNull(),
-  status: agentStatusEnum('status').default('pending').notNull(),
+  skillId: uuid('skill_id').references(() => skills.id),
+  status: text('status').notNull(),
   inputData: jsonb('input_data'),
   output: jsonb('output'),
-  logs: jsonb('logs'),
-  steps: jsonb('steps').$type<any[]>().default([]),
-  startTime: timestamp('start_time').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-  endTime: timestamp('end_time'),
+  steps: jsonb('steps'),
   duration: integer('duration'),
+  logs: jsonb('logs'),
+  startTime: timestamp('start_time').defaultNow().notNull(),
+  endTime: timestamp('end_time'),
 });
 
-// NEW: managers table (The CEO agents)
 export const managers = pgTable('managers', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').notNull(),
   description: text('description'),
-  goal: text('goal'),                      // Standing objective
-  systemPrompt: text('system_prompt'),     // Custom boss instructions
-  model: text('model').default('google/gemini-2.0-flash-001'),
+  goal: text('goal'),
   creatorId: uuid('creator_id').references(() => users.id).notNull(),
-  employeeIds: jsonb('employee_ids').$type<string[]>().default([]), // Pinned employees for this manager
+  systemPrompt: text('system_prompt'),
+  model: text('model'),
+  employeeIds: jsonb('employee_ids').default([]),
   isPublished: boolean('is_published').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// NEW: manager_runs table (Manager execution history)
 export const managerRuns = pgTable('manager_runs', {
   id: uuid('id').defaultRandom().primaryKey(),
-  managerId: uuid('manager_id').references(() => managers.id, { onDelete: 'cascade' }).notNull(),
+  managerId: uuid('manager_id').references(() => managers.id),
   userId: uuid('user_id').references(() => users.id).notNull(),
-  input: text('input').notNull(),           // User task
-  status: agentStatusEnum('status').default('pending').notNull(),
-  steps: jsonb('steps').$type<any[]>().default([]), // Reasoning trace (streamed)
-  output: jsonb('output'),                   // Final result
-  childRunIds: jsonb('child_run_ids').$type<string[]>().default([]), // Sub-agent executions
+  status: text('status').notNull(),
+  inputData: jsonb('input_data'),
+  output: jsonb('output'),
   startTime: timestamp('start_time').defaultNow().notNull(),
   endTime: timestamp('end_time'),
+});
+
+export const knowledge = pgTable('knowledge', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  title: text('title').notNull(),
+  content: text('content').notNull(),
+  metadata: jsonb('metadata').default({}),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 export const tools = pgTable('tools', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').notNull(),
   description: text('description'),
+  endpoint: text('endpoint'),
   inputSchema: jsonb('input_schema'),
   outputSchema: jsonb('output_schema'),
-  endpoint: text('endpoint'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
-export const agentRuns = pgTable('agent_runs', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  agentId: uuid('agent_id').references(() => agents.id, { onDelete: 'cascade' }).notNull(),
-  userId: uuid('user_id').references(() => users.id).notNull(),
-  status: agentStatusEnum('status').default('pending').notNull(),
-  startTime: timestamp('start_time').defaultNow().notNull(),
-  endTime: timestamp('end_time'),
-  duration: integer('duration'),
-  logs: jsonb('logs'),
-  output: jsonb('output'),
-});
-
-/**
- * User Credentials — stores per-user integration secrets, encrypted at rest.
- * 
- * Credential types:
- *  - slack_webhook    : { webhookUrl }
- *  - slack_oauth      : { accessToken, botToken, teamId, teamName }
- *  - smtp_email       : { host, port, user, password, from }
- *  - google_oauth     : { accessToken, refreshToken, expiresAt, email }
- *  - http_bearer      : { baseUrl, token }
- *  - http_basic       : { baseUrl, username, password }
- *  - webhook_relay    : { url, secret? }
- */
 export const credentials = pgTable('credentials', {
   id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  name: text('name').notNull(),              // e.g. "My Work Slack"
-  type: text('type').notNull(),              // e.g. "slack_webhook"
-  data: text('data').notNull(),              // AES-256-GCM encrypted JSON string
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  name: text('name').notNull(),
+  type: text('type').notNull(),
+  data: text('data').notNull(),
   isValid: boolean('is_valid').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
-
-export const transactions = pgTable('transactions', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  amount: integer('amount').notNull(), // Positive for additions, negative for deductions
-  type: transactionTypeEnum('type').notNull(),
-  description: text('description'),
-  stripeSessionId: text('stripe_session_id'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
-
-export const userNodes = pgTable('user_nodes', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  nodeKey: text('node_key').notNull(), // e.g. 'webSearch', 'scrapeUrl'
-  unlockedAt: timestamp('unlocked_at').defaultNow().notNull(),
 });
 
 export const otps = pgTable('otps', {
@@ -194,41 +156,51 @@ export const otps = pgTable('otps', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const transactions = pgTable('transactions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  amount: integer('amount').notNull(),
+  type: text('type').notNull(),
+  description: text('description'),
+  stripeSessionId: text('stripe_session_id'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export const memories = pgTable('memories', {
   id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
   key: text('key').notNull(),
   value: jsonb('value').notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => {
-  return {
-    userKeyIdx: uniqueIndex('memories_user_key_idx').on(table.userId, table.key),
-  };
+});
+
+export const userNodes = pgTable('user_nodes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  nodeKey: text('node_key').notNull(),
+  unlockedAt: timestamp('unlocked_at').defaultNow().notNull(),
 });
 
 export const pipedreamApps = pgTable('pipedream_apps', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   slug: text('slug').notNull(),
-  icon: text('icon'),
   description: text('description'),
-  lastSyncedAt: timestamp('last_synced_at').defaultNow().notNull(),
-}, (table) => {
-  return {
-    nameIdx: index('pd_app_name_idx').on(table.name),
-  };
+  icon: text('icon'),
+  lastSyncedAt: timestamp('last_synced_at'),
 });
 
-export const knowledge = pgTable('knowledge', {
+export const pipedreamComponents = pgTable('pipedream_components', {
   id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  title: text('title').notNull(),
-  content: text('content').notNull(),
-  metadata: jsonb('metadata'),
+  key: text('key').notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  type: text('type').notNull(),
+  appKey: text('app_key'),
+  appId: text('app_id'),
+  appName: text('app_name'),
+  appIcon: text('app_icon'),
+  raw: jsonb('raw'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
-
-
-
-
