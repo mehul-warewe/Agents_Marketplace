@@ -74,40 +74,64 @@ export default function ManagerDetailPage() {
 
   return (
     <SidebarLayout title={`COMMAND_DECK // ${manager?.name}`}>
-      <div className="flex flex-col h-full bg-background no-scrollbar overflow-hidden">
+      <div className="flex flex-col h-full bg-background overflow-hidden">
         
         {/* Navigation Bar */}
-        <div className="flex items-center justify-between px-10 py-6 border-b border-border/40 shrink-0">
-          <div className="flex items-center gap-10">
-             <button onClick={() => router.push('/manager')} className="w-12 h-12 bg-foreground/5 rounded-2xl hover:bg-foreground hover:text-background transition-all border border-border/40 flex items-center justify-center">
-                <ChevronRight size={18} strokeWidth={3} className="rotate-180" />
+        <header className="h-11 bg-card border-b border-border flex items-center justify-between px-4 shrink-0 z-50">
+          <div className="flex items-center gap-4">
+             <button onClick={() => router.push('/manager')} className="p-1 px-2.5 bg-foreground/5 rounded-lg hover:bg-foreground/10 transition-all text-foreground/40 hover:text-foreground border border-border/10">
+                <ChevronRight size={14} strokeWidth={3} className="rotate-180" />
              </button>
-             <div className="flex items-center gap-4">
-                <Users size={24} className="text-accent" />
-                <h1 className="text-2xl font-black uppercase tracking-tighter italic">{manager?.name}</h1>
-                <div className={`px-4 py-1.5 rounded-full border border-border/60 text-[9px] font-black uppercase tracking-widest ${stream.status === 'running' ? 'animate-pulse bg-accent/10 border-accent/40 text-accent' : 'bg-foreground/5 text-muted'}`}>
-                  {stream.status === 'running' ? 'EXECUTING_MISSION' : 'STATIONARY_NODE'}
+             <div className="flex items-center gap-2.5">
+                <div className="size-7 rounded-lg bg-indigo-600/10 text-indigo-600 flex items-center justify-center border border-indigo-600/20">
+                   <Users size={14} strokeWidth={2.5} />
+                </div>
+                <div className="flex flex-col">
+                   <span className="text-[7px] font-bold uppercase tracking-widest text-foreground/30 leading-none">Command</span>
+                   <h1 className="text-[11px] font-bold tracking-tight text-foreground leading-none">{manager?.name}</h1>
+                </div>
+                <div className={`px-2 py-0.5 rounded-md border text-[7px] font-bold uppercase tracking-wider ${stream.status === 'running' ? 'animate-pulse bg-indigo-500/10 border-indigo-500/20 text-indigo-500' : 'bg-foreground/5 border-border/10 text-muted'}`}>
+                  {stream.status === 'running' ? 'Active' : 'Idle'}
                 </div>
              </div>
           </div>
 
-          <nav className="flex items-center bg-foreground/[0.03] p-1.5 rounded-[1.75rem] border border-border/40 shadow-inner">
+          <nav className="flex items-center bg-secondary/50 rounded-lg p-0.5 border border-border/10 relative">
              {[
-               { id: 'chat', label: 'COMMAND_INPUT', icon: MessageSquare },
-               { id: 'config', label: 'STRATEGY_PARAMS', icon: Settings },
-               { id: 'employees', label: 'EMPLOYEES', icon: Cpu },
-               { id: 'history', label: 'HISTORY', icon: List }
+               { id: 'chat', label: 'Command', icon: MessageSquare },
+               { id: 'config', label: 'Strategy', icon: Settings },
+               { id: 'employees', label: 'Fleet', icon: Cpu },
+               { id: 'history', label: 'History', icon: List }
              ].map(t => (
                <button
                  key={t.id}
                  onClick={() => setActiveTab(t.id as any)}
-                 className={`flex items-center gap-3 px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all ${activeTab === t.id ? 'bg-foreground text-background shadow-xl' : 'text-muted hover:text-foreground'}`}
+                 className={`relative px-4 py-1.5 rounded-lg text-[8px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 z-10 ${activeTab === t.id ? 'text-indigo-500' : 'text-foreground/30 hover:text-foreground/50'}`}
                >
-                 <t.icon size={14} strokeWidth={3} /> {t.label}
+                 {activeTab === t.id && (
+                   <motion.div 
+                     layoutId="managerDetailTab"
+                     className="absolute inset-0 bg-card rounded-lg shadow-sm border border-border/5"
+                     transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                   />
+                 )}
+                 <t.icon size={11} strokeWidth={activeTab === t.id ? 2.5 : 2} className="relative z-20" />
+                 <span className="relative z-20">{t.label}</span>
                </button>
              ))}
           </nav>
-        </div>
+
+          <div className="flex items-center gap-2">
+             <button
+                onClick={handleSave}
+                disabled={isUpdating}
+                className="h-7 px-3 bg-indigo-600 text-white rounded-lg text-[8px] font-bold uppercase tracking-widest shadow-lg shadow-indigo-500/20 hover:scale-[1.05] active:scale-95 transition-all flex items-center gap-1.5 border-none"
+             >
+                {isUpdating ? 'Saving...' : 'Sync'} 
+                <Save size={10} strokeWidth={2.5} />
+             </button>
+          </div>
+        </header>
 
         {/* Content Area */}
         <div className="flex-1 overflow-hidden relative flex">
@@ -116,7 +140,7 @@ export default function ManagerDetailPage() {
           {activeTab === 'chat' && (
             <div className="flex-1 flex flex-col h-full">
               {/* Message Feed */}
-              <div className="flex-1 overflow-y-auto p-10 space-y-12 no-scrollbar">
+              <div className="flex-1 overflow-y-auto p-4 space-y-8 no-scrollbar">
                 {stream.status === 'idle' && stream.steps.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full opacity-30 text-center">
                     <Terminal size={60} strokeWidth={1} className="mb-8" />
@@ -229,7 +253,7 @@ export default function ManagerDetailPage() {
 
           {/* TAB: STRATEGY_PARAMS (Config) */}
           {activeTab === 'config' && (
-            <div className="flex-1 overflow-y-auto no-scrollbar p-16">
+            <div className="flex-1 overflow-y-auto no-scrollbar p-6">
                <div className="max-w-4xl mx-auto space-y-20">
                   <header>
                      <h2 className="text-4xl font-black italic tracking-tighter uppercase mb-2">Core_Strategy_Protocol</h2>
@@ -302,7 +326,7 @@ export default function ManagerDetailPage() {
 
           {/* TAB: EMPLOYEES (Employee Fleet Selector) */}
           {activeTab === 'employees' && (
-            <div className="flex-1 overflow-y-auto no-scrollbar p-16">
+            <div className="flex-1 overflow-y-auto no-scrollbar p-6">
                <div className="max-w-4xl mx-auto space-y-20">
                   <header>
                      <h2 className="text-4xl font-black italic tracking-tighter uppercase mb-2">Employee_Fleet_Assignment</h2>
@@ -357,7 +381,7 @@ export default function ManagerDetailPage() {
 
           {/* TAB: HISTORY (Past Runs) */}
           {activeTab === 'history' && (
-            <div className="flex-1 overflow-y-auto no-scrollbar p-16">
+            <div className="flex-1 overflow-y-auto no-scrollbar p-6">
                <div className="max-w-4xl mx-auto space-y-20">
                   <header>
                      <h2 className="text-4xl font-black italic tracking-tighter uppercase mb-2">Execution_History</h2>

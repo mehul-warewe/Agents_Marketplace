@@ -62,6 +62,9 @@ export default function SkillDashboard() {
     }, {
         onSuccess: () => {
             setSelectedSkillForPublish(null);
+        },
+        onError: (err: any) => {
+            alert(err.response?.data?.error || "Failed to publish skill. Ensure your logic has both an Input and an Output gateway.");
         }
     });
   };
@@ -340,7 +343,7 @@ function SkillCard({ skill, toolRegistry, onClick, onDelete, onPublish, onUpdate
 
             {/* Title + meta */}
             <div className="flex-1 min-w-0 overflow-hidden">
-               <h3 className="text-sm font-bold text-foreground truncate uppercase tracking-tight leading-tight">
+               <h3 className="text-sm font-bold text-foreground truncate tracking-tight leading-tight">
                   {skill.name}
                </h3>
                <div className="flex items-center gap-2 mt-1">
@@ -420,7 +423,7 @@ function SkillCard({ skill, toolRegistry, onClick, onDelete, onPublish, onUpdate
                  )}
               </div>
               <div className="min-w-0 flex-1 overflow-hidden pt-1">
-                 <h3 className="text-sm font-bold text-foreground uppercase tracking-tight leading-tight group-hover:text-indigo-400 transition-colors line-clamp-2 break-words">
+                 <h3 className="text-sm font-bold text-foreground tracking-tight leading-tight group-hover:text-indigo-400 transition-colors line-clamp-2 break-words">
                     {skill.name}
                  </h3>
               </div>

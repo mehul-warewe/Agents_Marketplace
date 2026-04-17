@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { X, Sparkles, Target, Shield, Info, Users, Cpu, Zap, MessageSquare, Trash2, ArrowRight, Search, Loader2, Calendar, Globe, Bell, Check, ChevronRight, Bot, Hammer, Activity } from 'lucide-react';
 import { usePipedreamApps } from '@/hooks/usePipedreamApps';
 import { usePipedreamTriggers } from '@/hooks/useApi';
+import { formatLabel } from '../ui/utils';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface NodeInspectorProps {
   selectedNode: any;
@@ -28,6 +30,7 @@ export default function NodeInspector({
 }: NodeInspectorProps) {
   const [activeTab, setActiveTab] = useState('Prompt');
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [triggerMode, setTriggerMode] = useState<'NATIVE' | 'APP'>('NATIVE');
   const [selectedApp, setSelectedApp] = useState<any>(null);
   
@@ -38,7 +41,7 @@ export default function NodeInspector({
   const isPlaceholder = selectedNode?.data.isPlaceholder;
 
   // App discovery for triggers
-  const { data: pipedreamApps, isLoading: isAppsLoading } = usePipedreamApps(search, 50, 0, !!(isTrigger && triggerMode === 'APP' && !selectedApp));
+  const { data: pipedreamApps, isLoading: isAppsLoading } = usePipedreamApps(debouncedSearch, 50, 0, !!(isTrigger && triggerMode === 'APP' && !selectedApp));
   const { data: appTriggers, isLoading: isTriggersLoading } = usePipedreamTriggers(selectedApp?.id);
 
   if (!selectedNode && !selectedEdge) return null;
@@ -68,7 +71,7 @@ export default function NodeInspector({
              <div className="flex flex-col gap-0.5">
                 <span className="text-[9px] font-bold uppercase tracking-widest text-foreground/30">Configuration</span>
                 <h2 className="text-lg font-bold tracking-tight text-foreground leading-none truncate max-w-[180px]">
-                  {isPlaceholder ? `New ${selectedNode.type}` : (selectedNode?.data.name || selectedEdge?.id || 'Configuration')}
+                  {isPlaceholder ? `New ${formatLabel(selectedNode.type)}` : (formatLabel(selectedNode?.data.name || selectedEdge?.id || 'Configuration'))}
                 </h2>
              </div>
           </div>
@@ -166,7 +169,7 @@ export default function NodeInspector({
                                        <div className="size-12 bg-secondary rounded-xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-all">
                                           {app.icon ? <img src={app.icon} className="size-8" alt="" /> : <Globe size={18} className="text-foreground/20" />}
                                        </div>
-                                       <span className="text-[9px] font-bold uppercase tracking-widest text-foreground/40 group-hover:text-foreground truncate w-full text-center">{app.name}</span>
+                                       <span className="text-[9px] font-bold uppercase tracking-widest text-foreground/40 group-hover:text-foreground truncate w-full text-center">{formatLabel(app.name)}</span>
                                     </button>
                                   ))}
                                </div>
@@ -254,7 +257,7 @@ export default function NodeInspector({
                                     <Bot size={20} strokeWidth={2.5} />
                                  </div>
                                  <div className="min-w-0 flex-1">
-                                    <h4 className="text-[11px] font-bold text-foreground uppercase tracking-tight">{worker.name}</h4>
+                                    <h4 className="text-[11px] font-bold text-foreground uppercase tracking-tight">{formatLabel(worker.name)}</h4>
                                     <p className="text-[9px] font-medium text-foreground/30 line-clamp-1 italic mt-1">{worker.description || 'No description available.'}</p>
                                  </div>
                                  <ArrowRight size={16} className="text-foreground/10 opacity-0 group-hover:opacity-100 transition-all" />

@@ -19,6 +19,8 @@ import DynamicParameterForm from './DynamicParameterForm';
 import PipedreamNodeSettings from './PipedreamNodeSettings';
 import { usePipedreamTools } from '@/hooks/usePipedreamApps';
 import { useCredentials } from '@/hooks/useApi';
+import { cn, formatLabel } from '@/components/ui/utils';
+import { useDebounce } from '@/hooks/useDebounce';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -383,7 +385,7 @@ function ContractEditor({ mode, inputSchema, outputDescription, onChange }: Cont
                       <div className="flex items-center justify-between pt-2 border-t border-border/20">
                          <div className="flex items-center gap-2 text-indigo-500/40">
                             <ChevronRight size={14} />
-                            <span className="px-2 py-1 bg-indigo-500/5 text-indigo-500/60 text-[9px] font-black rounded-md uppercase tracking-[0.2em]">{p.name || 'variable'}</span>
+                            <span className="px-2 py-1 bg-indigo-500/5 text-indigo-500/60 text-[9px] font-black rounded-md uppercase tracking-[0.2em]">{formatLabel(p.name || 'variable')}</span>
                          </div>
                          <div className="px-3 py-1 bg-foreground/[0.05] rounded-l-md rounded-r-2xl flex items-center gap-2">
                             {React.createElement(inputTypes.find(t => t.type === p.type)?.icon || Type, { size: 10, className: "text-muted/40" })}
@@ -512,7 +514,7 @@ function VariablePicker({ variables, onSelect, onClose }: VariablePickerProps) {
           <div key={node.nodeId} className="space-y-2">
             <div className="px-2 py-1 bg-white/[0.03] rounded-md flex items-center gap-2">
               <div className="size-1 rounded-full bg-indigo-500/40" />
-              <span className="text-[9px] font-black uppercase tracking-widest text-muted/60">{node.nodeLabel}</span>
+              <span className="text-[9px] font-black uppercase tracking-widest text-muted/60">{formatLabel(node.nodeLabel)}</span>
             </div>
             <div className="grid grid-cols-1 gap-1 pl-2">
               {node.vars.map(v => (
@@ -522,7 +524,7 @@ function VariablePicker({ variables, onSelect, onClose }: VariablePickerProps) {
                   className="flex items-center gap-2 px-3 py-2.5 hover:bg-indigo-500/10 rounded-xl text-left group transition-all"
                 >
                   <Database size={14} className="text-muted/20 group-hover:text-indigo-500" />
-                  <span className="text-[12px] font-bold text-muted/80 group-hover:text-white leading-none">{v}</span>
+                  <span className="text-[12px] font-bold text-muted/80 group-hover:text-white leading-none">{formatLabel(v)}</span>
                 </button>
               ))}
             </div>
@@ -660,7 +662,7 @@ export default function UnifiedSidebar({
                       <div className="size-1 rounded-full bg-indigo-500/30" />
                    </div>
                    <h2 className="text-[20px] font-black text-foreground tracking-tighter italic leading-none uppercase truncate">
-                     {node.data.label}
+                     {formatLabel(node.data.label)}
                    </h2>
                 </div>
              </div>

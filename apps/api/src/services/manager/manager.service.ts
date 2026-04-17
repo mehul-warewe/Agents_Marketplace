@@ -65,5 +65,11 @@ export const managerService = {
   async getManagerRun(runId: string) {
     const rows = await db.select().from(managerRuns).where(eq(managerRuns.id, runId));
     return rows[0];
+  },
+
+  async listPublicManagers() {
+    return await db.select().from(managers)
+      .where(eq(managers.isPublished, true))
+      .orderBy(desc(managers.updatedAt));
   }
 };

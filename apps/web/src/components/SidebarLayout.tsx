@@ -7,13 +7,15 @@ import SettingsModal from './modals/SettingsModal';
 import UpgradeModal from './modals/UpgradeModal';
 import { useUIStore } from '@/store/uiStore';
 import { useConnectionStore } from '@/store/connectionStore';
+import { cn } from '@/components/ui/utils';
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
   title?: string;
+  noScroll?: boolean;
 }
 
-export default function SidebarLayout({ children, title }: SidebarLayoutProps) {
+export default function SidebarLayout({ children, title, noScroll }: SidebarLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
@@ -60,8 +62,8 @@ export default function SidebarLayout({ children, title }: SidebarLayoutProps) {
 
         {/* ── Main Dashboard Viewport (Island 3) ──────── */}
         <main className="flex-1 bg-secondary border border-border/60 shadow-sm rounded-xl overflow-hidden flex flex-col relative z-0">
-           <div className="flex-1 overflow-y-auto no-scrollbar relative">
-              <div className="min-h-full">
+           <div className={cn("flex-1 relative", !noScroll && "overflow-y-auto no-scrollbar")}>
+              <div className={cn(!noScroll && "min-h-full")}>
                  {children}
               </div>
            </div>

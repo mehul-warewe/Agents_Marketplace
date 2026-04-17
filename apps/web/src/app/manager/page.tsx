@@ -52,117 +52,105 @@ export default function ManagerDashboard() {
 
   return (
     <SidebarLayout title="Managers">
-      <div className="flex-1 bg-secondary min-h-full text-foreground p-6 sm:p-10 lg:p-14 overflow-y-auto w-full no-scrollbar">
-        <div className="max-w-[1400px] mx-auto space-y-12">
+      <div className="flex-1 text-foreground space-y-3 p-2 lg:p-4 bg-secondary/5">
+        <div className="space-y-4">
           
           {/* Page Header */}
-          <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 pb-12">
-            <div className="space-y-4">
-              <h1 className="text-5xl font-bold font-display tracking-tight leading-none text-foreground">Operational Managers</h1>
-              <p className="text-muted-foreground font-medium text-sm max-w-xl">
-                 Orchestrate high-level autonomous managers to synthesize complex parameters with your employee fleet.
-              </p>
-            </div>
-            <button
-              onClick={() => router.push('/manager/builder')}
-              className="bg-primary text-primary-foreground hover:opacity-90 px-8 py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-[0.98]"
-            >
-              <Plus size={18} strokeWidth={2.5} /> Create Manager
-            </button>
-          </header>
-
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 px-1">
+             <div className="space-y-1">
+                <h1 className="text-3xl md:text-4xl font-bold font-display tracking-tight text-foreground">
+                  Manager Fleet
+                </h1>
+                <p className="text-muted-foreground font-medium text-[11px] max-w-md">
+                   Designate autonomous orchestration units to coordinate complex operations across your workforce.
+                </p>
+             </div>
+             
+             <button
+                onClick={() => router.push('/manager/builder')}
+                className="h-9 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/20 border-none transition-all flex items-center gap-2"
+             >
+                <Plus size={14} strokeWidth={2.5} /> Deploy Manager
+             </button>
+          </div>
+ 
           {/* Managers List */}
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 gap-8">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="h-[400px] bg-card/60 border border-border rounded-2xl animate-pulse" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-2">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="h-48 bg-muted rounded-xl animate-pulse" />
               ))}
             </div>
           ) : !managers || managers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-32 text-center border border-border/40 bg-card rounded-3xl shadow-md overflow-hidden relative">
-              <div className="w-20 h-20 bg-secondary rounded-2xl flex items-center justify-center text-muted-foreground/20 mb-8 border border-border/20 relative z-10 shadow-sm">
-                <Users size={32} strokeWidth={1.5} />
+            <div className="flex flex-col items-center justify-center py-20 text-center px-10 border border-border border-dashed rounded-2xl mx-2 bg-card shadow-sm">
+              <div className="w-14 h-14 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-500 border border-indigo-500/20 mb-6">
+                 <Users size={28} />
               </div>
-              <h3 className="text-2xl font-bold font-display text-foreground mb-3 relative z-10">Deploy your first manager</h3>
-              <p className="text-muted-foreground font-medium text-sm mb-10 max-w-xs mx-auto relative z-10">No managers found in your current fleet instance.</p>
+              <h3 className="text-lg font-bold font-display mb-1 uppercase tracking-tight">Fleet Empty</h3>
+              <p className="text-muted-foreground mb-6 max-w-sm mx-auto text-[11px] font-medium leading-relaxed">
+                No orchestration units detected. Start by deploying a manager to coordinate your specialized agents.
+              </p>
               <button
                 onClick={() => router.push('/manager/builder')}
-                className="bg-primary text-primary-foreground px-8 py-3.5 rounded-xl text-sm font-bold hover:opacity-90 transition-all relative z-10 shadow-lg shadow-primary/20"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest h-9 px-6 transition-all shadow-lg shadow-indigo-500/20 border-none"
               >
-                Create Manager
+                Deploy First Manager
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-2">
               {managers.map((manager: any) => (
                 <div 
                   key={manager.id} 
-                  className="bg-card p-10 group relative transition-all duration-300 rounded-2xl border border-border/40 shadow-md hover:shadow-xl hover:border-primary/20 flex flex-col overflow-hidden cursor-pointer" 
+                  className="bg-card p-4 group relative transition-all duration-300 rounded-2xl border border-border/40 shadow-md hover:shadow-xl hover:-translate-y-1 flex flex-col overflow-hidden cursor-pointer" 
                   onClick={() => router.push(`/manager/${manager.id}`)}
                 >
-                  {/* Status Badges */}
-                  <div className="flex items-center justify-between mb-10 relative z-10">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-border/40 bg-secondary text-muted-foreground text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                        <Users size={12} strokeWidth={2.5} />
-                        Manager
-                      </div>
-                      <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-border/40 bg-secondary text-muted-foreground text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                        <Cpu size={12} strokeWidth={2.5} />
-                        {manager.workerIds?.length || 0} Fleet
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); router.push(`/manager/builder?id=${manager.id}`); }}
-                        className="w-10 h-10 bg-secondary rounded-xl border border-border/40 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all flex items-center justify-center"
-                        title="Edit Strategy"
-                      >
-                        <Edit3 size={18} strokeWidth={2} />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); if(confirm('Delete this manager?')) deleteManager(manager.id); }}
-                        className="w-10 h-10 bg-red-500/5 rounded-xl border border-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
-                        title="Delete Manager"
-                      >
-                        <Trash2 size={18} strokeWidth={2} />
-                      </button>
-                    </div>
+                  <div className="flex items-center justify-between shrink-0 mb-4">
+                     <div className="w-9 h-9 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-foreground group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm">
+                        <Users size={16} />
+                     </div>
+                     <div className="flex items-center gap-1.5 transition-all">
+                        <div className="px-2 py-0.5 rounded-md border border-indigo-500/20 bg-indigo-500/10 text-indigo-500 text-[8px] font-bold uppercase shadow-xs tracking-widest">
+                           Manager
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); router.push(`/manager/builder?id=${manager.id}`); }}
+                          className="p-1.5 rounded-lg text-muted-foreground hover:bg-indigo-500/10 hover:text-indigo-500 transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <Edit3 size={14} />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); if(confirm('Purge this manager unit?')) deleteManager(manager.id); }}
+                          className="p-1.5 rounded-lg text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                     </div>
                   </div>
 
-                  {/* Header */}
-                  <div className="flex items-start gap-6 mb-10 relative z-10">
-                    <div className="w-16 h-16 rounded-xl border border-border/40 bg-secondary flex items-center justify-center text-foreground shrink-0 group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-all duration-300 shadow-sm overflow-hidden p-3.5">
-                      <Users size={32} strokeWidth={2} />
-                    </div>
-                    <div className="min-w-0 pt-1 text-left">
-                       <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest mb-1 block">Operational Identity</span>
-                      <h3 className="text-2xl font-bold font-display tracking-tight text-foreground leading-tight truncate mb-2">{manager.name}</h3>
-                      <p className="text-sm text-muted-foreground font-medium leading-relaxed line-clamp-2">
-                        {manager.goal || "Synthesizing strategic objectives for this operational node..."}
-                      </p>
-                    </div>
+                  <div className="space-y-1 min-h-[60px] mb-4">
+                     <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold font-display tracking-tight text-foreground truncate">{manager.name}</h3>
+                        <span className="text-[8px] px-1.5 py-0.5 bg-secondary rounded font-mono text-muted-foreground uppercase">{manager.model.split('/').pop()}</span>
+                     </div>
+                     <p className="text-[10px] text-muted-foreground font-medium line-clamp-2 leading-relaxed">
+                        {manager.goal || "Orchestrating strategic objectives for this operational node..."}
+                     </p>
                   </div>
 
-                  {/* Footer Info */}
-                  <div className="mt-auto space-y-6 pt-10 relative z-10 border-t border-border/40">
-                    <div className="flex items-center justify-between p-4 bg-secondary/60 rounded-xl group-hover:bg-secondary transition-colors">
-                      <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
-                        <Network size={14} /> Fleet Size
-                      </div>
-                      <div className="text-xs font-bold text-foreground">{manager.workerIds?.length || 0} Specialized Units</div>
-                    </div>
-                    
-                    <div className="mt-4 flex items-center justify-between text-[10px] font-bold text-muted-foreground/40 uppercase tracking-wider">
-                      <div className="flex items-center gap-2">
-                        <Clock size={14} strokeWidth={2.5} />
-                        Updated {new Date(manager.createdAt).toLocaleDateString()}
-                      </div>
-                      <div className="text-primary font-bold bg-primary/5 px-2.5 py-1 rounded-full border border-primary/10">
-                        {manager.model.split('/').pop().toUpperCase()}
-                      </div>
-                    </div>
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                     <div className="flex items-center gap-2 px-2 py-1 bg-secondary/80 border border-border/60 rounded-md text-[9px] font-bold text-foreground/50 shadow-xs uppercase tracking-tighter">
+                        <Network size={10} className="text-indigo-500" /> {manager.workerIds?.length || 0} Workforce Fleet
+                     </div>
+                  </div>
+
+                  <div className="pt-3 mt-auto border-t border-border/5 flex items-center justify-between">
+                     <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-foreground/40">
+                        <span>Updated {new Date(manager.createdAt).toLocaleDateString()}</span>
+                     </div>
+                     <div className="flex items-center gap-1 text-indigo-500 font-bold text-[9px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                        Orchestrate <ChevronRight size={12} strokeWidth={3} />
+                     </div>
                   </div>
                 </div>
               ))}

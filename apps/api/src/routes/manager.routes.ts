@@ -6,6 +6,11 @@ import { managerEngine } from '../services/manager/manager-engine.js';
 const router: express.Router = express.Router();
 router.use(passport.authenticate('jwt', { session: false }));
 
+// GET /managers/directory - Marketplace route for Managers
+router.get('/directory', async (req, res, next) => {
+  try { res.json(await managerService.listPublicManagers()); } catch (err) { next(err); }
+});
+
 // GET /managers - List user's Managers
 router.get('/', async (req: any, res, next) => {
   try {

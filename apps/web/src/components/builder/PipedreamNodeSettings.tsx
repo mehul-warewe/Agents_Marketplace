@@ -13,6 +13,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { LogIn, CheckCircle, AlertCircle, Loader2, RefreshCw, ExternalLink, ChevronDown } from 'lucide-react';
 import api from '@/lib/api';
 import CustomSelect from './CustomSelect';
+import { formatLabel } from '../ui/utils';
 
 interface PipedreamAccount {
   id: string;
@@ -48,8 +49,7 @@ export default function PipedreamNodeSettings({
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Derive a display name
-  const platformName = injectedPlatformName || 
-    (resolvedSlug ? resolvedSlug.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Platform');
+  const platformName = injectedPlatformName || (resolvedSlug ? formatLabel(resolvedSlug) : 'Platform');
 
   /** Fetch connected accounts from the backend and filter for safety */
   const fetchAccounts = async (slug: string) => {

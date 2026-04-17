@@ -16,6 +16,7 @@ import {
 import { MarkerType } from 'reactflow';
 import { NODE_REGISTRY } from '@repo/nodes';
 import type { NodeDefinition, NodeSocket, ConfigField } from '@repo/nodes';
+import { formatLabel } from '../ui/utils';
 
 export type { NodeSocket, ConfigField };
 
@@ -120,7 +121,7 @@ export const TOOL_REGISTRY: (ToolDefinition & { isGroup?: boolean; subActions?: 
        Object.keys(opInputs).forEach(key => {
          ops.add(key);
          if (!labels.has(key)) {
-           labels.set(key, key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()));
+           labels.set(key, formatLabel(key));
          }
        });
     }

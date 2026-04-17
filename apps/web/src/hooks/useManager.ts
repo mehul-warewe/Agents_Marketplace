@@ -12,6 +12,16 @@ export function useManagers() {
   });
 }
 
+export function useManagerDirectory() {
+  return useQuery({
+    queryKey: ['manager-directory'],
+    queryFn: async () => {
+      const { data } = await api.get('/managers/directory');
+      return data;
+    },
+  });
+}
+
 export function useManager(id: string | null) {
   return useQuery({
     queryKey: ['manager', id],

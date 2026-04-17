@@ -79,12 +79,12 @@ function ActiveConnectionCard({ cred, schemas, onDelete, iconMap, isDeleting }: 
   const mappedIcon = iconMap[slug];
 
   return (
-    <div className={`bg-card rounded-2xl border border-border/40 p-4 flex items-center gap-5 group relative transition-all duration-300 shadow-sm hover:shadow-md hover:border-indigo-500/20 ${isDeleting ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
+    <div className={`bg-card rounded-xl border border-border/40 p-2 flex items-center gap-3 group relative transition-all duration-300 shadow-sm hover:shadow-md hover:border-indigo-500/20 ${isDeleting ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
       
       {/* Big Logo Left */}
-      <div className="w-12 h-12 rounded-xl border flex items-center justify-center bg-secondary border-border/40 text-foreground shadow-inner overflow-hidden p-2 shrink-0 relative z-10">
+      <div className="size-8 rounded-lg border flex items-center justify-center bg-secondary border-border/40 text-foreground shadow-inner overflow-hidden p-1.5 shrink-0 relative z-10">
         {isDeleting ? (
-           <RefreshCw size={20} className="animate-spin text-primary/40" />
+           <RefreshCw size={14} className="animate-spin text-primary/40" />
         ) : mappedIcon ? (
            React.cloneElement(mappedIcon as any, { className: 'w-full h-full object-contain' })
         ) : (
@@ -99,13 +99,13 @@ function ActiveConnectionCard({ cred, schemas, onDelete, iconMap, isDeleting }: 
         )}
       </div>
 
-      <div className="flex flex-col flex-1 min-w-0 pr-6 relative z-10">
-        <h3 className="text-base font-bold font-display tracking-tight truncate leading-tight">
+      <div className="flex flex-col flex-1 min-w-0 pr-4 relative z-10">
+        <h3 className="text-[11px] font-bold font-display tracking-tight truncate leading-tight">
           {(cred.isPipedream ? cred.platformName : (schemas?.[cred.type]?.label || cred.platformName || cred.type.toUpperCase())).split(' ').map((s: string) => (s && s[0]) ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s).join(' ')}
         </h3>
 
         {cred.name && cred.name.toLowerCase() !== (cred.platformName || '').toLowerCase() && (
-          <p className="text-[11px] font-medium text-muted-foreground truncate opacity-70 leading-relaxed mt-0.5">
+          <p className="text-[8px] font-medium text-muted-foreground truncate opacity-70 leading-relaxed">
             {cred.name}
           </p>
         )}
@@ -150,11 +150,11 @@ function ActiveConnectionCard({ cred, schemas, onDelete, iconMap, isDeleting }: 
 function MarketplaceCard({ id, name, icon, logoUrl, isConnected, onClick, type = 'platform' }: any) {
   return (
     <motion.button 
-      whileHover={{ y: -5 }}
+      whileHover={{ y: -2 }}
       onClick={onClick}
-      className="bg-card rounded-3xl border border-border/40 p-6 flex flex-col items-center justify-center text-center group relative transition-all duration-300 shadow-sm hover:shadow-2xl hover:border-indigo-500/30"
+      className="bg-card rounded-2xl border border-border/40 p-3 flex flex-col items-center justify-center text-center group relative transition-all duration-300 shadow-sm hover:shadow-md hover:border-indigo-500/30"
     >
-      <div className="w-16 h-16 rounded-2xl bg-secondary border border-border/40 flex items-center justify-center text-foreground group-hover:scale-110 transition-all mb-4 relative z-10 p-4 shadow-inner overflow-hidden">
+      <div className="size-10 rounded-xl bg-secondary border border-border/40 flex items-center justify-center text-foreground group-hover:scale-110 transition-all mb-2 relative z-10 p-2 shadow-inner overflow-hidden">
          <div className="w-full h-full relative flex items-center justify-center">
             {icon ? (
               React.cloneElement(icon as any, { className: 'w-full h-full object-contain' })
@@ -166,18 +166,18 @@ function MarketplaceCard({ id, name, icon, logoUrl, isConnected, onClick, type =
                  onError={(e: any) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
                />
                <div className="absolute inset-0 items-center justify-center bg-secondary hidden">
-                  <Plus size={24} className="text-muted-foreground/20" />
+                  <Plus size={16} className="text-muted-foreground/20" />
                </div>
              </>
            )}
          </div>
       </div>
       
-      <h3 className="text-sm font-bold font-display text-foreground mb-4 relative z-10 truncate w-full px-2">
+      <h3 className="text-[10px] font-bold font-display text-foreground mb-3 relative z-10 truncate w-full px-1">
         {name}
       </h3>
 
-      <div className={`w-full flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider px-4 py-2 rounded-xl border transition-all ${isConnected ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 opacity-80' : 'bg-secondary border-border/40 text-muted-foreground group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 shadow-sm'}`}>
+      <div className={`w-full flex items-center justify-center gap-1 text-[8px] font-bold uppercase tracking-wider px-2 py-1 relative z-10 rounded-lg border transition-all ${isConnected ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 opacity-80' : 'bg-secondary border-border/40 text-muted-foreground group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 shadow-sm'}`}>
         {isConnected ? (
           <>
             <CheckCircle2 size={12} className="fill-current" />
@@ -365,21 +365,27 @@ export default function ConnectionsPage() {
 
   return (
     <SidebarLayout title="Integrations">
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8 font-inter text-foreground">
-        
-        {/* Header */}
-        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 py-2">
-          <div className="space-y-1.5">
-            <h1 className="text-3xl font-bold font-display tracking-tight leading-none text-foreground">Cloud Integrations</h1>
-            <p className="text-muted-foreground font-medium text-[11px] max-w-xl leading-relaxed">
-              Connect your professional accounts to extend the reach of your digital workforce.
-            </p>
-          </div>
+      <div className="flex-1 text-foreground space-y-3 p-2 lg:p-4 bg-secondary/5">
+        <div className="space-y-4">
           
-          <button onClick={scrollToExplore} className="bg-indigo-600 text-white h-9 px-6 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/20 border-none">
-            <Plus size={14} strokeWidth={2.5} /> Marketplace
-          </button>
-        </header>
+          {/* Header */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 px-1">
+             <div className="space-y-1">
+                <h1 className="text-3xl md:text-4xl font-bold font-display tracking-tight text-foreground">
+                  Cloud Integrations
+                </h1>
+                <p className="text-muted-foreground font-medium text-[11px] max-w-md">
+                   Securely bridge your professional credentials to authorize workforce operations across external platforms.
+                </p>
+             </div>
+             
+             <button
+                onClick={scrollToExplore}
+                className="h-9 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/20 border-none transition-all flex items-center gap-2"
+             >
+                <Plus size={14} strokeWidth={2.5} /> Marketplace
+             </button>
+          </div>
 
         {/* Active Connections */}
         <section className="space-y-4">
@@ -451,7 +457,7 @@ export default function ConnectionsPage() {
                 
                 <div className="relative min-w-full md:min-w-[400px] group">
                    <div className="relative">
-                    <Search size={16} className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors duration-300 ${searchFocused ? 'text-indigo-500' : 'text-muted-foreground/30'}`} />
+                    <Search size={14} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${searchFocused ? 'text-indigo-500' : 'text-muted-foreground/30'}`} />
                       <input 
                         type="text"
                         value={searchQuery}
@@ -459,7 +465,7 @@ export default function ConnectionsPage() {
                         onBlur={() => setSearchFocused(false)}
                         onChange={e => setSearchQuery(e.target.value)}
                         placeholder="Search for tools..."
-                        className="w-full bg-card border border-border/60 rounded-xl px-12 py-3 text-sm font-bold text-foreground outline-none focus:ring-0 transition-all shadow-lg placeholder:text-muted-foreground/30"
+                        className="w-full h-10 bg-card border border-border/60 rounded-xl px-11 text-xs font-bold text-foreground outline-none focus:ring-0 transition-all shadow-lg placeholder:text-muted-foreground/30"
                       />
                    </div>
                 </div>
@@ -471,7 +477,7 @@ export default function ConnectionsPage() {
                   <button
                     key={cat}
                     onClick={() => setActiveCategory(cat)}
-                    className={`px-4 py-1.5 rounded-lg font-bold text-[9px] uppercase tracking-widest transition-all whitespace-nowrap border ${activeCategory === cat ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-secondary/40 text-muted-foreground border-border/40 hover:bg-secondary hover:text-foreground'}`}
+                    className={`px-4 py-1.5 rounded-lg font-bold text-[8px] uppercase tracking-widest transition-all whitespace-nowrap border ${activeCategory === cat ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-secondary/40 text-muted-foreground border-border/40 hover:bg-secondary hover:text-foreground'}`}
                   >
                     {cat}
                   </button>
@@ -558,8 +564,8 @@ export default function ConnectionsPage() {
             </div>
           </div>
         )}
-
       </div>
+    </div>
     </SidebarLayout>
   );
 }
