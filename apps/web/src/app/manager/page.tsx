@@ -1,3 +1,4 @@
+'use client';
 import SidebarLayout from '@/components/SidebarLayout';
 import { useManagers, useCreateManager, useDeleteManager } from '@/hooks/useManager';
 import { useWorkers } from '@/hooks/useApi';

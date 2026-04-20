@@ -7,6 +7,7 @@ import { MODEL_TYPES } from '@/components/builder/toolRegistry';
 import { Bot, Play, ChevronRight, Edit3, Activity, Users, Target, Cpu, X, Sparkles, Network, Save, MessageSquare, List, Settings, Send, Terminal, Loader2, Zap, CheckCircle2, AlertCircle, Shield } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 
 export default function ManagerDetailPage() {
   const { id } = useParams();
