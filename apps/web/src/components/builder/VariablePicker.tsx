@@ -106,13 +106,43 @@ export default function VariablePicker({ nodes, edges, currentNodeId, onSelect, 
         if (node.data.toolId === 'skill.input') {
           const currentContract = node.data.inputSchema || [];
           if (currentContract.length > 0) {
-            const contractFields = currentContract.map((f: any) => ({
-              key: f.name,
-              label: f.name,
-              type: f.type,
-              preview: f.description,
-              fullPath: `input.${f.name}`
-            }));
+            const discoverNested = (obj: any, path: string): any[] => {
+              if (!obj || typeof obj !== 'object' || path.split('.').length > 5) return [];
+              return Object.entries(obj).flatMap(([k, v]) => {
+                const fullK = `${path}.${k}`;
+                const self = {
+                  key: fullK,
+                  label: fullK,
+                  type: typeof v,
+                  preview: typeof v === 'object' ? (Array.isArray(v) ? '[...]' : '{...}') : String(v).substring(0, 40),
+                  fullPath: fullK
+                };
+                if (v && typeof v === 'object' && !Array.isArray(v)) {
+                  return [self, ...discoverNested(v, fullK)];
+                }
+                return [self];
+              });
+            };
+
+            const contractFields = currentContract.flatMap((f: any) => {
+              const self = {
+                key: f.name,
+                label: f.name,
+                type: f.type,
+                preview: f.description,
+                fullPath: `input.${f.name}`
+              };
+
+              if (f.type === 'json' && f.defaultValue) {
+                try {
+                  const parsed = typeof f.defaultValue === 'string' ? JSON.parse(f.defaultValue) : f.defaultValue;
+                  if (parsed && typeof parsed === 'object') {
+                    return [self, ...discoverNested(parsed, `input.${f.name}`)];
+                  }
+                } catch (e) {}
+              }
+              return [self];
+            });
             fields = [...fields, ...contractFields];
           }
         }

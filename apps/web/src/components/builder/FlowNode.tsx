@@ -96,7 +96,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
         />
 
         {/* Note Toolbar - Moved to the left and vertical */}
-        <div className="absolute -left-12 top-1/2 -translate-y-1/2 hidden group-hover:flex flex-col items-center gap-3 px-1.5 py-3 bg-card border border-border/40 rounded-xl shadow-xl z-[100] animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute -left-12 top-1/2 -translate-y-1/2 hidden group-hover:flex flex-col items-center gap-3 px-1.5 py-3 bg-card border border-border rounded-xl shadow-xl z-[100] animate-in fade-in zoom-in-95 duration-200">
           <div className="relative group/color p-1.5 cursor-pointer">
             <Palette size={14} className="text-muted-foreground hover:text-foreground transition-colors" />
             <input 
@@ -153,11 +153,11 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   const isMissingCredential = needsCredential && !config.credentialId;
 
   const statusStyles = {
-    idle: isMissingCredential ? 'border-red-500/50 bg-red-500/5' : 'border-border/40 bg-card',
-    pending: 'border-primary/20 bg-card',
-    running: 'border-primary shadow-lg shadow-primary/10 bg-primary/5',
-    completed: 'border-primary/20 bg-card shadow-md',
-    failed: 'border-red-500/30 bg-card',
+    idle: isMissingCredential ? 'border-red-500 bg-red-500/10' : 'border-border bg-card',
+    pending: 'border-primary/40 bg-card',
+    running: 'border-primary shadow-lg shadow-primary/20 bg-primary/10',
+    completed: 'border-primary/40 bg-card shadow-md',
+    failed: 'border-red-500/60 bg-card',
   };
 
   const Icon = tool.icon as any;
@@ -167,7 +167,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
       
       {/* Node Toolbar - Moved to the left and vertical */}
       <div className={`
-        absolute -left-12 top-1/2 -translate-y-1/2 hidden group-hover:flex flex-col items-center gap-3 px-2 py-3 bg-card border border-border/40 rounded-xl shadow-xl z-[100] animate-in fade-in zoom-in-95 duration-200
+        absolute -left-12 top-1/2 -translate-y-1/2 hidden group-hover:flex flex-col items-center gap-3 px-2 py-3 bg-card border border-border rounded-xl shadow-xl z-[100] animate-in fade-in zoom-in-95 duration-200
         ${(data.toolId === 'skill.output') ? '!hidden' : ''}
       `}>
         <button onClick={onPlayClick} className="p-1.5 text-muted-foreground hover:text-primary transition-colors relative z-[101]"><Play size={14} fill="currentColor" /></button>
@@ -179,7 +179,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
       {/* Main Body */}
       <div 
         className={`
-          w-[260px] min-h-[90px] rounded-3xl border p-4 flex items-center gap-4 transition-all duration-300
+          w-[220px] min-h-[70px] rounded-xl border p-3 flex items-center gap-3 transition-all duration-300
           ${statusStyles[status]}
           ${selected ? 'border-primary shadow-xl ring-4 ring-primary/5' : 'hover:border-primary/20 shadow-md'}
         `}
@@ -190,20 +190,19 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
         )}
 
         {/* Icon Section */}
-        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border border-border/40 transition-all duration-300 overflow-hidden p-3 bg-secondary group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary`}>
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-border transition-all duration-300 overflow-hidden p-2.5 bg-secondary group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary shadow-sm`}>
           {typeof tool.icon === 'string' && (tool.icon.startsWith('http') || tool.icon.startsWith('/')) ? (
             <img src={tool.icon} alt={tool.label} className="w-full h-full object-contain" />
           ) : (
-            <Icon size={24} strokeWidth={2.5} className="transition-colors group-hover:text-primary-foreground" />
+            <Icon size={18} strokeWidth={2.5} className="transition-colors group-hover:text-primary-foreground text-indigo-500" />
           )}
         </div>
 
-        {/* Info Section */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold font-display text-foreground truncate leading-tight tracking-tight">
+          <p className="text-[12px] font-bold font-display text-foreground truncate leading-tight tracking-tight uppercase">
             {data.label}
           </p>
-          <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest truncate mt-1.5">
+          <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest truncate mt-1">
              {status === 'running' ? 'Active' : tool.name.replace(' node', '')}
           </p>
         </div>
@@ -218,7 +217,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
              <div className="group/warn relative">
                 <AlertCircle size={14} className="text-red-500 animate-pulse" />
                 <div className="absolute bottom-full right-0 mb-2 px-2 py-1 bg-red-500 text-white text-[8px] font-black uppercase rounded opacity-0 group-hover/warn:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                  Credential Required
+                   Credential Required
                 </div>
              </div>
            )}
@@ -235,85 +234,121 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
         />
       )}
       
-      {/* Dynamic Sockets for Skill Input / Output */}
-      {data.toolId === 'skill.input' && data.inputSchema && (data.inputSchema as any[]).map((param, idx) => {
-        const socketName = param.name;
-        const isConnected = edges.some(e => e.source === id && e.sourceHandle === socketName);
-        
-        // Distribute handles along the bottom or sides
-        // For a more professional look, we can stack them on the right or bottom
-        return (
-          <React.Fragment key={socketName}>
-            <Handle
-              type="source"
-              position={Position.Bottom}
-              id={socketName}
-              className="!w-3 !h-3 !bg-indigo-500 !border-2 !border-background !opacity-100"
-              style={{ 
-                left: `${((idx + 1) / ((data.inputSchema as any[]).length + 1)) * 100}%`,
-                bottom: -6
-              }}
-            />
-            {/* Label for the socket */}
-            {!isConnected && (
-              <div 
-                className="absolute text-[8px] font-black uppercase tracking-tighter text-indigo-500/60 whitespace-nowrap"
-                style={{ 
-                  left: `${((idx + 1) / ((data.inputSchema as any[]).length + 1)) * 100}%`,
-                  bottom: -22,
-                  transform: 'translateX(-50%)'
-                }}
-              >
-                {socketName}
-              </div>
-            )}
-          </React.Fragment>
-        );
-      })}
-
-      {/* Standard Handles */}
-      {(!data.inputSchema || (data.inputSchema as any[]).length === 0) && tool.outputs.map((socket: any) => {
-        const isConnected = data.isEmployeeMode 
-          ? edges.some(e => e.source === id) 
-          : edges.some(e => e.source === id && (e.sourceHandle === socket.name || tool.outputs.length === 1));
-
-        return (
-          <React.Fragment key={socket.name}>
-            <Handle
-              type="source"
-              position={Position.Bottom}
-              id={socket.name}
-              className="!opacity-0 !pointer-events-none"
-              style={{ bottom: -4 }}
-            />
+      {/* Dynamic Sockets for Multiple Outputs (like Split Branch) */}
+      {((data.inputSchema?.length || 0) > 0 || tool.outputs.length > 1) && data.toolId !== 'skill.input' && (
+        <div className="absolute inset-x-0 bottom-[-4px] flex justify-around px-2 pointer-events-none gap-4">
+          {(data.inputSchema || tool.outputs).map((socket: any) => {
+            const socketName = socket.name;
+            const isConnected = edges.some(e => e.source === id && e.sourceHandle === socketName);
+            const isTruePath = socketName.toLowerCase() === 'true';
+            const isFalsePath = socketName.toLowerCase() === 'false';
+            const isParallelPath = socketName.startsWith('path_');
             
-            {/* Contextual + trigger always visible IF NOT connected */}
-            {!isConnected && (
+            return (
+              <div key={socketName} className="relative flex flex-col items-center pointer-events-auto min-w-[60px]">
+                <Handle
+                  type="source"
+                  position={Position.Bottom}
+                  id={socketName}
+                  className={`!w-3 !h-3 !border-2 !border-background !opacity-100 !relative !bottom-0 !left-auto !translate-x-0 transition-colors ${
+                    isTruePath ? '!bg-emerald-500' : isFalsePath ? '!bg-red-500' : isParallelPath ? '!bg-purple-500' : '!bg-indigo-500'
+                  }`}
+                />
+                {!isConnected && (
+                  <div className="flex flex-col items-center mt-2 group/socket">
+                    <div className={`w-[1px] h-5 border-l border-dashed transition-colors ${
+                      isTruePath ? 'border-emerald-500/40 group-hover/socket:border-emerald-500' : 
+                      isFalsePath ? 'border-red-500/40 group-hover/socket:border-red-500' : 
+                      isParallelPath ? 'border-purple-500/40 group-hover/socket:border-purple-500' :
+                      'border-border/40 group-hover/socket:border-indigo-500/40'
+                    }`} />
+                    <div 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        data.onAddConnect?.({
+                          nodeId: id,
+                          handleId: socketName,
+                          handleType: 'source',
+                          socketType: socket.type || 'any',
+                          clientX: e.clientX,
+                          clientY: e.clientY
+                        });
+                      }}
+                      className={`w-7 h-7 bg-card border rounded-lg flex flex-col items-center justify-center transition-all cursor-pointer shadow-lg scale-90 hover:scale-100 z-50 mb-1.5 ${
+                        isTruePath ? 'border-emerald-500/20 text-emerald-500/40 hover:bg-emerald-500 hover:text-white hover:border-emerald-500' :
+                        isFalsePath ? 'border-red-500/20 text-red-500/40 hover:bg-red-500 hover:text-white hover:border-red-500' :
+                        isParallelPath ? 'border-purple-500/20 text-purple-500/40 hover:bg-purple-500 hover:text-white hover:border-purple-500' :
+                        'border-border/40 text-muted-foreground/30 hover:bg-indigo-500 hover:text-white hover:border-indigo-500'
+                      }`}
+                    >
+                      <Plus size={14} strokeWidth={3} />
+                    </div>
+                    <span className={`text-[8px] font-black uppercase tracking-widest transition-colors ${
+                      isTruePath ? 'text-emerald-500/60 group-hover/socket:text-emerald-500' :
+                      isFalsePath ? 'text-red-500/60 group-hover/socket:text-red-500' :
+                      isParallelPath ? 'text-purple-500/60 group-hover/socket:text-purple-500' :
+                      'text-muted-foreground/40 group-hover/socket:text-indigo-500'
+                    }`}>
+                      {socket.label || socket.name}
+                    </span>
+                  </div>
+                )}
+                {isConnected && (
+                  <span className={`mt-2 text-[7px] font-black uppercase tracking-[0.2em] transition-colors ${
+                    isTruePath ? 'text-emerald-500/40' : isFalsePath ? 'text-red-500/40' : isParallelPath ? 'text-purple-500/40' : 'text-muted-foreground/20'
+                  }`}>
+                    {socket.label || socket.name}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Standard Handle (Single Output) */}
+      {(tool.outputs.length === 1 && (!data.inputSchema || data.inputSchema.length === 0 || data.toolId === 'skill.input')) && (
+        <>
+          <Handle
+            type="source"
+            position={Position.Bottom}
+            id={tool.outputs[0]?.name}
+            className="!opacity-0 !pointer-events-none"
+            style={{ bottom: -4 }}
+          />
+          
+          {(() => {
+            const socket = tool.outputs[0];
+            const isConnected = data.isEmployeeMode 
+              ? edges.some(e => e.source === id) 
+              : edges.some(e => e.source === id && e.sourceHandle === socket?.name);
+
+            if (isConnected) return null;
+
+            return (
               <div className="absolute top-[100%] left-1/2 -translate-x-1/2 flex flex-col items-center">
-                {/* Short dashed line extension (vertical) */}
                 <div className="w-[1px] h-6 border-l border-dashed border-border/60" />
-                
-                <div 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    data.onAddConnect?.({
-                      nodeId: id,
-                      handleId: socket.name,
-                      handleType: 'source',
-                      socketType: socket.type,
-                      clientX: e.clientX,
-                      clientY: e.clientY
-                    });
-                  }}
-                  className="w-8 h-8 bg-card border border-border/40 rounded-xl flex items-center justify-center text-muted-foreground/40 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all cursor-pointer shadow-lg scale-90 hover:scale-100 z-50 mt-0"
-                >
+                  <div 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      data.onAddConnect?.({
+                        nodeId: id,
+                        handleId: socket?.name || 'output',
+                        handleType: 'source',
+                        socketType: socket?.type || 'any',
+                        clientX: e.clientX,
+                        clientY: e.clientY
+                      });
+                    }}
+                    className="w-8 h-8 bg-card border border-border rounded-xl flex items-center justify-center text-muted-foreground/60 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all cursor-pointer shadow-lg scale-90 hover:scale-100 z-50 mt-0"
+                  >
                   <Plus size={16} strokeWidth={2.5} />
                 </div>
               </div>
-            )}
-          </React.Fragment>
-        );
-      })}
+            );
+          })()}
+        </>
+      )}
     </div>
   );
 }

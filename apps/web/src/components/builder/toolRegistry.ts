@@ -95,7 +95,7 @@ const PIPEDREAM_TEMPLATE = {
  * TOOL_REGISTRY — the full node list with icons resolved for the frontend.
  * Hierarchy: Nodes with multiple operations are treated as groups.
  */
-export const TOOL_REGISTRY: (ToolDefinition & { isGroup?: boolean; subActions?: any[] })[] = NODE_REGISTRY.flatMap((node) => {
+const BASE_REGISTRY = NODE_REGISTRY.flatMap((node) => {
   const icon = (ICON_MAP[node.icon] ?? node.icon) as IconType;
   
   // Identify Operations for grouping
@@ -134,7 +134,6 @@ export const TOOL_REGISTRY: (ToolDefinition & { isGroup?: boolean; subActions?: 
       });
     });
   }
-
   const isGroup = subActions.length > 0;
 
   return [{
@@ -144,6 +143,96 @@ export const TOOL_REGISTRY: (ToolDefinition & { isGroup?: boolean; subActions?: 
     subActions: subActions,
   }];
 });
+
+const MANUAL_ADDITIONS = [
+  {
+    id: 'core.api',
+    name: 'API Request',
+    label: 'API Request',
+    icon: ICON_MAP['Webhook'] || Webhook,
+    category: 'Integrations',
+    description: 'Make a raw HTTP request to any endpoint.',
+    executionKey: 'http_request',
+    bg: 'bg-indigo-500/10',
+    color: 'text-indigo-500',
+    border: 'border-indigo-500/20',
+    isTrigger: false,
+    isGroup: false,
+    subActions: [],
+    inputs: [{ name: 'input', label: 'Input Data', type: 'any' }],
+    outputs: [{ name: 'output', label: 'Response', type: 'any' }],
+    configFields: [
+      { key: 'url', label: 'Endpoint URL', type: 'text', required: true },
+      { key: 'method', label: 'HTTP Method', type: 'select', options: ['GET', 'POST', 'PUT', 'DELETE'], required: true },
+      { key: 'headers', label: 'Custom Headers (JSON)', type: 'textarea', required: false },
+      { key: 'body', label: 'Request Body', type: 'textarea', required: false }
+    ]
+  }
+];
+
+// Deduplicate registry to prevent double-key errors
+const ALL_TOOLS = [...BASE_REGISTRY, ...MANUAL_ADDITIONS];
+const UNIQUE_MAP = new Map();
+ALL_TOOLS.forEach(t => UNIQUE_MAP.set(t.id, t));
+
+export let TOOL_REGISTRY: (ToolDefinition & { isGroup?: boolean; subActions?: any[] })[] = Array.from(UNIQUE_MAP.values())
+  .filter(tool => {
+    const normalizedId = tool.id.toLowerCase();
+    const normalizedName = (tool.name || "").toLowerCase();
+    const normalizedLabel = (tool.label || "").toLowerCase();
+    
+    const isBranchOrSplit = 
+      normalizedId.includes('branch') || 
+      normalizedId.includes('split') || 
+      normalizedName.includes('branch') || 
+      normalizedName.includes('split') ||
+      normalizedLabel.includes('branch') ||
+      normalizedLabel.includes('split');
+      
+    return !isBranchOrSplit;
+  });
+
+/**
+ * Update the model options in the registry dynamically from an external source.
+ */
+export const updateRegistryModels = (models: { id: string; name: string }[], provider?: string) => {
+  const modelOptions = models.map(m => ({ value: m.id, label: m.name }));
+  const targetProvider = provider?.toLowerCase();
+  
+  TOOL_REGISTRY = TOOL_REGISTRY.map(tool => {
+    const isModelTool = tool.category === 'Models' || tool.id.includes('llm');
+    if (!isModelTool) return tool;
+
+    // Strict provider filtering
+    let shouldUpdate = !targetProvider; // If no provider specified, update all
+    
+    if (targetProvider) {
+      const toolId = tool.id.toLowerCase();
+      const toolLabel = tool.label.toLowerCase();
+      
+      if (targetProvider === 'google' || targetProvider === 'gemini') {
+        shouldUpdate = toolId.includes('gemini') || toolId.includes('google') || toolLabel.includes('gemini');
+      } else if (targetProvider === 'openai') {
+        shouldUpdate = toolId.includes('openai') || toolLabel.includes('openai');
+      } else if (targetProvider === 'anthropic' || targetProvider === 'claude') {
+        shouldUpdate = toolId.includes('anthropic') || toolId.includes('claude') || toolLabel.includes('claude');
+      } else if (targetProvider === 'openrouter') {
+        shouldUpdate = toolId.includes('openrouter') || toolLabel.includes('openrouter');
+      }
+    }
+
+    if (shouldUpdate) {
+      const newConfigFields = tool.configFields.map(field => {
+        if (field.key === 'model') {
+          return { ...field, options: modelOptions };
+        }
+        return field;
+      });
+      return { ...tool, configFields: newConfigFields };
+    }
+    return tool;
+  });
+};
 
 /**
  * List of unique categories derived from the registry.
@@ -287,17 +376,17 @@ export const getToolById = (id: string): ToolDefinition => {
     return {
       id: 'skill.input',
       name: 'Skill Input',
-      label: 'Skill Input',
+      label: 'Skill Input Gateway',
       icon: ICON_MAP['Signpost'] || Signpost,
       category: 'Triggers',
-      description: 'Starting point for this skill.',
+      description: 'The defining contract for this skill.',
       executionKey: 'trigger_manual',
       bg: 'bg-indigo-500/10',
       color: 'text-indigo-500',
       border: 'border-indigo-500/20',
       isTrigger: true,
       inputs: [],
-      outputs: [{ name: 'output', label: 'Inputs', type: 'any' }],
+      outputs: [{ name: 'pulse', label: 'Start Execution', type: 'pulse' }],
       configFields: []
     } as any;
   }

@@ -6,10 +6,24 @@ import { getSchema } from './schema.service.js';
 
 export const credentialsService = {
   async listCredentials(userId: string) {
-    return await db.select()
+    const userCreds = await db.select()
       .from(credentials)
       .where(eq(credentials.userId, userId))
       .orderBy(desc(credentials.createdAt));
+
+    // Inject System Managed Default
+    const systemDefault = {
+      id: 'system_default',
+      userId: 'system',
+      name: 'System Default',
+      type: 'openrouter',
+      isValid: true,
+      data: null, // Hidden key
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    };
+
+    return [systemDefault, ...userCreds];
   },
 
   async createCredential(userId: string, name: string, type: string, data: any) {

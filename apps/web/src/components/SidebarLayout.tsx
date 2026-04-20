@@ -39,7 +39,7 @@ export default function SidebarLayout({ children, title, noScroll }: SidebarLayo
       {/* Mobile Backdrop */}
       {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-background/80 z-40 lg:hidden backdrop-blur-sm animate-in fade-in"
+          className="fixed inset-0 bg-background/60 z-40 lg:hidden animate-in fade-in"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}

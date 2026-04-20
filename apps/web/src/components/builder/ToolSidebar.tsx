@@ -88,8 +88,18 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
     return [...TOOL_REGISTRY, ...pipedreamApps];
   }, [pipedreamApps]);
 
-  const categories = useMemo(() => {
-    return TOOL_CATEGORIES.filter(cat => cat !== 'Integrations' && cat !== 'Triggers');
+  // virtual categories: Consolidate Logic, Core, Data into "Built-in Tools"
+  const virtualCategories = useMemo(() => {
+    const cats = TOOL_CATEGORIES.filter(cat => !['Integrations', 'Triggers', 'Output'].includes(cat));
+    const merged = new Set<string>();
+    cats.forEach(c => {
+      if (['Logic', 'Core', 'Data'].includes(c)) {
+        merged.add('Built-in Tools');
+      } else {
+        merged.add(c);
+      }
+    });
+    return Array.from(merged);
   }, []);
 
   const filtered = useMemo(() => {
@@ -98,11 +108,12 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
       const staticMatches = TOOL_REGISTRY.filter(t => 
         !t.id.startsWith('ai.') && 
         t.category !== 'AI' &&
+        t.category !== 'Triggers' &&
         (t.label.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q) || t.name.toLowerCase().includes(q))
       );
 
       const subActionMatches = TOOL_REGISTRY.flatMap(t => {
-        if (t.subActions) {
+        if (t.subActions && t.category !== 'Triggers') {
            return t.subActions
             .filter(sub => sub.label.toLowerCase().includes(q))
             .map(sub => ({ ...t, id: sub.id, label: `${t.label}: ${sub.label}`, isGroup: false, icon: t.icon, subAction: true }));
@@ -119,8 +130,7 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
           category: 'Integrations'
         }));
 
-      const baseResults = [...staticMatches, ...subActionMatches, ...platformMatches]
-        .filter(t => (t as any).category !== 'Triggers');
+      const baseResults = [...staticMatches, ...subActionMatches, ...platformMatches];
       const filteredResults = filter ? baseResults.filter(filter) : baseResults;
 
       return filteredResults.sort((a, b) => {
@@ -134,11 +144,6 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
       });
     }
 
-    let visibleRegistry = TOOL_REGISTRY;
-    if (filter) {
-      visibleRegistry = TOOL_REGISTRY.filter(filter);
-    }
-
     if (activePlatform && activePlatform !== '__integrations_view__') {
        return platformTools.map(tool => ({
         name: tool.name,
@@ -148,110 +153,111 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
     }
 
     return [];
-  }, [query, activePlatform, platformTools, pipedreamApps, combinedRegistry, socketType, filter]);
+  }, [query, activePlatform, platformTools, pipedreamApps, filter]);
 
   const toggle = (cat: string) =>
     setCollapsed(prev => ({ ...prev, [cat]: !prev[cat] }));
 
   return (
     <aside
-      className={`fixed top-14 left-0 h-[calc(100vh-3.5rem)] bg-card/95 backdrop-blur-xl border-r border-border/40 transition-all duration-500 z-40 flex flex-col shadow-2xl ${
+      className={`fixed top-14 left-0 h-[calc(100vh-3.5rem)] bg-card border-r border-border/40 transition-all duration-500 z-40 flex flex-col shadow-xl ${
         isOpen ? 'w-80' : 'w-0 overflow-hidden border-none'
       }`}
     >
       {/* ── HEADER ────────────────────────────────────────────── */}
-      <div className="p-6 pb-4 flex flex-col gap-5 border-b border-border/40 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full -mr-12 -mt-12 blur-2xl" />
-        
-        <div className="flex items-center justify-between">
-           <div className="flex flex-col">
-              <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest leading-none mb-1">Architecture</span>
-              <h2 className="text-[14px] font-black text-foreground italic uppercase tracking-tighter flex items-center gap-2">
-                <LayoutPanelLeft size={14} className="text-indigo-500" />
-                {activePlatform && activePlatform !== '__integrations_view__' ? 'Action Protocol' : 'Unit Registry'}
-              </h2>
-           </div>
-           <button onClick={onToggle} className="w-7 h-7 rounded-lg bg-foreground/[0.03] border border-border/10 flex items-center justify-center text-muted/40 hover:text-foreground hover:bg-foreground/[0.08] transition-all">
-              <X size={12} strokeWidth={3} />
+      <div className="p-6 pb-4 flex flex-col gap-5 relative overflow-hidden">
+        <div className="flex items-center justify-between relative z-10">
+               <div className="flex flex-col">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <div className="w-1 h-1 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]" />
+                    <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-[0.2em] leading-none">Intelligence Hub</span>
+                  </div>
+                  <h2 className="text-base font-bold font-display tracking-tight text-foreground leading-none uppercase">
+                    {activePlatform && activePlatform !== '__integrations_view__' ? 'Action Index' : 'Tool Registry'}
+                  </h2>
+               </div>
+           <button onClick={onToggle} className="w-8 h-8 rounded-lg bg-secondary border border-border/40 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all group">
+              <X size={14} strokeWidth={2.5} />
            </button>
         </div>
 
         <div className="relative group/search">
-          <div className="absolute inset-x-0 inset-y-0 bg-indigo-500/5 rounded-2xl scale-95 group-focus-within/search:scale-100 opacity-0 group-focus-within/search:opacity-100 transition-all duration-500" />
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted/20 group-focus-within/search:text-indigo-500 group-focus-within/search:scale-110 transition-all z-10" size={14} strokeWidth={3} />
-          <input
-            type="text"
-            placeholder={activePlatform ? 'Search protocol actions...' : 'Search units & platforms...'}
-            className="w-full bg-foreground/[0.02] border border-border/40 rounded-2xl py-3 pl-11 pr-4 text-[11px] font-bold uppercase tracking-widest placeholder:text-muted/20 outline-none focus:border-indigo-500/40 focus:ring-4 focus:ring-indigo-500/5 transition-all relative z-0"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+          <div className="relative flex items-center bg-secondary border border-border/60 rounded-xl p-1 group-focus-within/search:border-indigo-500/40 transition-all shadow-inner">
+            <Search className="absolute left-3.5 text-muted-foreground/30 group-focus-within/search:text-indigo-500 transition-all z-10" size={13} strokeWidth={2.5} />
+            <input
+              type="text"
+              placeholder={activePlatform ? 'Search actions...' : 'Find tools & nodes...'}
+              className="w-full bg-transparent py-2.5 pl-10 pr-3 text-[10px] font-bold uppercase tracking-widest text-foreground placeholder:text-muted-foreground/20 outline-none transition-all"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto px-4 py-2 no-scrollbar">
         {/* UNIFIED SEARCH RESULTS VIEW */}
         {query.trim() && (
            <div className="space-y-1">
              {filtered.length === 0 && !isLoadingApps && (
-               <div className="p-12 text-center">
-                 <div className="w-12 h-12 bg-muted/5 rounded-2xl flex items-center justify-center text-muted/20 mx-auto mb-4 border border-dashed border-border/40">
-                    <Search size={20} />
+               <div className="p-16 text-center">
+                 <div className="w-12 h-12 bg-secondary rounded-xl flex items-center justify-center text-muted-foreground mx-auto mb-4 border border-border/40 border-dashed">
+                    <Search size={20} strokeWidth={2.5} />
                  </div>
-                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted/30 italic leading-relaxed">No matching operative <br/>found in registry</p>
+                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 leading-relaxed italic">No matching tools <br/>mapped in registry</p>
                </div>
              )}
-             {filtered.map((tool: any) => {
-                const Icon = tool.icon as any;
-                const toolLabel = tool.label || tool.name;
-                const toolId = tool.id;
-                const toolBg = tool.bg || 'bg-indigo-500/10';
-                const toolColor = tool.color || 'text-indigo-500';
+             <div className="space-y-2 p-3 bg-secondary border border-border/60 rounded-3xl shadow-inner mt-2">
+               {filtered.map((tool: any) => {
+                  const Icon = tool.icon as any;
+                  const toolLabel = tool.label || tool.name;
+                  const toolId = tool.id;
 
-                return (
-                  <button
-                    key={toolId || toolLabel}
-                    onClick={() => {
-                      if (tool.isGroup) {
-                        setActivePlatform(tool.id);
-                        setSelectedPlatformName(tool.label || tool.name);
-                        setSelectedPlatformIcon((tool as any).icon || '');
-                        setQuery(''); 
-                      } else {
-                        onAddTool(toolId, { label: toolLabel, icon: tool.icon });
-                      }
-                    }}
-                    className="w-full flex items-center gap-4 p-3.5 rounded-2xl hover:bg-foreground/[0.04] transition-all text-left group border border-transparent hover:border-border/20"
-                  >
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-border/10 shadow-sm ${toolBg} group-hover:scale-110 transition-transform`}>
-                      {typeof tool.icon === 'string' ? (
-                        <img src={tool.icon} alt={toolLabel} className="w-6 h-6 object-contain" />
-                      ) : (
-                        <Icon size={18} strokeWidth={2.5} className={toolColor} />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-black text-foreground uppercase tracking-tight truncate leading-tight">{toolLabel}</p>
-                      {tool.category && (
-                        <p className="text-[8px] uppercase font-black tracking-widest text-muted/30 mt-1">{tool.category}</p>
-                      )}
-                    </div>
-                    {tool.isGroup ? (
-                      <ChevronRight size={14} className="text-muted/20 transition-transform group-hover:translate-x-1 group-hover:text-indigo-500" />
-                    ) : (
-                      <div className="opacity-0 group-hover:opacity-100 transition-all">
-                         <div className="w-6 h-6 rounded-lg bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-                            <Plus size={12} strokeWidth={3} />
-                         </div>
+                  return (
+                    <button
+                      key={toolId || toolLabel}
+                      onClick={() => {
+                        if (tool.isGroup) {
+                          setActivePlatform(tool.id);
+                          setSelectedPlatformName(tool.label || tool.name);
+                          setSelectedPlatformIcon((tool as any).icon || '');
+                          setQuery(''); 
+                        } else {
+                          onAddTool(toolId, { label: toolLabel, icon: tool.icon });
+                        }
+                      }}
+                      className="w-full flex items-center gap-3 p-4 bg-card border border-border shadow-md rounded-2xl hover:bg-muted/50 transition-all text-left group hover:border-indigo-500/20"
+                    >
+                      <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 border border-border/40 bg-secondary group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20 transition-all shadow-sm overflow-hidden">
+                        {typeof tool.icon === 'string' ? (
+                          <img src={tool.icon} alt={toolLabel} className="w-4.5 h-4.5 object-contain" />
+                        ) : (
+                          <Icon size={14} strokeWidth={2.5} className="text-indigo-500" />
+                        )}
                       </div>
-                    )}
-                  </button>
-                );
-             })}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-bold text-foreground uppercase tracking-tight truncate leading-tight group-hover:text-indigo-500 transition-colors leading-none">{toolLabel}</p>
+                        {tool.category && (
+                          <p className="text-[8px] uppercase font-bold tracking-widest text-muted-foreground/40 mt-1 leading-none">{tool.category === 'Logic' ? 'Protocol' : tool.category}</p>
+                        )}
+                      </div>
+                      {tool.isGroup ? (
+                        <ChevronRight size={12} className="text-muted-foreground opacity-30 transition-transform group-hover:translate-x-1 group-hover:opacity-100 group-hover:text-indigo-500" />
+                      ) : (
+                        <div className="opacity-0 group-hover:opacity-100 transition-all">
+                           <div className="w-6 h-6 rounded-md bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                              <Plus size={12} strokeWidth={2.5} />
+                           </div>
+                        </div>
+                      )}
+                    </button>
+                  );
+               })}
+             </div>
              {isLoadingApps && (
-               <div className="p-6 flex items-center justify-center gap-3 text-muted/30">
-                 <Loader2 size={12} className="animate-spin text-indigo-500" />
-                 <span className="text-[9px] font-black uppercase tracking-widest italic">Syncing global registry...</span>
+               <div className="p-8 flex items-center justify-center gap-3 text-muted-foreground">
+                 <Loader2 size={14} className="animate-spin text-indigo-500" />
+                 <span className="text-[10px] font-bold uppercase tracking-widest italic">Syncing Index...</span>
                </div>
              )}
            </div>
@@ -259,33 +265,32 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
 
         {/* STANDARD CATEGORY / PLATFORM NAVIGATION */}
         {!query.trim() && (
-          <>
-            {activePlatform === '__integrations_view__' ? (
+            activePlatform === '__integrations_view__' ? (
               <div>
                 <button
                   onClick={() => {
                     setActivePlatform(null);
                     setSelectedPlatformName('');
                   }}
-                  className="w-full flex items-center gap-2 mb-4 p-3 py-2 bg-foreground/[0.03] border border-border/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted/60 hover:text-foreground hover:bg-foreground/[0.06] transition-all group"
+                  className="w-full flex items-center gap-2 mb-4 p-2.5 bg-secondary border border-border/40 rounded-lg text-[9px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted transition-all group"
                 >
-                  <ChevronLeft size={12} strokeWidth={3} className="group-hover:-translate-x-0.5 transition-transform" />
-                  Return to Core Units
+                  <ChevronLeft size={12} strokeWidth={2.5} className="group-hover:-translate-x-1 transition-transform" />
+                  Return to Core
                 </button>
 
                 {isLoadingApps && pipedreamApps.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-4 py-20">
-                    <div className="w-12 h-12 rounded-3xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20 relative">
-                       <Loader2 size={24} className="animate-spin" />
-                       <div className="absolute inset-0 rounded-3xl border border-indigo-500 animate-ping opacity-20" />
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted/40 italic">Decrypting Index...</span>
+                  <div className="flex flex-col items-center justify-center gap-4 py-24">
+                     <Loader2 size={24} className="animate-spin text-indigo-500 opacity-50" />
+                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 italic">Syncing Index...</span>
                   </div>
                 ) : (
-                  <div className="space-y-1.5">
+                  <div className="space-y-2 p-3 bg-secondary border border-border/60 rounded-3xl shadow-inner">
                     <div className="px-1 mb-4 flex flex-col gap-1">
-                       <h3 className="text-[10px] font-black text-foreground uppercase tracking-widest">Global Matrix</h3>
-                       <p className="text-[9px] text-muted/40 font-medium italic">3,100+ native logic platforms available</p>
+                       <div className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                          <h3 className="text-[11px] font-bold text-foreground uppercase tracking-widest">Global Ecosystem</h3>
+                       </div>
+                       <p className="text-[10px] text-muted-foreground font-medium italic">3,100+ native logic platforms indexed</p>
                     </div>
                     {pipedreamApps.map((app) => (
                       <button
@@ -295,24 +300,24 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
                           setSelectedPlatformName(app.name);
                           setSelectedPlatformIcon(app.icon);
                         }}
-                        className="w-full flex items-center gap-4 p-3.5 rounded-2xl hover:bg-foreground/[0.04] transition-all text-left group border border-transparent hover:border-border/10"
+                        className="w-full flex items-center gap-3 p-4 bg-card border border-border shadow-md rounded-2xl hover:bg-muted/50 transition-all text-left group hover:border-indigo-500/20"
                       >
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border border-border/10 bg-indigo-500/5 group-hover:bg-indigo-500/10 group-hover:scale-105 transition-all shadow-sm">
-                          <img src={app.icon} alt={app.name} className="w-5 h-5 object-contain" />
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border border-border/40 bg-secondary group-hover:bg-muted transition-all shadow-sm overflow-hidden p-1.5">
+                          <img src={app.icon} alt={app.name} className="w-full h-full object-contain" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[12px] font-bold text-foreground truncate uppercase tracking-tight">{app.name}</p>
+                          <p className="text-[12px] font-bold text-foreground truncate uppercase tracking-tight group-hover:text-indigo-500 transition-colors leading-none">{app.name}</p>
                         </div>
-                        <ChevronRight size={14} strokeWidth={2.5} className="text-muted/20 transition-transform group-hover:translate-x-1 group-hover:text-indigo-500" />
+                        <ChevronRight size={14} strokeWidth={2.5} className="text-muted-foreground opacity-30 transition-transform group-hover:translate-x-1 group-hover:text-indigo-500" />
                       </button>
                     ))}
 
                     {hasMore && (
                       <button
                         onClick={() => setPage(p => p + 1)}
-                        className="w-full py-5 mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-indigo-500/60 hover:text-indigo-500 hover:bg-indigo-500/5 transition-all text-center rounded-2xl border border-dashed border-indigo-500/20"
+                        className="w-full py-6 mt-4 text-[10px] font-black uppercase tracking-[0.35em] text-indigo-400 border border-dashed border-indigo-400/20 bg-card rounded-2xl shadow-sm hover:bg-indigo-400/5 transition-all text-center"
                       >
-                        {isLoadingApps ? <Loader2 size={12} className="animate-spin mx-auto" /> : 'Fetch Remaining'}
+                        {isLoadingApps ? <Loader2 size={14} className="animate-spin mx-auto" /> : 'Fetch Remaining Units'}
                       </button>
                     )}
                   </div>
@@ -322,29 +327,29 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
               <div>
                 <button
                   onClick={() => setActivePlatform('__integrations_view__')}
-                  className="w-full flex items-center gap-2 mb-4 p-3 py-2 bg-foreground/[0.03] border border-border/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted/60 hover:text-foreground hover:bg-foreground/[0.06] transition-all group"
+                  className="w-full flex items-center gap-2 mb-4 p-3 bg-secondary border border-border/40 rounded-xl text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted transition-all group"
                 >
-                  <ChevronLeft size={12} strokeWidth={3} className="group-hover:-translate-x-0.5 transition-transform" />
-                  Registry Index
+                  <ChevronLeft size={14} strokeWidth={2.5} className="group-hover:-translate-x-1 transition-transform" />
+                  Ecosystem Index
                 </button>
 
-                <div className="flex items-center gap-4 p-4 mb-6 bg-indigo-500/5 rounded-[2rem] border border-indigo-500/20">
-                   <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center p-2.5 shadow-xl shadow-indigo-500/5 border border-indigo-500/10">
+                <div className="flex items-center gap-4 p-4 mb-6 bg-indigo-500/5 rounded-xl border border-indigo-500/10 shadow-sm relative overflow-hidden">
+                   <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center p-2 shadow-sm border border-border">
                       <img src={selectedPlatformIcon} className="w-full h-full object-contain" />
                    </div>
                    <div className="flex flex-col">
-                      <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest">Platform Matrix</span>
-                      <h4 className="text-[13px] font-black text-foreground uppercase tracking-tight italic">{selectedPlatformName}</h4>
+                      <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest mb-0.5">Active Extension</span>
+                      <h4 className="text-base font-bold text-foreground uppercase tracking-tight leading-none">{selectedPlatformName}</h4>
                    </div>
                 </div>
 
                 {isLoadingTools ? (
-                  <div className="flex flex-col items-center justify-center gap-4 py-20">
+                  <div className="flex flex-col items-center justify-center gap-4 py-24">
                     <Loader2 size={24} className="animate-spin text-indigo-500" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted/30 italic">Decrypting protocols...</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 italic">Syncing Protocols...</span>
                   </div>
                 ) : (
-                  <div className="space-y-1.5">
+                  <div className="space-y-2 p-3 bg-secondary border border-border/60 rounded-3xl shadow-inner">
                     {platformTools.map((tool) => {
                       return (
                         <button
@@ -359,16 +364,16 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
                               platformName: selectedPlatformName
                             });
                           }}
-                          className="w-full flex items-start gap-4 p-4 rounded-2xl hover:bg-foreground/[0.05] transition-all text-left group border border-transparent hover:border-indigo-500/20"
+                          className="w-full flex items-start gap-4 p-4 bg-card border border-border shadow-md rounded-2xl hover:bg-muted/50 transition-all text-left group hover:border-indigo-500/20"
                         >
                           <div className="flex-1 min-w-0">
-                            <p className="text-[12px] font-black text-foreground uppercase tracking-tight leading-tight group-hover:text-indigo-500 transition-colors">{tool.name}</p>
+                            <p className="text-[12px] font-bold text-foreground uppercase tracking-tight leading-tight group-hover:text-indigo-500 transition-colors uppercase">{tool.name}</p>
                             {tool.description && (
-                              <p className="text-[9px] text-muted/40 font-medium leading-relaxed italic mt-1 line-clamp-2">{tool.description}</p>
+                              <p className="text-[10px] text-muted-foreground font-medium leading-relaxed italic mt-1.5 line-clamp-2">{tool.description}</p>
                             )}
                           </div>
-                          <div className="w-6 h-6 rounded-lg bg-foreground/[0.05] flex items-center justify-center text-muted/20 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-sm">
-                             <Plus size={12} strokeWidth={3} />
+                          <div className="w-7 h-7 rounded-lg bg-secondary border border-border/40 flex items-center justify-center text-muted-foreground group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm group-hover:scale-110 shrink-0">
+                             <Plus size={14} strokeWidth={2.5} />
                           </div>
                         </button>
                       );
@@ -379,46 +384,48 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
             ) : (
               /* MAIN REGISTRY VIEW */
               <>
-                <button
-                  onClick={() => setActivePlatform('__integrations_view__')}
-                  className="w-full flex items-center justify-between p-4 mb-8 rounded-[2rem] bg-indigo-500/5 border border-indigo-500/20 hover:bg-indigo-500/10 transition-all group relative overflow-hidden"
-                >
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/10 rounded-full -mr-10 -mt-10 blur-xl group-hover:scale-150 transition-transform duration-700" />
-                  <span className="flex items-center gap-4 flex-1 relative z-10">
-                     <div className="w-10 h-10 rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/30 flex items-center justify-center">
-                        <Zap size={18} fill="white" className="text-white" />
-                     </div>
-                     <div className="flex flex-col">
-                        <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest">Connect Matrix</span>
-                        <span className="text-[13px] font-black text-indigo-600 uppercase italic italic tracking-tight">Integrations</span>
-                     </div>
-                  </span>
-                  <div className="w-8 h-8 rounded-full border border-indigo-500/10 flex items-center justify-center transition-all group-hover:translate-x-1 relative z-10">
-                     <ChevronRight size={14} strokeWidth={3} className="text-indigo-500/40" />
-                  </div>
-                </button>
+                <div className="p-3 bg-secondary border border-border/60 rounded-3xl shadow-inner mb-10">
+                  <button
+                    onClick={() => setActivePlatform('__integrations_view__')}
+                    className="w-full flex items-center justify-between p-4 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all group relative overflow-hidden shadow-lg shadow-indigo-500/20 border border-indigo-500/30"
+                  >
+                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
+                    <div className="flex items-center gap-4 relative z-10">
+                       <div className="w-10 h-10 rounded-lg bg-white/10 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/20 group-hover:scale-110 transition-transform">
+                          <Zap size={18} fill="white" className="text-white" />
+                       </div>
+                        <div className="flex flex-col text-left">
+                          <span className="text-[9px] font-bold text-indigo-100/60 uppercase tracking-widest mb-0.5">External Extensions</span>
+                          <span className="text-lg font-bold uppercase tracking-tight leading-tight">Integrations</span>
+                       </div>
+                    </div>
+                    <div className="w-7 h-7 rounded-full bg-white/10 border border-white/20 flex items-center justify-center transition-all group-hover:translate-x-1 relative z-10">
+                       <ChevronRight size={16} strokeWidth={2.5} className="text-white" />
+                    </div>
+                  </button>
+                </div>
 
-                {categories.map(cat => {
-                  const items = (query.trim() ? filtered : (filter ? TOOL_REGISTRY.filter(filter) : TOOL_REGISTRY))
-                    .filter(t => (t as any).category === cat);
+                {virtualCategories.map(vCat => {
+                  const baseCats = vCat === 'Built-in Tools' ? ['Logic', 'Core', 'Data'] : [vCat];
+                  const items = TOOL_REGISTRY.filter(t => baseCats.includes(t.category));
                   if (items.length === 0) return null;
-                  const isCollapsed = collapsed[cat];
+                  const isCollapsed = collapsed[vCat];
 
                   return (
-                    <div key={cat} className="mb-6">
+                    <div key={vCat} className="mb-8">
                       <button
-                        onClick={() => toggle(cat)}
-                        className="w-full flex items-center justify-between px-2 mb-3 text-muted/40 font-black uppercase tracking-[0.2em] group"
+                        onClick={() => toggle(vCat)}
+                        className="w-full flex items-center justify-between px-2 mb-3 text-muted-foreground font-bold uppercase tracking-widest group"
                       >
-                        <span className="text-[9px] flex items-center gap-2 group-hover:text-foreground transition-colors">
-                           <div className="w-1 h-3 rounded-full bg-indigo-500/20 group-hover:bg-indigo-500 transition-all" />
-                           {cat}
+                        <span className="text-[10px] flex items-center gap-2 group-hover:text-foreground transition-colors">
+                           <div className={`w-1 h-3 rounded-full transition-all ${isCollapsed ? 'bg-secondary' : 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)]'}`} />
+                           {vCat}
                         </span>
-                        <ChevronDown size={12} strokeWidth={3} className={`transition-transform duration-500 ${isCollapsed ? '-rotate-90 text-muted/20' : 'text-indigo-500/20'}`} />
+                        <ChevronDown size={12} strokeWidth={2.5} className={`transition-transform duration-500 ${isCollapsed ? '-rotate-90 text-muted-foreground/20' : 'text-indigo-500'}`} />
                       </button>
 
                       {!isCollapsed && (
-                        <div className="space-y-1 mt-1">
+                        <div className="space-y-2 p-3 bg-secondary border border-border/60 rounded-3xl shadow-inner mt-2">
                           {items.map((tool: any) => {
                             const Icon = tool.icon as any;
                             const toolLabel = tool.label || tool.name;
@@ -434,23 +441,25 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
                                     onAddTool(tool.id, { label: toolLabel, icon: tool.icon });
                                   }
                                 }}
-                                className="w-full flex items-center gap-4 p-3.5 rounded-2xl hover:bg-foreground/[0.04] transition-all text-left group border border-transparent hover:border-border/10"
+                                className="w-full flex items-center gap-3 p-4 bg-card border border-border shadow-md rounded-2xl hover:bg-muted/50 transition-all text-left group hover:border-indigo-500/20"
                               >
-                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border border-border/10 shadow-sm ${tool.bg || 'bg-indigo-500/10'} group-hover:scale-105 transition-all`}>
+                                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border border-border/40 bg-secondary group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20 transition-all shadow-sm">
                                   {typeof tool.icon === 'string' ? (
                                     <img src={tool.icon} alt={toolLabel} className="w-5 h-5 object-contain" />
                                   ) : (
-                                    <Icon size={18} strokeWidth={2.5} className={tool.color || 'text-indigo-500'} />
+                                    <Icon size={16} strokeWidth={2.5} className="text-muted-foreground group-hover:text-indigo-500 transition-colors" />
                                   )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-[12px] font-bold text-foreground uppercase tracking-tight truncate leading-tight">{toolLabel}</p>
+                                  <p className="text-[12px] font-bold text-foreground uppercase tracking-tight truncate leading-tight group-hover:text-indigo-500 transition-colors leading-none">{toolLabel}</p>
                                 </div>
                                 {tool.isGroup ? (
-                                  <ChevronRight size={14} className="text-muted/20 transition-transform group-hover:translate-x-1 hover:text-indigo-500" />
+                                  <ChevronRight size={14} className="text-muted-foreground/20 transition-transform group-hover:translate-x-1 group-hover:text-indigo-500" />
                                 ) : (
                                   <div className="opacity-0 group-hover:opacity-100 transition-all">
-                                     <Plus size={14} strokeWidth={3} className="text-indigo-500/40" />
+                                     <div className="w-7 h-7 rounded-lg bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 shadow-sm group-hover:bg-indigo-600 group-hover:text-white group-hover:scale-110 transition-all">
+                                        <Plus size={14} strokeWidth={2.5} />
+                                     </div>
                                   </div>
                                 )}
                               </button>
@@ -462,9 +471,18 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
                   );
                 })}
               </>
-            )}
-          </>
+            )
         )}
+      </div>
+
+      <div className="p-4 border-t border-border/40 bg-secondary/20 block">
+        <div className="flex items-center justify-between">
+           <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest leading-none">Registry v4.1.0</span>
+           <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+              <span className="text-[9px] font-bold text-emerald-500/60 uppercase tracking-widest leading-none">Sync Active</span>
+           </div>
+        </div>
       </div>
     </aside>
   );

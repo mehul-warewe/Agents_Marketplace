@@ -38,8 +38,8 @@ export const CustomSelect = ({ value, onChange, options, placeholder = 'Select..
       <div
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`
-          flex items-center justify-between w-full px-4 py-3 bg-foreground/[0.03] border border-border/40 rounded-xl text-[12px] font-medium transition-all group cursor-pointer
-          ${isOpen ? 'border-foreground/40 ring-2 ring-foreground/5' : 'hover:border-border/80'}
+          flex items-center justify-between w-full px-3 py-2 bg-secondary border border-border/40 rounded-lg text-[12px] font-medium transition-all group cursor-pointer
+          ${isOpen ? 'border-indigo-500/40 ring-2 ring-indigo-500/5 shadow-lg shadow-indigo-500/5' : 'hover:border-border/80'}
           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         `}
       >
@@ -50,7 +50,7 @@ export const CustomSelect = ({ value, onChange, options, placeholder = 'Select..
       </div>
 
       {isOpen && (
-        <div className="absolute top-[calc(100%+6px)] left-0 w-full bg-card border border-border/60 rounded-xl shadow-2xl p-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute top-[calc(100%+6px)] left-0 w-full bg-card border border-border/60 rounded-xl shadow-2xl p-1 z-[100] animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden">
           <div className="relative mb-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted/40" size={12} />
             <input
@@ -73,7 +73,7 @@ export const CustomSelect = ({ value, onChange, options, placeholder = 'Select..
                   }}
                   className={`
                     flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all text-[11px]
-                    ${opt.id === value ? 'bg-foreground text-background font-bold' : 'hover:bg-foreground/[0.04] text-foreground/80'}
+                    ${opt.id === value ? 'bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-500/20' : 'hover:bg-muted text-foreground/80'}
                   `}
                 >
                   <span className="truncate pr-4">{opt.label}</span>

@@ -1,7 +1,6 @@
 'use client';
-
 import React, { useState } from 'react';
-import { Bot, Plus, Search, Terminal, Activity, User, ChevronRight, Zap, Target, Share2, MoreHorizontal, Settings, ShieldCheck, UserPlus, Trash2 } from 'lucide-react';
+import { Bot, Plus, Search, Terminal, Activity, User, ChevronRight, Zap, Target, Share2, MoreHorizontal, Settings, ShieldCheck, UserPlus, Trash2, Globe, Shield } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEmployees, useCreateEmployee, useDeleteEmployee } from '@/hooks/useEmployees';
 import { useAuthStore } from '@/store/authStore';
@@ -23,51 +22,56 @@ export default function EmployeeDashboard() {
   };
 
   return (
-    <div className="flex-1 text-foreground space-y-3 p-2 lg:p-4 bg-secondary/5">
-      <div className="space-y-4">
+    <div className="flex-1 text-foreground space-y-6 p-6 bg-secondary/5 h-full">
+      <div className="max-w-7xl mx-auto space-y-8">
         
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 px-1">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
            <div className="space-y-1">
-              <h1 className="text-3xl md:text-4xl font-bold font-display tracking-tight text-foreground">
-                Active Workforce
+              <div className="flex items-center gap-2 mb-2">
+                 <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20">
+                    <Bot size={16} />
+                 </div>
+                 <span className="text-[10px] font-bold text-emerald-500/60 uppercase tracking-[0.3em]">Operative Directory</span>
+              </div>
+              <h1 className="text-4xl font-bold font-display tracking-tight text-foreground">
+                Workforce Registry
               </h1>
-              <p className="text-muted-foreground font-medium text-[11px] max-w-md">
-                Manage and deploy your specialized AI agents. Each professional can be equipped with custom skills.
+              <p className="text-muted-foreground font-medium text-[12px] max-w-xl leading-relaxed">
+                Manage and deploy your specialized AI professionals. Each operative can be fine-tuned with custom domain logic and tool access.
               </p>
            </div>
            
            <Button 
               onClick={handleCreateNew}
               disabled={isCreating}
-              size="sm"
-              className="gap-2 h-9 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/20 border-none transition-all"
+              className="h-11 px-8 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-[11px] uppercase tracking-widest shadow-lg shadow-indigo-500/20 transition-all gap-3"
            >
-              {isCreating ? <Activity size={14} className="animate-spin" /> : <UserPlus size={14} strokeWidth={2.5} />} 
-              {isCreating ? 'Creating...' : 'Add Agent'}
+              {isCreating ? <Activity size={16} className="animate-spin" /> : <UserPlus size={16} strokeWidth={2.5} />} 
+              {isCreating ? 'Provisioning...' : 'Provision Operative'}
            </Button>
         </div>
 
         {/* Employees Grid */}
         {isLoading ? (
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-2">
-              {[1,2,3,4].map(i => <div key={i} className="h-48 bg-muted rounded-xl animate-pulse" />)}
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map(i => <div key={i} className="h-64 bg-card/50 border border-border/40 rounded-3xl animate-pulse" />)}
            </div>
         ) : !employees || employees.length === 0 ? (
-           <div className="flex flex-col items-center justify-center py-20 text-center px-10 border border-border border-dashed rounded-2xl mx-2 bg-card shadow-sm">
-               <div className="w-14 h-14 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-500 border border-indigo-500/20">
-                  <User size={28} />
+           <div className="flex flex-col items-center justify-center py-32 text-center px-10 border border-border border-dashed rounded-[2.5rem] bg-card/30 backdrop-blur-sm shadow-sm max-w-2xl mx-auto">
+               <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500 border border-emerald-500/20 mb-8 shadow-inner">
+                  <User size={32} />
                </div>
-              <h3 className="text-lg font-bold font-display mb-1 uppercase tracking-tight">Workforce Empty</h3>
-              <p className="text-muted-foreground mb-6 max-w-sm mx-auto text-[11px] font-medium leading-relaxed">
-                No active professionals detected. Start by creating a new agent and assigning specialized capabilities.
+              <h3 className="text-2xl font-bold font-display mb-3 text-foreground tracking-tight">Registry Empty</h3>
+              <p className="text-muted-foreground mb-10 max-w-sm mx-auto text-[13px] font-medium leading-relaxed">
+                No active professionals detected in your registry. Start by provisioning a new operative and defining their strategic capabilities.
               </p>
-               <Button onClick={handleCreateNew} disabled={isCreating} size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest h-9 px-6 transition-all shadow-lg shadow-indigo-500/20 border-none">
-                 {isCreating ? 'Preparing Workspace...' : 'Create First Agent'}
+               <Button onClick={handleCreateNew} disabled={isCreating} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-[11px] uppercase tracking-widest h-11 px-8 shadow-lg shadow-indigo-500/20">
+                 {isCreating ? 'Synchronizing Archive...' : 'Provision First Operative'}
                </Button>
            </div>
         ) : (
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-2">
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {employees.map((emp: any) => (
                  <EmployeeCard 
                     key={emp.id} 
@@ -88,57 +92,60 @@ function EmployeeCard({ employee, onClick, onDelete }: { employee: any, onClick:
   const skillCount = employee.skillIds?.length || 0;
   
   return (
-    <Card 
+    <div 
       onClick={onClick}
-      className="p-4 flex flex-col gap-4 cursor-pointer group hover:shadow-xl transition-all shadow-md relative overflow-hidden bg-card border-border/40 hover:-translate-y-1 duration-300 rounded-2xl"
+      className="group bg-card p-6 relative transition-all duration-500 rounded-3xl border border-border/40 shadow-sm hover:shadow-2xl hover:shadow-emerald-500/5 hover:-translate-y-1 flex flex-col overflow-hidden cursor-pointer"
     >
-      <div className="flex items-center justify-between shrink-0">
-         <div className="w-9 h-9 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-foreground group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm">
-            <Bot size={16} />
+      {/* Decorative Gradient */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-emerald-500/10 transition-colors" />
+
+      <div className="flex items-center justify-between shrink-0 mb-6 relative z-10">
+         <div className="w-11 h-11 rounded-2xl bg-secondary border border-border/40 flex items-center justify-center text-foreground group-hover:bg-emerald-600 group-hover:text-white group-hover:border-transparent transition-all duration-500 shadow-inner group-hover:rotate-3">
+            <Bot size={20} />
          </div>
-         <div className="flex items-center gap-1.5">
-            <div className={`px-2 py-0.5 rounded-md border text-[8px] font-bold uppercase shadow-xs tracking-widest ${employee.isPublished ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-500' : 'bg-muted-foreground/10 border-muted-foreground/20 text-muted-foreground'}`}>
-               {employee.isPublished ? 'Published' : 'Draft'}
+         <div className="flex items-center gap-2 relative z-10">
+            <div className={`px-2 py-0.5 rounded-md border text-[9px] font-bold uppercase tracking-widest ${employee.isPublished ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-500' : 'bg-muted-foreground/10 border-muted-foreground/20 text-muted-foreground'}`}>
+               {employee.isPublished ? 'Marketplace Live' : 'Internal Draft'}
             </div>
             <button 
-              onClick={(e) => { e.stopPropagation(); if(confirm('Remove this agent?')) onDelete(); }}
-              className="p-1.5 rounded-lg text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+              onClick={(e) => { e.stopPropagation(); if(confirm('Sync removal of this professional unit?')) onDelete(); }}
+              className="p-2 rounded-xl text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
             >
-               <Trash2 size={14} />
+               <Trash2 size={15} />
             </button>
          </div>
       </div>
 
-      <div className="space-y-1 min-h-[60px]">
+      <div className="space-y-2 mb-6 relative z-10">
          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold font-display tracking-tight text-foreground truncate">{employee.name}</h3>
-            <span className="text-[8px] px-1.5 py-0.5 bg-secondary rounded font-mono text-muted-foreground uppercase">{modelName}</span>
+            <h3 className="text-lg font-bold font-display tracking-tight text-foreground truncate group-hover:text-emerald-500 transition-colors">{employee.name}</h3>
+            <span className="text-[9px] px-2 py-0.5 bg-secondary border border-border/40 rounded font-mono text-muted-foreground uppercase">{modelName}</span>
          </div>
-         <p className="text-[10px] text-muted-foreground font-medium line-clamp-2 leading-relaxed">
-            {employee.description || "No professional summary defined for this agent."}
+         <p className="text-[12px] text-muted-foreground font-medium line-clamp-2 leading-relaxed">
+            {employee.description || "No strategic operational summary defined for this professional."}
          </p>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2 mb-8 relative z-10">
          {skillCount > 0 ? (
-            <div className="flex items-center gap-2 px-2 py-1 bg-secondary/80 border border-border/60 rounded-md text-[9px] font-bold text-foreground/50 shadow-xs uppercase tracking-tighter">
-               <Zap size={10} className="text-indigo-500" /> {skillCount} Specialized Tools
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-[10px] font-bold text-emerald-600 shadow-xs uppercase tracking-tight">
+               <Zap size={12} strokeWidth={2.5} /> {skillCount} Domain Capabilities
             </div>
          ) : (
-            <div className="w-full px-2 py-1.5 bg-secondary/50 border border-border border-dashed rounded-lg text-[9px] font-bold text-muted-foreground/30 flex items-center gap-2 uppercase tracking-widest">
-               <Target size={12} /> No skills assigned
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/50 border border-border border-dashed rounded-xl text-[10px] font-bold text-muted-foreground/30 uppercase tracking-tight">
+               <Target size={12} /> No capabilities mapped
             </div>
          )}
       </div>
 
-      <div className="pt-3 mt-auto border-t border-border/5 flex items-center justify-between">
-         <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-foreground/40">
-            <span>#{employee.id.slice(0, 4)}</span>
+      <div className="pt-5 mt-auto border-t border-border/5 flex items-center justify-between relative z-10">
+         <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-foreground/20">
+            <Shield size={12} /> Verified Unit
          </div>
-         <div className="flex items-center gap-1 text-indigo-500 font-bold text-[9px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
-            Architect <ChevronRight size={12} strokeWidth={3} />
+         <div className="flex items-center gap-1.5 text-emerald-500 font-bold text-[10px] uppercase tracking-widest opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-300">
+            Architect <ChevronRight size={14} strokeWidth={3} />
          </div>
       </div>
-    </Card>
+    </div>
   );
 }

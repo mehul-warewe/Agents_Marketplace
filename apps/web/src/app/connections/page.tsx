@@ -28,6 +28,7 @@ import {
   ArrowRight,
   MoreVertical
 } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 const iconMap: Record<string, any> = {};
 
@@ -35,7 +36,6 @@ function ConnectedAppIcon({ slug, appId, defaultLogo, className }: any) {
   const { data: appMeta } = usePipedreamAppDetails(slug);
   const [fallbackIndex, setFallbackIndex] = useState(0);
 
-  // Pipedream API response can have logo_url or icon depending on which endpoint we hit
   const finalLogo = appMeta?.logo_url || appMeta?.icon || defaultLogo;
   const finalAppId = appMeta?.id || appId;
 
@@ -79,12 +79,14 @@ function ActiveConnectionCard({ cred, schemas, onDelete, iconMap, isDeleting }: 
   const mappedIcon = iconMap[slug];
 
   return (
-    <div className={`bg-card rounded-xl border border-border/40 p-2 flex items-center gap-3 group relative transition-all duration-300 shadow-sm hover:shadow-md hover:border-indigo-500/20 ${isDeleting ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
+    <div className={`group bg-card p-4 relative transition-all duration-500 rounded-3xl border border-border/40 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/5 hover:-translate-y-1 flex items-center gap-4 overflow-hidden ${isDeleting ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
+      {/* Decorative Gradient */}
+      <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-indigo-500/10 transition-colors" />
       
-      {/* Big Logo Left */}
-      <div className="size-8 rounded-lg border flex items-center justify-center bg-secondary border-border/40 text-foreground shadow-inner overflow-hidden p-1.5 shrink-0 relative z-10">
+      {/* App Logo */}
+      <div className="size-10 rounded-xl border flex items-center justify-center bg-secondary border-border/40 text-foreground shadow-inner overflow-hidden p-2 shrink-0 relative z-10 group-hover:rotate-3 transition-transform duration-500">
         {isDeleting ? (
-           <RefreshCw size={14} className="animate-spin text-primary/40" />
+           <RefreshCw size={14} className="animate-spin text-indigo-500/40" />
         ) : mappedIcon ? (
            React.cloneElement(mappedIcon as any, { className: 'w-full h-full object-contain' })
         ) : (
@@ -99,24 +101,24 @@ function ActiveConnectionCard({ cred, schemas, onDelete, iconMap, isDeleting }: 
         )}
       </div>
 
-      <div className="flex flex-col flex-1 min-w-0 pr-4 relative z-10">
-        <h3 className="text-[11px] font-bold font-display tracking-tight truncate leading-tight">
+      <div className="flex flex-col flex-1 min-w-0 relative z-10">
+        <h3 className="text-[12px] font-bold font-display tracking-tight truncate leading-tight group-hover:text-indigo-500 transition-colors">
           {(cred.isPipedream ? cred.platformName : (schemas?.[cred.type]?.label || cred.platformName || cred.type.toUpperCase())).split(' ').map((s: string) => (s && s[0]) ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s).join(' ')}
         </h3>
 
         {cred.name && cred.name.toLowerCase() !== (cred.platformName || '').toLowerCase() && (
-          <p className="text-[8px] font-medium text-muted-foreground truncate opacity-70 leading-relaxed">
+          <p className="text-[10px] font-medium text-muted-foreground truncate opacity-70 leading-relaxed">
             {cred.name}
           </p>
         )}
       </div>
 
-      <div className="relative z-20" ref={dropdownRef}>
+      <div className="relative z-20 shrink-0" ref={dropdownRef}>
         <button 
           onClick={() => setShowOptions(!showOptions)}
-          className="w-8 h-8 rounded-lg hover:bg-secondary/50 flex items-center justify-center text-muted-foreground/40 hover:text-foreground transition-all active:scale-95"
+          className="w-9 h-9 rounded-xl hover:bg-secondary flex items-center justify-center text-muted-foreground/30 hover:text-foreground transition-all active:scale-90"
         >
-          <MoreVertical size={16} />
+          <MoreVertical size={16} strokeWidth={2.5} />
         </button>
 
         <AnimatePresence>
@@ -125,19 +127,19 @@ function ActiveConnectionCard({ cred, schemas, onDelete, iconMap, isDeleting }: 
               initial={{ opacity: 0, scale: 0.95, y: -10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -10 }}
-              className="absolute right-0 mt-2 w-48 bg-card border border-border/60 rounded-xl shadow-2xl z-50 overflow-hidden py-1"
+              className="absolute right-0 mt-2 w-48 bg-card border border-border/60 rounded-xl shadow-2xl z-50 overflow-hidden py-1 p-1"
             >
                <button 
                  onClick={() => {
-                   if (confirm('Are you sure you want to remove this connection?')) {
+                   if (confirm('Sync removal of this integration node?')) {
                      onDelete();
                    }
                    setShowOptions(false);
                  }}
-                 className="w-full px-4 py-2.5 text-left text-xs font-bold text-red-500 hover:bg-red-500/5 flex items-center gap-2 transition-colors"
+                 className="w-full px-4 py-3 text-left text-[10px] font-bold text-red-500 hover:bg-red-500/5 flex items-center gap-3 transition-colors rounded-lg uppercase tracking-widest"
                >
-                 <Trash2 size={12} />
-                 Remove Connection
+                 <Trash2 size={14} />
+                 Remove Bridge
                </button>
             </motion.div>
           )}
@@ -150,11 +152,14 @@ function ActiveConnectionCard({ cred, schemas, onDelete, iconMap, isDeleting }: 
 function MarketplaceCard({ id, name, icon, logoUrl, isConnected, onClick, type = 'platform' }: any) {
   return (
     <motion.button 
-      whileHover={{ y: -2 }}
+      whileHover={{ y: -4 }}
       onClick={onClick}
-      className="bg-card rounded-2xl border border-border/40 p-3 flex flex-col items-center justify-center text-center group relative transition-all duration-300 shadow-sm hover:shadow-md hover:border-indigo-500/30"
+      className="group bg-card rounded-[2rem] border border-border/40 p-5 flex flex-col items-center justify-center text-center relative transition-all duration-500 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 hover:border-indigo-500/30 overflow-hidden"
     >
-      <div className="size-10 rounded-xl bg-secondary border border-border/40 flex items-center justify-center text-foreground group-hover:scale-110 transition-all mb-2 relative z-10 p-2 shadow-inner overflow-hidden">
+      {/* Decorative gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+
+      <div className="size-14 rounded-2xl bg-secondary border border-border/40 flex items-center justify-center text-foreground group-hover:rotate-6 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 mb-4 relative z-10 p-3 shadow-inner overflow-hidden">
          <div className="w-full h-full relative flex items-center justify-center">
             {icon ? (
               React.cloneElement(icon as any, { className: 'w-full h-full object-contain' })
@@ -166,33 +171,30 @@ function MarketplaceCard({ id, name, icon, logoUrl, isConnected, onClick, type =
                  onError={(e: any) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
                />
                <div className="absolute inset-0 items-center justify-center bg-secondary hidden">
-                  <Plus size={16} className="text-muted-foreground/20" />
+                  <Plus size={20} className="text-muted-foreground/20" />
                </div>
              </>
            )}
          </div>
       </div>
       
-      <h3 className="text-[10px] font-bold font-display text-foreground mb-3 relative z-10 truncate w-full px-1">
+      <h3 className="text-[11px] font-bold font-display text-foreground mb-4 relative z-10 truncate w-full px-1 uppercase tracking-tight group-hover:text-indigo-500 transition-colors">
         {name}
       </h3>
 
-      <div className={`w-full flex items-center justify-center gap-1 text-[8px] font-bold uppercase tracking-wider px-2 py-1 relative z-10 rounded-lg border transition-all ${isConnected ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 opacity-80' : 'bg-secondary border-border/40 text-muted-foreground group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 shadow-sm'}`}>
+      <div className={`w-full flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.05em] px-4 py-2 relative z-10 rounded-xl border transition-all duration-300 ${isConnected ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-secondary border-border/40 text-muted-foreground group-hover:bg-indigo-600 group-hover:text-white group-hover:border-transparent group-hover:shadow-lg group-hover:shadow-indigo-500/20 shadow-inner'}`}>
         {isConnected ? (
           <>
-            <CheckCircle2 size={12} className="fill-current" />
+            <CheckCircle2 size={12} strokeWidth={3} />
             Connected
           </>
         ) : (
           <>
-            <Plus size={12} strokeWidth={2.5} />
+            <Link2 size={12} strokeWidth={3} />
             Connect
           </>
         )}
       </div>
-
-      {/* Decorative gradient highlight on hover */}
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl pointer-events-none" />
     </motion.button>
   );
 }
@@ -248,9 +250,7 @@ export default function ConnectionsPage() {
 
   const allPlatforms = pdPages?.pages.flatMap(page => page.results) || [];
 
-  // Merge native and Pipedream accounts
   const unifiedBridges = useMemo(() => {
-    // Create a lookup map from marketplace platforms for high-quality logos and accurate names
     const platformMetaMap: Record<string, { logoUrl: string, name: string, icon?: string }> = {};
     allPlatforms.forEach((app: any) => {
       platformMetaMap[app.slug] = {
@@ -309,7 +309,7 @@ export default function ConnectionsPage() {
         logoUrl: logoUrl
       };
     });
-
+ 
     return [...native, ...pd];
   }, [credentials, pdAccounts, allPlatforms, schemas]);
 
@@ -349,110 +349,97 @@ export default function ConnectionsPage() {
     exploreRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handlePlatformClick = (key: string, s: any) => {
-    if (key.includes('oauth')) {
-       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-       const authUrl = new URL(`${apiUrl}/credentials/oauth/${key.split('_')[0]}`);
-       const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-       if (token) authUrl.searchParams.set('token', token);
-       window.open(authUrl.toString(), `Connect`, `width=600,height=700`);
-    } else {
-      setSelectedType(key);
-      setCredName(s.label.toUpperCase());
-      setIsModalOpen(true);
-    }
-  };
-
   return (
     <SidebarLayout title="Integrations">
-      <div className="flex-1 text-foreground space-y-3 p-2 lg:p-4 bg-secondary/5">
-        <div className="space-y-4">
+       <div className="flex-1 text-foreground space-y-6 p-6 bg-secondary/5 h-full overflow-y-auto no-scrollbar">
+        <div className="max-w-7xl mx-auto space-y-8">
           
-          {/* Header */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 px-1">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
              <div className="space-y-1">
-                <h1 className="text-3xl md:text-4xl font-bold font-display tracking-tight text-foreground">
-                  Cloud Integrations
+                <div className="flex items-center gap-2 mb-2">
+                   <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20 font-display">
+                      <Link size={16} />
+                   </div>
+                   <span className="text-[10px] font-bold text-indigo-500/60 uppercase tracking-[0.3em]">Authentication Hub</span>
+                </div>
+                <h1 className="text-4xl font-bold font-display tracking-tight text-foreground">
+                  Control Center
                 </h1>
-                <p className="text-muted-foreground font-medium text-[11px] max-w-md">
-                   Securely bridge your professional credentials to authorize workforce operations across external platforms.
+                <p className="text-muted-foreground font-medium text-[12px] max-w-xl leading-relaxed">
+                   Manage and monitor secure authenticated bridges to external platforms and internal workforce services.
                 </p>
              </div>
              
-             <button
+             <Button
                 onClick={scrollToExplore}
-                className="h-9 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/20 border-none transition-all flex items-center gap-2"
+                className="h-11 px-8 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-[11px] uppercase tracking-widest shadow-lg shadow-indigo-500/20 transition-all gap-3"
              >
-                <Plus size={14} strokeWidth={2.5} /> Marketplace
-             </button>
+                <Plus size={16} strokeWidth={2.5} /> Marketplace
+             </Button>
           </div>
 
-        {/* Active Connections */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between px-2">
-            <div className="flex items-center gap-3">
-              <Activity size={16} className="text-indigo-500/60" />
-              <h2 className="text-lg font-bold font-display tracking-tight text-foreground uppercase tracking-wider">Active</h2>
-            </div>
-            {unifiedBridges.length > 0 && (
-              <span className="text-[9px] font-bold px-2 py-0.5 bg-indigo-500/5 text-indigo-500 border border-indigo-500/20 rounded-lg uppercase tracking-widest">
-                {unifiedBridges.length} Enabled
-              </span>
-            )}
-          </div>
+          {/* Active Connections */}
+          <section className="space-y-5">
+             <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-3">
+                   <ShieldCheck size={16} className="text-emerald-500/60" />
+                   <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/40">Active Integration Nodes</h2>
+                </div>
+                {unifiedBridges.length > 0 && (
+                   <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-bold uppercase tracking-widest">
+                      {unifiedBridges.length} Secure Bridges
+                   </div>
+                )}
+             </div>
 
-          {(loadingCreds || loadingPdAccounts) ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-2">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-32 bg-secondary/40 border border-border rounded-xl animate-pulse" />
-              ))}
-            </div>
-          ) : unifiedBridges.length === 0 ? (
-            <div className="bg-secondary/40 rounded-2xl border border-border/40 border-dashed py-16 flex flex-col items-center justify-center text-center space-y-4 px-8 mx-2 group overflow-hidden">
-              <div className="w-12 h-12 bg-card rounded-xl flex items-center justify-center text-muted-foreground/20 border border-border/20 group-hover:scale-110 transition-transform shadow-sm">
-                <Link2 size={24} strokeWidth={1} />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-bold font-display text-foreground/40 uppercase tracking-tight">Empty Registry</h3>
-                <p className="text-muted-foreground font-medium text-[10px] max-w-xs leading-relaxed">Browse the marketplace below to initiate your first secure account link.</p>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 px-2">
-              {unifiedBridges.map((cred: any) => (
-                <ActiveConnectionCard 
-                  key={cred.id} 
-                  cred={cred} 
-                  schemas={schemas} 
-                  onDelete={() => handleDelete(cred.id, cred.isPipedream)} 
-                  iconMap={iconMap} 
-                  isDeleting={deletingId === cred.id}
-                />
-              ))}
-            </div>
-          )}
-        </section>
+             {loadingCreds || loadingPdAccounts ? (
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[1, 2, 3, 4].map(i => <div key={i} className="h-20 bg-card/40 border border-border/40 rounded-3xl animate-pulse" />)}
+               </div>
+             ) : unifiedBridges.length === 0 ? (
+               <div className="flex flex-col items-center justify-center py-20 text-center px-10 border border-border border-dashed rounded-3xl bg-card/30 backdrop-blur-sm max-w-lg mx-auto">
+                   <div className="w-12 h-12 bg-secondary/50 rounded-2xl flex items-center justify-center text-muted-foreground/30 border border-border/40 mb-6 font-display">
+                      <Link size={24} />
+                   </div>
+                   <h3 className="text-lg font-bold font-display mb-2 text-foreground uppercase tracking-tight">Node Registry Empty</h3>
+                   <p className="text-muted-foreground mb-8 text-[11px] font-medium leading-relaxed max-w-xs mx-auto">
+                      No secure bridges have been established. Browse the integration marketplace below to authorize external platforms.
+                   </p>
+                   <Button onClick={scrollToExplore} variant="outline" className="text-[10px] font-bold uppercase tracking-widest h-9 px-6 rounded-xl border-border/60">
+                      Explore Marketplace
+                   </Button>
+               </div>
+             ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {unifiedBridges.map((cred: any) => (
+                    <ActiveConnectionCard 
+                      key={cred.id} 
+                      cred={cred} 
+                      schemas={schemas} 
+                      iconMap={iconMap}
+                      isDeleting={deletingId === cred.id}
+                      onDelete={() => handleDelete(cred.id, cred.isPipedream)} 
+                    />
+                  ))}
+                </div>
+             )}
+          </section>
 
-        {/* Marketplace */}
-        <section ref={exploreRef} className="space-y-6 pb-20">
-          <div className="space-y-6">
-            <div className="flex flex-col gap-6">
-              {/* Marketplace Stats & Search */}
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2 pt-6">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 shadow-sm">
-                      <Layers size={18} />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold font-display tracking-tight text-foreground uppercase tracking-wider">Marketplace</h2>
-                      <p className="text-muted-foreground font-medium text-[10px] flex items-center gap-2 mt-0.5 uppercase tracking-widest">
-                        Bridge 100+ native agent skills 
-                        <span className="w-1 h-1 rounded-full bg-border" />
-                        <span className="text-indigo-500/60">New platforms weekly</span>
-                      </p>
-                    </div>
+          {/* Marketplace section */}
+          <section ref={exploreRef} className="space-y-8 pt-10 pb-20 border-t border-border/5">
+            <div className="space-y-8">
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-1">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 mb-2">
+                     <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20 font-display">
+                        <Layers size={16} />
+                     </div>
+                     <span className="text-[10px] font-bold text-indigo-500/60 uppercase tracking-[0.3em]">Module Registry</span>
                   </div>
+                  <h2 className="text-3xl font-bold font-display tracking-tight text-foreground">Platform Marketplace</h2>
+                  <p className="text-muted-foreground font-medium text-[12px] flex items-center gap-2 mt-0.5 leading-relaxed">
+                    Bridge over 100+ native agent tools and cloud services.
+                  </p>
                 </div>
                 
                 <div className="relative min-w-full md:min-w-[400px] group">
@@ -464,108 +451,122 @@ export default function ConnectionsPage() {
                         onFocus={() => setSearchFocused(true)}
                         onBlur={() => setSearchFocused(false)}
                         onChange={e => setSearchQuery(e.target.value)}
-                        placeholder="Search for tools..."
-                        className="w-full h-10 bg-card border border-border/60 rounded-xl px-11 text-xs font-bold text-foreground outline-none focus:ring-0 transition-all shadow-lg placeholder:text-muted-foreground/30"
+                        placeholder="Search integration catalog..."
+                        className="w-full h-11 bg-card border border-border/60 rounded-2xl px-12 text-[12px] font-bold text-foreground outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-sm group-hover:shadow-lg placeholder:text-muted-foreground/30"
                       />
                    </div>
                 </div>
               </div>
 
-              {/* Category Chips */}
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 px-2">
+               <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 px-1">
                 {categories.map(cat => (
                   <button
                     key={cat}
                     onClick={() => setActiveCategory(cat)}
-                    className={`px-4 py-1.5 rounded-lg font-bold text-[8px] uppercase tracking-widest transition-all whitespace-nowrap border ${activeCategory === cat ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-secondary/40 text-muted-foreground border-border/40 hover:bg-secondary hover:text-foreground'}`}
+                    className={`px-5 py-2 rounded-xl font-bold text-[9px] uppercase tracking-widest transition-all whitespace-nowrap border ${activeCategory === cat ? 'bg-indigo-600 text-white border-indigo-600 shadow-xl shadow-indigo-600/20' : 'bg-card text-muted-foreground border-border/40 hover:bg-secondary hover:text-foreground'}`}
                   >
                     {cat}
                   </button>
                 ))}
               </div>
-            </div>
 
-            {/* Marketplace Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-              {/* Pipedream Apps */}
-              {allPlatforms.map((app: any) => (
-                <MarketplaceCard 
-                  key={app.id}
-                  name={app.name}
-                  logoUrl={`https://assets.pipedream.net/s.v0/${app.id}/logo/orig`}
-                  isConnected={connectedTypesSet.has(`pd:${app.slug}`)}
-                  onClick={() => handlePipedreamConnect(app)}
-                />
-              ))}
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
+                {allPlatforms.map((app: any) => (
+                  <MarketplaceCard 
+                    key={app.id}
+                    name={app.name}
+                    logoUrl={`https://assets.pipedream.net/s.v0/${app.id}/logo/orig`}
+                    isConnected={connectedTypesSet.has(`pd:${app.slug}`)}
+                    onClick={() => handlePipedreamConnect(app)}
+                  />
+                ))}
 
-              {/* Loading Skeletons */}
-              {isLoadingPd && [1, 2, 3, 4, 5, 6].map(i => (
-                <div key={i} className="h-40 bg-secondary/20 rounded-2xl border border-border border-dashed animate-pulse" />
-              ))}
-            </div>
-
-            {hasNextPage && !searchQuery && (
-              <div className="flex justify-center py-10">
-                <button 
-                  onClick={() => fetchNextPage()} 
-                  disabled={isFetchingNextPage}
-                  className="group relative px-10 py-4 rounded-xl bg-secondary border border-border/60 overflow-hidden transition-all hover:border-indigo-500/30"
-                >
-                  <div className="relative flex items-center gap-3 font-bold text-[11px] uppercase tracking-widest text-foreground">
-                    {isFetchingNextPage ? 'Syncing...' : 'Show More Tools'}
-                  </div>
-                </button>
+                {isLoadingPd && [1, 2, 3, 4, 5, 6].map(i => (
+                  <div key={i} className="h-44 bg-card/40 rounded-[2rem] border border-border/40 border-dashed animate-pulse" />
+                ))}
               </div>
-            )}
-          </div>
-        </section>
 
+              {hasNextPage && !searchQuery && (
+                <div className="flex justify-center py-12">
+                  <Button 
+                    onClick={() => fetchNextPage()} 
+                    disabled={isFetchingNextPage}
+                    variant="outline"
+                    className="h-12 px-10 rounded-2xl font-bold text-[11px] uppercase tracking-widest border-border/60 hover:bg-secondary hover:text-white transition-all shadow-xl shadow-black/5"
+                  >
+                    {isFetchingNextPage ? <Activity size={14} className="animate-spin mr-3" /> : <RefreshCw size={14} className="mr-3" />}
+                    {isFetchingNextPage ? 'Retrieving Protocols...' : 'Show More Tools'}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-            <div className="absolute inset-0 bg-transparent" onClick={() => setIsModalOpen(false)} />
-            <div className="bg-card w-full max-w-md rounded-2xl border border-border/60 shadow-2xl overflow-hidden relative z-10 animate-in fade-in zoom-in-95 duration-500">
-              <div className="p-6 border-b border-border/40 relative bg-secondary/30">
-                <button onClick={() => setIsModalOpen(false)} className="absolute top-6 right-6 w-8 h-8 rounded-lg bg-card hover:bg-muted flex items-center justify-center text-muted-foreground transition-all border border-border/10">
-                  <X size={16} strokeWidth={2.5} />
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-background/80 backdrop-blur-xl" 
+              onClick={() => setIsModalOpen(false)} 
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-card w-full max-w-lg rounded-[2.5rem] border border-border/40 shadow-2xl overflow-hidden relative z-10 duration-500"
+            >
+              <div className="p-10 border-b border-border/40 relative bg-secondary/30">
+                <button onClick={() => setIsModalOpen(false)} className="absolute top-10 right-10 w-10 h-10 rounded-xl bg-card hover:bg-foreground hover:text-background flex items-center justify-center transition-all border border-border/40 shadow-sm">
+                  <X size={20} strokeWidth={2.5} />
                 </button>
-                <div className="flex items-center gap-2 mb-2">
-                   <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                   <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Setup</span>
+                <div className="flex items-center gap-2 mb-3">
+                   <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20 font-display">
+                      <Sparkles size={16} />
+                   </div>
+                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">Authorization Bridge</span>
                 </div>
-                <h2 className="text-lg font-bold font-display text-foreground tracking-tight uppercase tracking-wider">
-                  {selectedType ? schemas?.[selectedType]?.label : 'Protocol'}
+                <h2 className="text-3xl font-bold font-display text-foreground tracking-tight uppercase tracking-tight">
+                  {selectedType ? (schemas?.[selectedType]?.label || selectedType) : 'Platform'}
                 </h2>
               </div>
-              <div className="p-8 max-h-[70vh] overflow-y-auto no-scrollbar">
+              <div className="p-10 max-h-[70vh] overflow-y-auto no-scrollbar">
                 {selectedType && (
                   <form onSubmit={(e) => {
                     e.preventDefault();
+                    if (!credName) return;
                     createCredential.mutate({ name: credName, type: selectedType, data: formData });
                     setIsModalOpen(false);
-                  }} className="space-y-6">
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Alias</label>
-                      <input required type="text" value={credName} onChange={e => setCredName(e.target.value)} className="w-full bg-secondary border border-border/40 rounded-xl px-4 py-2.5 text-[11px] font-bold text-foreground outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all" placeholder="e.g. Production" />
+                  }} className="space-y-8">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ml-1">Alias Identifier</label>
+                      <input required type="text" value={credName} onChange={e => setCredName(e.target.value)} className="w-full bg-secondary border border-border/40 rounded-2xl px-6 py-4 text-[13px] font-bold text-foreground outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-inner" placeholder="e.g. Master Production Key" />
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                        {schemas?.[selectedType]?.fields.map((f: any) => (
-                        <div key={f.key} className="space-y-2">
-                          <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest ml-1">{f.label}</label>
-                          <input required type={f.type === 'password' ? 'password' : 'text'} value={formData[f.key] || ''} onChange={e => setFormData({ ...formData, [f.key]: e.target.value })} className="w-full bg-secondary border border-border/40 rounded-xl px-4 py-2.5 text-[11px] font-bold text-foreground outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all" placeholder={`Enter ${f.label.toLowerCase()}...`} />
+                        <div key={f.key} className="space-y-3">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ml-1">{f.label}</label>
+                          <input required type={f.type === 'password' ? 'password' : 'text'} value={formData[f.key] || ''} onChange={e => setFormData({ ...formData, [f.key]: e.target.value })} className="w-full bg-secondary border border-border/40 rounded-2xl px-6 py-4 text-[13px] font-bold text-foreground outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-inner" placeholder={`Enter ${f.label.toLowerCase()}...`} />
                         </div>
                       ))}
                     </div>
-                    <div className="pt-4">
-                       <button type="submit" className="w-full bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/20 hover:opacity-90 transition-all border-none">Enable Bridge</button>
+                    <div className="pt-6">
+                       <Button type="submit" className="w-full bg-indigo-600 text-white h-14 rounded-2xl font-bold text-[11px] uppercase tracking-widest shadow-xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all border-none">
+                          Establish secure bridge
+                          <ArrowRight size={16} className="ml-3" strokeWidth={3} />
+                       </Button>
                     </div>
                   </form>
                 )}
               </div>
-            </div>
+            </motion.div>
           </div>
         )}
-      </div>
-    </div>
+      </AnimatePresence>
     </SidebarLayout>
   );
 }

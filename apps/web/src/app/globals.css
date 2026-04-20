@@ -6,19 +6,19 @@
 
 /* ─── Design Tokens (New Style) ─────────────────────────── */
 :root {
-  --background: #e2e8f0; 
-  --foreground: #030213;
+  --background: #f8fafc; 
+  --foreground: #0f172a;
   --card: #ffffff;
-  --card-border: rgba(0, 0, 0, 0.06);
-  --muted: #ebedf0;
-  --secondary: #f1f3f5;
-  --primary: #030213;
+  --card-border: #e2e8f0;
+  --muted: #f1f5f9;
+  --secondary: #f1f5f9;
+  --primary: #0f172a;
   --primary-foreground: #ffffff;
-  --accent: #e5e7eb;
-  --accent-foreground: #030213;
-  --border: rgba(0, 0, 0, 0.08);
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --border: #e2e8f0;
   --sidebar: #ffffff;
-  --sidebar-border: rgba(0, 0, 0, 0.08);
+  --sidebar-border: #e2e8f0;
   --radius: 0.625rem;   
   --radius-lg: 0.75rem;
   --radius-md: 0.625rem;
@@ -32,9 +32,9 @@
 }
 
 .dark {
-  --background: #080809; 
+  --background: #070708; 
   --foreground: #fcfcfc;
-  --card: #121213;      
+  --card: #0f0f11;      
   --card-border: #1d1d1f;
   --muted: #1d1d1f;     
   --secondary: #161617;
@@ -43,7 +43,7 @@
   --accent: #1d1d1f;    
   --accent-foreground: #fcfcfc;
   --border: #1d1d1f;
-  --sidebar: #121213;
+  --sidebar: #0f0f11;
   --sidebar-border: #1d1d1f;
 }
 
@@ -57,7 +57,7 @@
   --primary-foreground: #ffffff;
   --accent: #e9ebef;
   --accent-foreground: #030213;
-  --border: rgba(0, 0, 0, 0.1);
+  --border: #e2e8f0;
   --radius: 0.625rem;
   
   background-color: var(--background);
@@ -65,9 +65,9 @@
 }
 
 .dark .theme-demo {
-  --background: #111111;
+  --background: #070708;
   --foreground: #fcfcfc;
-  --card: #151515;
+  --card: #0f0f11;
   --muted: #262626;
   --primary: #fcfcfc;
   --primary-foreground: #111111;
@@ -79,7 +79,7 @@
 /* ─── Base Styles ────────────────────────────────────────── */
 * {
   border-color: var(--border);
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 200ms;
 }
@@ -129,20 +129,20 @@ body {
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
   }
 
-  .glass-card {
-    background: color-mix(in srgb, var(--card) 80%, transparent);
-    backdrop-filter: blur(12px);
-    border: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  .matte-card {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
   }
 
-  /* Opacity variants */
-  .bg-foreground\/2 { background-color: color-mix(in srgb, var(--foreground) 2%, transparent); }
-  .bg-foreground\/5 { background-color: color-mix(in srgb, var(--foreground) 5%, transparent); }
-  .bg-foreground\/10 { background-color: color-mix(in srgb, var(--foreground) 10%, transparent); }
-  .bg-accent\/10 { background-color: color-mix(in srgb, var(--accent) 10%, transparent); }
-  .bg-accent\/20 { background-color: color-mix(in srgb, var(--accent) 20%, transparent); }
-  .border-accent\/20 { border-color: color-mix(in srgb, var(--accent) 20%, transparent); }
-  .border-foreground\/10 { border-color: color-mix(in srgb, var(--foreground) 10%, transparent); }
+  /* Opacity variants - using solid compute */
+  .bg-foreground\/2 { background-color: color-mix(in srgb, var(--foreground) 2%, var(--background)); }
+  .bg-foreground\/5 { background-color: color-mix(in srgb, var(--foreground) 5%, var(--background)); }
+  .bg-foreground\/10 { background-color: color-mix(in srgb, var(--foreground) 10%, var(--background)); }
+  .bg-accent\/10 { background-color: color-mix(in srgb, var(--accent) 10%, var(--background)); }
+  .bg-accent\/20 { background-color: color-mix(in srgb, var(--accent) 20%, var(--background)); }
+  .border-accent\/20 { border-color: color-mix(in srgb, var(--accent) 20%, var(--border)); }
+  .border-foreground\/10 { border-color: color-mix(in srgb, var(--foreground) 10%, var(--border)); }
 
   /* Text balance */
   .text-balance { text-wrap: balance; }

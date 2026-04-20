@@ -8,9 +8,9 @@ export const ifNode: NodeDefinition = {
   variant: 'connector', 
   description: 'A binary router that directs the workflow to either the True or False path.',
   icon: 'Signpost',
-  color: '#408000',
-  bg: 'bg-[#408000]/5',
-  border: 'border-[#408000]/30',
+  color: 'text-indigo-500',
+  bg: 'bg-indigo-500/10',
+  border: 'border-indigo-500/20',
   isTrigger: false,
   executionKey: 'logic_if',
   inputs: [

@@ -10,7 +10,8 @@ router.use(passport.authenticate('jwt', { session: false }));
 
 router.get('/', async (req, res, next) => {
   try {
-    const models = await modelsService.listModels();
+    const provider = (req.query.provider as string) || 'openrouter';
+    const models = await modelsService.listModels(provider);
     res.json(models);
   } catch (err) {
     next(err);

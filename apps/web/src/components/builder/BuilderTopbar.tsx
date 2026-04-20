@@ -107,7 +107,7 @@ export default function BuilderTopbar({
           className="flex items-center gap-2 px-5 py-2 hover:bg-secondary rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all border border-border/40 disabled:opacity-40"
         >
           {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} strokeWidth={2.5} />}
-          {isEmployeeMode ? 'Initialize' : (isEditMode ? 'Save Changes' : 'Deploy')}
+          {isEmployeeMode ? 'Provision Unit' : (isEditMode ? 'Save Changes' : 'Deploy')}
         </button>
 
         <div className="h-4 w-px bg-border/40 mx-2 hidden sm:block" />

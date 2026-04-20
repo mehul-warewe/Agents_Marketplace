@@ -402,56 +402,63 @@ function SkillCard({ skill, toolRegistry, onClick, onDelete, onPublish, onUpdate
 
   // ── Grid Card ──────────────────────────────────────────────
   return (
-    <div className="flex flex-col bg-card border border-border/40 hover:border-indigo-500/30 rounded-2xl overflow-hidden transition-all group hover:shadow-xl shadow-sm relative">
+    <div 
+      className="group flex flex-col bg-card border border-border/40 hover:border-indigo-500/30 rounded-3xl overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-indigo-500/5 hover:-translate-y-1 relative"
+    >
+      {/* Decorative Gradient Accent */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-indigo-500/10 transition-colors" />
+
       {/* Update stripe */}
       {skill.hasUpdate && (
          <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-400 to-amber-600 animate-pulse z-10" />
       )}
 
       {/* Card Body */}
-      <div className="flex flex-col p-5 gap-4 flex-1">
+      <div className="flex flex-col p-6 gap-5 flex-1 relative z-10">
 
         {/* Header */}
-        <div className="flex items-start justify-between gap-2">
-           <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-start justify-between gap-3">
+           <div className="flex items-center gap-4 min-w-0">
               <div className="relative shrink-0">
-                 <Icon />
+                 <div className="size-11 rounded-2xl bg-secondary border border-border/40 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 shadow-inner group-hover:rotate-3">
+                    <Icon />
+                 </div>
                  {skill.isPublished && (
-                    <div className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 rounded-full bg-indigo-500 text-[5px] font-black text-white uppercase border border-background shadow-[0_0_8px_rgba(99,102,241,0.6)] leading-tight">
+                    <div className="absolute -top-1.5 -right-1.5 px-2 py-0.5 rounded-full bg-indigo-500 text-[6px] font-black text-white uppercase border border-background shadow-[0_0_12px_rgba(99,102,241,0.4)] leading-tight tracking-[0.05em]">
                        LIVE
                     </div>
                  )}
               </div>
               <div className="min-w-0 flex-1 overflow-hidden pt-1">
-                 <h3 className="text-sm font-bold text-foreground tracking-tight leading-tight group-hover:text-indigo-400 transition-colors line-clamp-2 break-words">
+                 <h3 className="text-base font-bold text-foreground tracking-tight leading-tight group-hover:text-indigo-400 transition-colors line-clamp-2 break-words font-display">
                     {skill.name}
                  </h3>
               </div>
            </div>
 
            {/* 3-dot menu */}
-           <div className="shrink-0">
+           <div className="shrink-0 relative z-20">
               <DropdownMenu>
                  <DropdownMenuTrigger asChild>
-                    <button className="w-8 h-8 flex items-center justify-center text-muted-foreground/30 hover:text-foreground hover:bg-secondary/80 rounded-lg transition-all">
-                       <MoreHorizontal size={18} />
+                    <button className="w-9 h-9 flex items-center justify-center text-muted-foreground/30 hover:text-foreground hover:bg-secondary/80 rounded-xl transition-all active:scale-90">
+                       <MoreHorizontal size={18} strokeWidth={2.5} />
                     </button>
                  </DropdownMenuTrigger>
-                 <DropdownMenuContent align="end" className="w-48 bg-card border-border/60">
-                    <DropdownMenuItem onClick={onClick} className="uppercase text-[9px] font-bold tracking-widest py-2">
-                        <Terminal size={12} className="mr-2" /> Edit Skill Logic
+                 <DropdownMenuContent align="end" className="w-52 bg-card border-border/60 rounded-xl shadow-2xl p-1 animate-in zoom-in-95 duration-200">
+                    <DropdownMenuItem onClick={onClick} className="uppercase text-[10px] font-bold tracking-widest py-3 cursor-pointer rounded-lg focus:bg-indigo-500/10 focus:text-indigo-500">
+                        <Terminal size={14} className="mr-3" /> Edit Skill Logic
                     </DropdownMenuItem>
                     {skill.hasUpdate && (
-                       <DropdownMenuItem onClick={onUpdate} className="text-amber-500 uppercase text-[9px] font-bold tracking-widest py-2">
-                          <RefreshCw size={12} className="mr-2" /> Sync Update
+                       <DropdownMenuItem onClick={onUpdate} className="text-amber-500 uppercase text-[10px] font-bold tracking-widest py-3 cursor-pointer rounded-lg focus:bg-amber-500/10 focus:text-amber-500">
+                          <RefreshCw size={14} className="mr-3" /> Sync Update
                        </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem onClick={onPublish} className="uppercase text-[9px] font-bold tracking-widest py-2">
+                    <DropdownMenuItem onClick={onPublish} className="uppercase text-[10px] font-bold tracking-widest py-3 cursor-pointer rounded-lg focus:bg-indigo-500/10 focus:text-indigo-500">
                        {skill.isPublished ? 'Marketplace Profile' : 'Publish to Marketplace'}
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={onDelete} className="text-red-500 uppercase text-[9px] font-bold tracking-widest py-2">
-                       <Trash2 size={12} className="mr-2" /> Delete Skill
+                    <DropdownMenuSeparator className="bg-border/40 my-1" />
+                    <DropdownMenuItem onClick={onDelete} className="text-red-500 uppercase text-[10px] font-bold tracking-widest py-3 cursor-pointer rounded-lg focus:bg-red-500/10 focus:text-red-500">
+                       <Trash2 size={14} className="mr-3" /> Delete Skill
                     </DropdownMenuItem>
                  </DropdownMenuContent>
               </DropdownMenu>
@@ -459,7 +466,7 @@ function SkillCard({ skill, toolRegistry, onClick, onDelete, onPublish, onUpdate
         </div>
 
         {/* Description */}
-        <p className="text-[11px] text-muted-foreground/70 line-clamp-2 leading-relaxed font-medium min-h-[30px] overflow-hidden break-words whitespace-normal">
+        <p className="text-[12px] text-muted-foreground font-medium line-clamp-2 leading-relaxed min-h-[36px] overflow-hidden break-words whitespace-normal px-1">
            {skill.description || 'Automated logic unit for high-precision workflow execution.'}
         </p>
 
@@ -469,11 +476,12 @@ function SkillCard({ skill, toolRegistry, onClick, onDelete, onPublish, onUpdate
         </div>
       </div>
 
-      {/* Footer (Simplified) */}
-      <div className="border-t border-border/40 px-5 py-2 bg-secondary/10">
-         <div className="flex items-center justify-end">
-            <span className="text-[10px] font-black text-foreground uppercase tracking-tight">{nodeCount} Nodes</span>
+      {/* Footer */}
+      <div className="border-t border-border/5 px-6 py-4 bg-secondary/5 flex items-center justify-between relative z-10 transition-colors group-hover:bg-indigo-500/5">
+         <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-foreground/20">
+            <Globe size={12} /> Unit Logic Verified
          </div>
+         <span className="text-[10px] font-bold text-indigo-500/40 uppercase tracking-widest">{nodeCount} Operational Nodes</span>
       </div>
     </div>
   );

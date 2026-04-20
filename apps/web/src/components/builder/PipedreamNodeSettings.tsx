@@ -168,7 +168,7 @@ export default function PipedreamNodeSettings({
 
       {/* Connected Accounts */}
       <div className="space-y-3">
-        <label className="block text-[10px] font-black uppercase text-muted/60 tracking-widest pl-1">
+        <label className="block text-[9px] font-bold uppercase text-muted-foreground/60 tracking-widest px-1">
           Select {platformName} Account
         </label>
 
@@ -183,24 +183,30 @@ export default function PipedreamNodeSettings({
           isLoading={isFetchingAccounts}
         />
 
-        {/* Connect Button */}
-        <button
-          onClick={handleConnect}
-          disabled={isConnecting || !appSlug}
-          className="w-full px-4 py-3.5 bg-indigo-600 text-white rounded-xl text-[11px] font-black uppercase tracking-wider hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2.5"
-        >
-          {isConnecting ? (
-            <>
-              <Loader2 size={14} className="animate-spin" />
-              Connecting...
-            </>
-          ) : (
-            <>
-              <LogIn size={15} strokeWidth={3} />
-              Connect {platformName}
-            </>
-          )}
-        </button>
+        {appSlug ? (
+          <button
+            onClick={handleConnect}
+            disabled={isConnecting || !appSlug}
+            className="w-full h-10 bg-indigo-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2.5"
+          >
+            {isConnecting ? (
+              <>
+                <Loader2 size={12} className="animate-spin" />
+                Connecting...
+              </>
+            ) : (
+              <>
+                <LogIn size={13} strokeWidth={3} />
+                Connect {platformName}
+              </>
+            )}
+          </button>
+        ) : (
+          <div className="p-4 bg-foreground/[0.02] border border-dashed border-border/40 rounded-lg text-center">
+            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/30">Native Logic Protocol</p>
+            <p className="text-[8px] text-muted-foreground/20 italic mt-1">No external authentication signature required</p>
+          </div>
+        )}
       </div>
     </div>
   );

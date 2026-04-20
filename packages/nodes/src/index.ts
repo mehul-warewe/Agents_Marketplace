@@ -11,7 +11,9 @@ import { claudeNode } from './definitions/claude/claude.js';
 import { openrouterNode } from './definitions/openrouter/openrouter.js';
 
 import { ifNode } from './definitions/if/if.js';
+import { branchNode } from './definitions/branch/branch.js';
 import { codeNode } from './definitions/code/code.js';
+import { apiCallNode } from './definitions/api-call/api-call.js';
 
 import { stickyNoteNode } from './definitions/sticky-note/sticky-note.js';
 import { structuredOutputParserNode } from './definitions/structured-output-parser/structured-output-parser.js';
@@ -42,7 +44,9 @@ export const NODE_REGISTRY: NodeDefinition[] = [
 
   // ─── LOGIC & FLOW CONTROL ─────────────────────────────────────────────
   ifNode,
+  branchNode,
   codeNode,
+  apiCallNode,
 
   // ─── PIPEDREAM INTEGRATIONS (Dynamic platforms) ────────────────────────
   pipedreamActionNode,

@@ -20,6 +20,21 @@ export async function resolveCredential(
   credentialId: string,
   userId: string,
 ): Promise<ResolvedCredential> {
+  // Handle System Default (Admin Key)
+  if (credentialId === 'system_default') {
+    return {
+      id: 'system_default',
+      type: 'openrouter',
+      data: {
+        apiKey: process.env.OPENROUTER_API_KEY || '',
+        googleApiKey: process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || '',
+        openaiApiKey: process.env.OPENAI_API_KEY || '',
+        anthropicApiKey: process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY || '',
+        isSystemManaged: true
+      }
+    };
+  }
+
   const rows = await db.select()
     .from(credentials)
     .where(and(

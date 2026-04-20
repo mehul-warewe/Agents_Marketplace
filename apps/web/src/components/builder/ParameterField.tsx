@@ -15,16 +15,16 @@ export function ParameterField({ field, value, onChange, isRequired }: Parameter
 
   if (field.type === 'textarea') {
     return (
-      <div className="mb-4">
+      <div className="p-4 bg-card border border-border shadow-soft rounded-2xl mb-4 hover:border-indigo-500/20 transition-all group/field">
         <div className="flex items-center gap-2 mb-2">
-          <label className="text-xs font-semibold text-foreground/70">
+          <label className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground">
             {field.label}
             {required && <span className="text-red-500 ml-1">*</span>}
           </label>
           {field.description && (
-            <div className="group relative">
-              <HelpCircle size={12} className="text-foreground/40 cursor-help" />
-              <div className="absolute bottom-full left-0 hidden group-hover:block bg-foreground text-background text-[10px] p-2 rounded max-w-[200px] mb-1 z-50 whitespace-normal">
+            <div className="group/tip relative">
+              <HelpCircle size={12} className="text-muted-foreground/30 cursor-help hover:text-indigo-500 transition-colors" />
+              <div className="absolute bottom-full left-0 hidden group-hover/tip:block bg-card border border-border shadow-2xl text-foreground text-[9px] font-bold uppercase tracking-widest p-3 rounded-xl max-w-[200px] mb-2 z-50 whitespace-normal animate-in fade-in slide-in-from-bottom-1 duration-200">
                 {field.description}
               </div>
             </div>
@@ -33,9 +33,9 @@ export function ParameterField({ field, value, onChange, isRequired }: Parameter
         <textarea
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={field.example || field.description || 'Enter value...'}
+          placeholder={field.example || field.description || 'Enter logic...'}
           rows={4}
-          className="w-full px-3 py-2 bg-foreground/[0.03] border border-border/40 rounded-lg text-sm outline-none focus:border-foreground/40 focus:ring-2 focus:ring-foreground/5 font-mono text-xs resize-vertical"
+          className="w-full px-4 py-3 bg-secondary border border-border/40 rounded-xl text-[12px] font-medium text-foreground outline-none focus:border-indigo-500/40 focus:ring-4 focus:ring-indigo-500/5 transition-all placeholder:text-muted-foreground/20 resize-none leading-relaxed"
         />
       </div>
     );
@@ -43,16 +43,16 @@ export function ParameterField({ field, value, onChange, isRequired }: Parameter
 
   if (field.type === 'number') {
     return (
-      <div className="mb-4">
+      <div className="p-4 bg-card border border-border shadow-soft rounded-2xl mb-4 hover:border-indigo-500/20 transition-all group/field">
         <div className="flex items-center gap-2 mb-2">
-          <label className="text-xs font-semibold text-foreground/70">
+          <label className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground">
             {field.label}
             {required && <span className="text-red-500 ml-1">*</span>}
           </label>
           {field.description && (
-            <div className="group relative">
-              <HelpCircle size={12} className="text-foreground/40 cursor-help" />
-              <div className="absolute bottom-full left-0 hidden group-hover:block bg-foreground text-background text-[10px] p-2 rounded max-w-[200px] mb-1 z-50 whitespace-normal">
+            <div className="group/tip relative">
+              <HelpCircle size={12} className="text-muted-foreground/30 cursor-help hover:text-indigo-500 transition-colors" />
+              <div className="absolute bottom-full left-0 hidden group-hover/tip:block bg-card border border-border shadow-2xl text-foreground text-[9px] font-bold uppercase tracking-widest p-3 rounded-xl max-w-[200px] mb-2 z-50 whitespace-normal animate-in fade-in slide-in-from-bottom-1 duration-200">
                 {field.description}
               </div>
             </div>
@@ -62,8 +62,8 @@ export function ParameterField({ field, value, onChange, isRequired }: Parameter
           type="number"
           value={value || ''}
           onChange={(e) => onChange(e.target.value ? Number(e.target.value) : '')}
-          placeholder={field.example || field.description || 'Enter number...'}
-          className="w-full px-3 py-2 bg-foreground/[0.03] border border-border/40 rounded-lg text-sm outline-none focus:border-foreground/40 focus:ring-2 focus:ring-foreground/5"
+          placeholder={field.example || field.description || '0'}
+          className="w-full px-4 py-3 bg-secondary border border-border/40 rounded-xl text-[12px] font-bold text-foreground outline-none focus:border-indigo-500/40 focus:ring-4 focus:ring-indigo-500/5 transition-all placeholder:text-muted-foreground/20"
         />
       </div>
     );
@@ -91,16 +91,16 @@ export function ParameterField({ field, value, onChange, isRequired }: Parameter
 
   // Default: text input
   return (
-    <div className="mb-4">
+    <div className="p-4 bg-card border border-border shadow-soft rounded-2xl mb-4 hover:border-indigo-500/20 transition-all group/field">
       <div className="flex items-center gap-2 mb-2">
-        <label className="text-xs font-semibold text-foreground/70">
+        <label className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground">
           {field.label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
         {field.description && (
-          <div className="group relative">
-            <HelpCircle size={12} className="text-foreground/40 cursor-help" />
-            <div className="absolute bottom-full left-0 hidden group-hover:block bg-foreground text-background text-[10px] p-2 rounded max-w-[200px] mb-1 z-50 whitespace-normal">
+          <div className="group/tip relative">
+            <HelpCircle size={12} className="text-muted-foreground/30 cursor-help hover:text-indigo-500 transition-colors" />
+            <div className="absolute bottom-full left-0 hidden group-hover/tip:block bg-card border border-border shadow-2xl text-foreground text-[9px] font-bold uppercase tracking-widest p-3 rounded-xl max-w-[200px] mb-2 z-50 whitespace-normal animate-in fade-in slide-in-from-bottom-1 duration-200">
               {field.description}
             </div>
           </div>
@@ -110,11 +110,11 @@ export function ParameterField({ field, value, onChange, isRequired }: Parameter
         type="text"
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={field.example || field.description || 'Enter value...'}
-        className="w-full px-3 py-2 bg-foreground/[0.03] border border-border/40 rounded-lg text-sm outline-none focus:border-foreground/40 focus:ring-2 focus:ring-foreground/5"
+        placeholder={field.example || field.description || 'Enter signal...'}
+        className="w-full px-4 py-3 bg-secondary border border-border/40 rounded-xl text-[12px] font-medium text-foreground outline-none focus:border-indigo-500/40 focus:ring-4 focus:ring-indigo-500/5 transition-all placeholder:text-muted-foreground/20"
       />
       {field.example && (
-        <p className="text-[10px] text-foreground/40 mt-1">Example: {field.example}</p>
+        <p className="text-[9px] font-bold text-indigo-500/40 border-l border-indigo-500/20 pl-2 mt-3 uppercase tracking-widest">Example: {field.example}</p>
       )}
     </div>
   );

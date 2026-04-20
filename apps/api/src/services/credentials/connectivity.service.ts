@@ -199,7 +199,39 @@ export async function testConnectivity(type: string, data: any): Promise<{ ok: b
         timeout: 5000,
         validateStatus: () => true
       });
-      return { ok: r.status === 200, message: r.status === 200 ? 'Valid' : 'Invalid' };
+      return { ok: r.status === 200, message: r.status === 200 ? 'Valid' : 'Invalid OpenAI Key' };
+    }
+
+    if (type === 'google_api_key' && data.apiKey) {
+      // Gemini verification: call listModels
+      const r = await axios.get(`https://generativelanguage.googleapis.com/v1beta/models?key=${data.apiKey}`, {
+        timeout: 5000,
+        validateStatus: () => true
+      });
+      return { ok: r.status === 200, message: r.status === 200 ? 'Valid' : 'Invalid Gemini Key' };
+    }
+
+    if (type === 'anthropic_api_key' && data.apiKey) {
+      // Anthropic does not have a simple naked list models endpoint that works without specific headers
+      // We'll try a dummy request to their models list
+      const r = await axios.get('https://api.anthropic.com/v1/models', {
+        headers: { 
+          'x-api-key': data.apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        timeout: 5000,
+        validateStatus: () => true
+      });
+      return { ok: r.status === 200, message: r.status === 200 ? 'Valid' : 'Invalid Anthropic Key' };
+    }
+
+    if (type === 'openrouter_api_key' && data.apiKey) {
+      const r = await axios.get('https://openrouter.ai/api/v1/models', {
+        headers: { Authorization: `Bearer ${data.apiKey}` },
+        timeout: 5000,
+        validateStatus: () => true
+      });
+      return { ok: r.status === 200, message: r.status === 200 ? 'Valid' : 'Invalid OpenRouter Key' };
     }
 
     return { ok: true, message: 'Credential saved' };

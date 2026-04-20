@@ -7,8 +7,8 @@ import { Users, Shield, Zap, Target, Cpu, MessageSquare, ListTree, StickyNote, A
 export const ManagerHubNode = memo(({ data }: any) => {
   return (
     <div className="group relative">
-      <div className="absolute -inset-4 bg-indigo-500/10 rounded-[3rem] blur-2xl opacity-0 group-hover:opacity-40 transition-opacity duration-700" />
-      <div className="relative w-80 bg-card/80 backdrop-blur-xl border-2 border-indigo-500/30 rounded-[2.5rem] shadow-2xl p-6 overflow-hidden">
+      <div className="absolute -inset-4 bg-indigo-500/10 rounded-[3rem] blur-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-700" />
+      <div className="relative w-80 bg-card border-2 border-indigo-500/50 rounded-[2.5rem] shadow-2xl p-6 overflow-hidden">
         <header className="flex items-center gap-4 mb-4 relative z-10 drag-handle cursor-move">
           <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
             <Users size={24} strokeWidth={2.5} />
@@ -21,7 +21,7 @@ export const ManagerHubNode = memo(({ data }: any) => {
              <h3 className="text-md font-black italic tracking-tighter uppercase leading-none truncate max-w-[150px] text-foreground">{data.name || 'Unnamed'}</h3>
           </div>
         </header>
-        <div className="p-4 bg-foreground/[0.03] border border-border/40 rounded-2xl relative z-10">
+        <div className="p-4 bg-muted border border-border rounded-2xl relative z-10">
            <p className="text-[9px] font-black text-muted uppercase tracking-widest mb-1 italic">Strategic Core</p>
            <p className="text-[10px] font-bold text-foreground/80 leading-relaxed italic line-clamp-2">{data.goal || 'Define strategic goal...'}</p>
         </div>
@@ -34,7 +34,7 @@ export const ManagerHubNode = memo(({ data }: any) => {
 export const EmployeeNode = memo(({ data }: any) => {
   return (
     <div className="group relative">
-      <div className={`relative w-72 bg-card/60 backdrop-blur-xl border ${data.isPlaceholder ? 'border-dashed border-border/40 bg-foreground/[0.02]' : 'border-indigo-500/20'} rounded-[1.75rem] shadow-xl p-5 hover:border-indigo-500 transition-all duration-500`}>
+      <div className={`relative w-72 bg-card border ${data.isPlaceholder ? 'border-dashed border-border' : 'border-indigo-500/40'} rounded-[1.75rem] shadow-xl p-5 hover:border-indigo-500 transition-all duration-500`}>
         <header className="flex items-center gap-4 mb-3 drag-handle cursor-move">
           <div className={`w-11 h-11 ${data.isPlaceholder ? 'bg-foreground/5 text-muted/40' : 'bg-indigo-500/10 text-indigo-500'} rounded-xl flex items-center justify-center border border-border/10 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 shadow-sm`}>
             <Cpu size={20} />
@@ -67,7 +67,7 @@ export const EmployeeNode = memo(({ data }: any) => {
 export const ToolNode = memo(({ data }: any) => {
   return (
     <div className="group relative">
-      <div className={`relative w-64 bg-card/60 backdrop-blur-xl border ${data.isPlaceholder ? 'border-dashed border-border/40 bg-foreground/[0.02]' : 'border-emerald-500/20'} rounded-[1.5rem] shadow-lg p-4 hover:border-emerald-500 transition-all duration-500`}>
+      <div className={`relative w-64 bg-card border ${data.isPlaceholder ? 'border-dashed border-border' : 'border-emerald-500/40'} rounded-[1.5rem] shadow-lg p-4 hover:border-emerald-500 transition-all duration-500`}>
         <header className="flex items-center gap-3 mb-2 drag-handle cursor-move">
           <div className={`w-10 h-10 ${data.isPlaceholder ? 'bg-emerald-500/5 text-emerald-500/40' : 'bg-emerald-500/10 text-emerald-500'} rounded-xl flex items-center justify-center border border-emerald-500/20 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-500 shadow-sm`}>
             <Zap size={18} />
@@ -97,7 +97,7 @@ export const ToolNode = memo(({ data }: any) => {
 export const TriggerNode = memo(({ data }: any) => {
   return (
     <div className="group relative">
-      <div className={`relative w-64 bg-card/60 backdrop-blur-xl border ${data.isPlaceholder ? 'border-dashed border-border/40 bg-foreground/[0.02]' : 'border-orange-500/20'} rounded-[1.5rem] shadow-lg p-4 hover:border-orange-500 transition-all duration-500`}>
+      <div className={`relative w-64 bg-card border ${data.isPlaceholder ? 'border-dashed border-border' : 'border-orange-500/40'} rounded-[1.5rem] shadow-lg p-4 hover:border-orange-500 transition-all duration-500`}>
         <header className="flex items-center gap-3 mb-2 drag-handle cursor-move">
           <div className={`w-10 h-10 ${data.isPlaceholder ? 'bg-orange-500/5 text-orange-500/40' : 'bg-orange-500/10 text-orange-500'} rounded-xl flex items-center justify-center border border-orange-500/20 group-hover:bg-orange-500 group-hover:text-white transition-all duration-500 shadow-sm`}>
             <Activity size={18} />
@@ -128,7 +128,7 @@ export const TriggerNode = memo(({ data }: any) => {
 export const ConditionNode = memo(({ data }: any) => {
   return (
     <div className="group relative">
-      <div className="relative w-64 bg-card/60 backdrop-blur-xl border border-purple-500/20 rounded-[1.5rem] shadow-lg p-4 hover:border-purple-500 transition-all duration-500">
+      <div className="relative w-64 bg-card border border-purple-500/40 rounded-[1.5rem] shadow-lg p-4 hover:border-purple-500 transition-all duration-500">
         <header className="flex items-center gap-3 mb-2 drag-handle cursor-move">
           <div className="w-10 h-10 bg-purple-500/10 text-purple-500 rounded-xl flex items-center justify-center border border-purple-500/20 group-hover:bg-purple-500 group-hover:text-white transition-all duration-500 shadow-sm">
             <ListTree size={18} />
@@ -150,7 +150,7 @@ export const ConditionNode = memo(({ data }: any) => {
 export const NoteNode = memo(({ data }: any) => {
   return (
     <div className="group relative">
-      <div className="relative w-64 bg-yellow-400/5 backdrop-blur-xl border border-yellow-500/20 rounded-[1.5rem] shadow-lg p-5">
+      <div className="relative w-64 bg-yellow-400/10 border border-yellow-500/40 rounded-[1.5rem] shadow-lg p-5">
         <div className="flex items-center gap-3 mb-3">
           <StickyNote size={14} className="text-yellow-500" />
           <span className="text-[8px] font-black text-yellow-500 uppercase tracking-widest">Strategy Note</span>

@@ -37,7 +37,8 @@ import UnifiedSidebar, { InputParam } from './builder/UnifiedSidebar';
 import BuilderTopbar from './builder/BuilderTopbar';
 import ArchitectBar from './builder/ArchitectBar';
 import EmployeeMetadataPanel from './builder/EmployeeMetadataPanel';
-import { makeNode, getToolById, getToolByExecutionKey, INITIAL_NODES, INITIAL_EDGES, MODEL_TYPES, TOOL_REGISTRY } from './builder/toolRegistry';
+import { makeNode, getToolById, getToolByExecutionKey, INITIAL_NODES, INITIAL_EDGES, MODEL_TYPES, TOOL_REGISTRY, updateRegistryModels } from './builder/toolRegistry';
+import api from '@/lib/api';
 
 import { EDGE_DEFAULTS } from './builder/toolRegistry';
 import { SaveModal } from './builder/SaveModal';
@@ -103,10 +104,10 @@ function DeletableEdge({
         <div className="w-full h-full flex items-center justify-center">
           <div
             className={`
-              w-7 h-7 bg-[#232329] border border-white/20 text-white
+              w-7 h-7 bg-card border border-border text-foreground
               flex items-center justify-center cursor-pointer pointer-events-auto 
               opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-full shadow-2xl
-              hover:scale-125 hover:border-accent hover:bg-black/40
+              hover:scale-125 hover:border-accent hover:bg-accent/10
               ${selected ? 'opacity-100 scale-110 !border-accent' : ''}
             `}
             onClick={onInsert}
@@ -230,6 +231,22 @@ function WorkflowBuilderInner() {
   
   const { mutate: runAgent } = useRunAgent();
   const { mutate: runSkill } = useRunSkill();
+
+  // Sync Intelligence (Models) - Segregated by provider
+  useEffect(() => {
+    const providers = ['google', 'openai', 'anthropic', 'openrouter'];
+    
+    providers.forEach(async (provider) => {
+      try {
+        const { data } = await api.get(`/models?provider=${provider}`);
+        if (Array.isArray(data)) {
+          updateRegistryModels(data, provider);
+        }
+      } catch (err) {
+        console.error(`Failed to sync intelligence for ${provider}:`, err);
+      }
+    });
+  }, []);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(
     isSkillMode 
@@ -933,28 +950,57 @@ function WorkflowBuilderInner() {
     }
 
     const variables: any[] = [];
-
     const sortedUpstream = Array.from(upstreamNodes)
       .map(id => nodes.find(n => n.id === id))
       .filter(Boolean)
       .sort((a: any, b: any) => a.position.y - b.position.y);
 
+    const discoverNested = (obj: any, path: string = ''): string[] => {
+      if (!obj || typeof obj !== 'object' || (path && path.split('.').length > 5)) return [];
+      return Object.entries(obj).flatMap(([k, v]) => {
+        const fullK = path ? `${path}.${k}` : k;
+        if (v && typeof v === 'object' && !Array.isArray(v)) {
+          return [fullK, ...discoverNested(v, fullK)];
+        }
+        return [fullK];
+      });
+    };
+
     for (const node of sortedUpstream) {
       if (!node) continue;
       const tool = getToolById(node.data.toolId);
-
       let vars: string[] = [];
-      if (node.data.toolId === 'skill.input') {
-        vars = skillInputSchema.map(p => p.name);
-      } else if (tool) {
-        vars = tool.outputs.map(o => o.name);
+
+      // 1. Live Result Discovery (if node has run)
+      if (node.data.result && typeof node.data.result === 'object') {
+        vars = discoverNested(node.data.result);
+      } 
+
+      // 2. Schema-based Discovery (Design-time or fallback)
+      if (vars.length === 0) {
+        if (node.data.toolId === 'skill.input') {
+          vars = skillInputSchema.flatMap(p => {
+            const self = [p.name];
+            if (p.type === 'json' && p.defaultValue) {
+              try {
+                const parsed = typeof p.defaultValue === 'string' ? JSON.parse(p.defaultValue) : p.defaultValue;
+                if (parsed && typeof parsed === 'object') {
+                  return [...self, ...discoverNested(parsed, p.name)];
+                }
+              } catch (e) {}
+            }
+            return self;
+          });
+        } else if (tool) {
+          vars = tool.outputs.map(o => o.name);
+        }
       }
 
       if (vars.length > 0) {
         variables.push({
           nodeId: node.id,
-          nodeLabel: node.data.label,
-          vars
+          nodeLabel: node.data.label || (tool?.label),
+          vars: Array.from(new Set(vars)) // Deduplicate
         });
       }
     }
@@ -1122,7 +1168,7 @@ function WorkflowBuilderInner() {
         </div>
 
         {/* Centre: Canvas Area */}
-        <div className="flex-1 relative overflow-hidden bg-secondary rounded-2xl border border-border/40 ml-4 shadow-sm">
+        <div className="flex-1 relative overflow-hidden bg-background rounded-[2.5rem] border border-border ml-4 shadow-2xl">
           <ReactFlow
             nodes={nodesWithHandlers}
             edges={edges}
@@ -1153,16 +1199,16 @@ function WorkflowBuilderInner() {
             fitViewOptions={{ padding: 0.8, maxZoom: 0.8 }}
             defaultEdgeOptions={{
               ...EDGE_DEFAULTS,
-              style: { strokeWidth: 1.5, stroke: 'rgba(255,255,255,0.1)', transition: 'stroke 0.5s' }
+              style: { strokeWidth: 1.5, transition: 'stroke 0.5s' }
             }}
-            deleteKeyCode={['Backspace', 'Delete']}
+            deleteKeyCode={null}
           >
             <Background 
               variant={BackgroundVariant.Dots} 
-              gap={40} 
+              gap={24} 
               size={1} 
-              color="var(--border)" 
-              className="opacity-40"
+              color="currentColor" 
+              className="text-foreground/[0.03]"
             />
 
             {/* Zoom Controls — bottom-right (n8n style) */}
@@ -1173,28 +1219,14 @@ function WorkflowBuilderInner() {
             />
 
             {/* MiniMap — bottom-left */}
-            <MiniMap
-              style={{
-                background: 'var(--card)',
-                border: `1px solid var(--border)`,
-                borderRadius: '1.25rem',
-                margin: '2rem',
-                width: 180,
-                height: 120,
-                overflow: 'hidden',
-                boxShadow: '0 10px 40px -10px rgb(0 0 0 / 0.15)',
-                opacity: 0.8
-              }}
-              position="bottom-left"
-              nodeColor={(n: any) => {
-                if (n.data?.executionKey === 'sticky_note') return 'rgba(120, 120, 120, 0.08)';
-                return 'var(--foreground)';
-              }}
-              nodeStrokeColor={(n: any) => (n.data?.executionKey === 'sticky_note' ? 'transparent' : 'rgba(0,0,0,0.1)')}
-              nodeBorderRadius={8}
-              maskColor="rgba(var(--background-rgb, 0,0,0), 0.1)"
+            <MiniMap 
+              className="!bg-card !border-border/40 !rounded-2xl !shadow-2xl !m-8 overflow-hidden"
               zoomable
-              pannable
+              nodeBorderRadius={12}
+              maskColor="var(--secondary)"
+              nodeColor="var(--primary)"
+              nodeStrokeColor="var(--primary)"
+              nodeStrokeWidth={2}
             />
           </ReactFlow>
 
@@ -1206,7 +1238,7 @@ function WorkflowBuilderInner() {
 
           {/* Generation overlay */}
           {isArchitecting && (
-            <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center animate-in fade-in duration-700">
+            <div className="absolute inset-0 bg-background z-50 flex flex-col items-center justify-center animate-in fade-in duration-700">
                <div className="flex flex-col items-center gap-6">
                 <div className="w-16 h-16 border-2 border-foreground border-t-transparent animate-spin rounded-full" />
                 <div className="text-center">
@@ -1260,9 +1292,9 @@ function WorkflowBuilderInner() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-20"
           >
-            {/* Backdrop Blur */}
+            {/* Backdrop */}
             <div 
-              className="absolute inset-0 bg-[#070708]/80 backdrop-blur-3xl"
+              className="absolute inset-0 bg-background/90"
               onClick={() => setIsPublishing(false)} 
             />
             
@@ -1270,11 +1302,11 @@ function WorkflowBuilderInner() {
               initial={{ scale: 0.95, y: 20, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.95, y: 20, opacity: 0 }}
-              className="relative w-full max-w-4xl bg-[#111114] border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row h-[600px]"
+              className="relative w-full max-w-4xl bg-card border border-border rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row h-[600px]"
             >
               {/* Left: Branding & Status */}
-              <div className="md:w-1/3 bg-accent/5 p-10 flex flex-col justify-between border-r border-white/5 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-accent/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2" />
+              <div className="md:w-1/3 bg-muted p-10 flex flex-col justify-between border-r border-border relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2" />
                 
                 <div className="relative z-10">
                   <div className="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center text-white shadow-2xl shadow-accent/20 mb-8 animate-pulse">
@@ -1300,16 +1332,16 @@ function WorkflowBuilderInner() {
 
               {/* Right: Interaction */}
               <div className="flex-1 flex flex-col bg-[#0c0c0e] overflow-hidden">
-                <div className="flex items-center justify-between p-8 shrink-0">
+                <div className="flex items-center justify-between p-8 shrink-0 border-b border-border/40 bg-secondary/10">
                    <div className="flex items-center gap-3">
-                      <Bot size={20} className="text-accent" />
-                      <span className="text-xs font-black uppercase tracking-widest text-white/80">Protocol Configuration</span>
+                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]" />
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-foreground">Workforce Registry Configuration</span>
                    </div>
                    <button 
                      onClick={() => setIsPublishing(false)}
-                     className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all"
+                     className="w-10 h-10 rounded-xl bg-secondary border border-border/40 flex items-center justify-center hover:bg-muted transition-all text-muted-foreground hover:text-foreground"
                    >
-                     <X size={18} />
+                     <X size={18} strokeWidth={2.5} />
                    </button>
                 </div>
 
@@ -1322,21 +1354,21 @@ function WorkflowBuilderInner() {
                    />
                 </div>
 
-                <div className="p-10 bg-black/40 border-t border-white/5 flex items-center justify-between shrink-0">
+                <div className="p-10 bg-secondary/10 border-t border-border/40 flex items-center justify-between shrink-0">
                    <div className="hidden sm:block">
-                      <p className="text-[9px] text-white/20 font-black uppercase tracking-widest">Final Phase: Promotion to Worker Status</p>
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest italic">Final Review: Promotion to Production Fleet</p>
                    </div>
                    <button
                      onClick={() => handleSave()}
                      disabled={isSaving || isPublishingWorker}
-                     className="h-14 px-10 bg-white text-black font-black uppercase tracking-widest text-xs rounded-2xl flex items-center gap-3 hover:bg-accent hover:text-white transition-all shadow-xl active:scale-95 disabled:opacity-50"
+                     className="h-14 px-10 bg-indigo-600 text-white font-bold uppercase tracking-widest text-[11px] rounded-xl flex items-center gap-3 hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50"
                    >
                      {isSaving || isPublishingWorker ? (
                        <Loader2 size={16} className="animate-spin" />
                      ) : (
                        <>
-                         Confirm & Publish Unit
-                         <SendHorizonal size={16} />
+                         Confirm & Promote to Workforce
+                         <SendHorizonal size={16} strokeWidth={2.5} />
                        </>
                      )}
                    </button>

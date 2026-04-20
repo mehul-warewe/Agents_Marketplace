@@ -6,13 +6,16 @@
  * Supports text, textarea, select, boolean, number, email, url, etc.
  */
 
-import React, { useMemo } from 'react';
-import { ChevronDown } from 'lucide-react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { ChevronDown, Check, Zap } from 'lucide-react';
+
+import SmartInput from '@/components/builder/SmartInput';
 
 interface DynamicParameterFormProps {
   schema: Record<string, any>;
   values: Record<string, any>;
   onChange: (values: Record<string, any>) => void;
+  onTriggerPicker?: (fieldKey: string, pos: { x: number, y: number }, cursorPos: number) => void;
 }
 
 interface SchemaProperty {
@@ -36,7 +39,8 @@ interface SchemaProperty {
 export default function DynamicParameterForm({
   schema,
   values,
-  onChange
+  onChange,
+  onTriggerPicker
 }: DynamicParameterFormProps) {
   const properties = (schema.properties || {}) as Record<string, SchemaProperty>;
   const required = new Set(schema.required || []);
@@ -65,16 +69,18 @@ export default function DynamicParameterForm({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4 p-5 bg-secondary border border-border/60 rounded-3xl shadow-inner">
       {sortedFields.map(([key, prop]) => (
-        <FormField
-          key={key}
-          fieldKey={key}
-          property={prop}
-          value={values[key]}
-          isRequired={required.has(key)}
-          onChange={(v) => handleChange(key, v)}
-        />
+        <div key={key} className="p-5 bg-card border border-border shadow-md rounded-2xl animate-in fade-in slide-in-from-top-1 duration-300 hover:border-indigo-500/20 transition-all group/field">
+          <FormField
+            fieldKey={key}
+            property={prop}
+            value={values[key]}
+            isRequired={required.has(key)}
+            onChange={(v) => handleChange(key, v)}
+            onTriggerPicker={onTriggerPicker}
+          />
+        </div>
       ))}
     </div>
   );
@@ -89,6 +95,7 @@ interface FormFieldProps {
   value: any;
   isRequired: boolean;
   onChange: (value: any) => void;
+  onTriggerPicker?: (fieldKey: string, pos: { x: number, y: number }, cursorPos: number) => void;
 }
 
 function FormField({
@@ -96,7 +103,8 @@ function FormField({
   property,
   value,
   isRequired,
-  onChange
+  onChange,
+  onTriggerPicker
 }: FormFieldProps) {
   const label = property.title || fieldKey.replace(/_/g, ' ');
   const description = property.description || '';
@@ -115,35 +123,35 @@ function FormField({
   else if (type === 'string' && (property.minLength ?? 0) > 100) fieldType = 'textarea';
 
   return (
-    <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
+    <div className="space-y-2">
       <label className="flex items-center gap-2">
-        <span className="text-[11px] font-black uppercase tracking-tight text-foreground/80">
+        <span className="text-[9px] font-bold uppercase tracking-tight text-muted-foreground">
           {label}
         </span>
         {isRequired && (
           <span className="flex items-center gap-1">
              <span className="text-red-500 font-bold">*</span>
-             <span className="text-[8px] font-black uppercase text-red-500/60 tracking-widest bg-red-500/5 px-1 rounded">Required</span>
+             <span className="text-[8px] font-bold uppercase text-red-500/60 tracking-widest bg-red-400/5 px-1 rounded">Required</span>
           </span>
         )}
       </label>
 
       {description && (
-        <p className="text-[10px] text-muted/50 leading-relaxed italic mb-1">{description}</p>
+        <p className="text-[9px] text-muted-foreground/40 leading-relaxed italic mb-1">{description}</p>
       )}
 
-      {fieldType === 'select' && property.enum ? (
-        <SelectField
-          value={value}
-          options={property.enum}
-          onChange={onChange}
-          placeholder={`Select ${label}...`}
-        />
-      ) : fieldType === 'checkbox' ? (
+      {fieldType === 'boolean' || fieldType === 'bool' ? (
         <CheckboxField
           value={value}
           onChange={onChange}
           label={label}
+        />
+      ) : fieldType === 'select' ? (
+        <SelectField
+          value={value}
+          options={property.enum || property.options || []}
+          onChange={onChange}
+          placeholder={`Select ${label.toLowerCase()}...`}
         />
       ) : fieldType === 'number' ? (
         <NumberField
@@ -152,18 +160,20 @@ function FormField({
           placeholder={`Enter ${label.toLowerCase()}...`}
         />
       ) : fieldType === 'textarea' ? (
-        <TextareaField
-          value={value}
-          onChange={onChange}
-          placeholder={`Enter ${label.toLowerCase()}...`}
+        <SmartInput
+          textarea
           rows={3}
+          value={value}
+          onChange={(val) => onChange(val)}
+          placeholder={`Enter ${label.toLowerCase()}...`}
+          onTriggerPicker={(pos, cursor) => onTriggerPicker?.(fieldKey, pos, cursor)}
         />
       ) : (
-        <InputField
-          type={fieldType}
+        <SmartInput
           value={value}
-          onChange={onChange}
+          onChange={(val) => onChange(val)}
           placeholder={`Enter ${label.toLowerCase()}...`}
+          onTriggerPicker={(pos, cursor) => onTriggerPicker?.(fieldKey, pos, cursor)}
         />
       )}
     </div>
@@ -171,59 +181,9 @@ function FormField({
 }
 
 /**
- * Text input field
- */
-function InputField({
-  type,
-  value,
-  onChange,
-  placeholder
-}: {
-  type: string;
-  value: any;
-  onChange: (v: any) => void;
-  placeholder?: string;
-}) {
-  return (
-    <input
-      type={type}
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value || null)}
-      placeholder={placeholder}
-      className="w-full px-3 py-2 bg-foreground/[0.03] border border-border/40 rounded-lg text-sm outline-none focus:border-foreground/40 transition-colors"
-    />
-  );
-}
-
-/**
- * Textarea field
- */
-function TextareaField({
-  value,
-  onChange,
-  placeholder,
-  rows = 3
-}: {
-  value: any;
-  onChange: (v: any) => void;
-  placeholder?: string;
-  rows?: number;
-}) {
-  return (
-    <textarea
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value || null)}
-      placeholder={placeholder}
-      rows={rows}
-      className="w-full px-3 py-2 bg-foreground/[0.03] border border-border/40 rounded-lg text-sm outline-none focus:border-foreground/40 transition-colors resize-none"
-    />
-  );
-}
-
-/**
  * Number field
  */
-function NumberField({
+export function NumberField({
   value,
   onChange,
   placeholder
@@ -238,15 +198,15 @@ function NumberField({
       value={value ?? ''}
       onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
       placeholder={placeholder}
-      className="w-full px-3 py-2 bg-foreground/[0.03] border border-border/40 rounded-lg text-sm outline-none focus:border-foreground/40 transition-colors"
+      className="w-full bg-card border border-border shadow-soft rounded-xl py-2.5 px-4 text-[12px] font-bold text-foreground outline-none focus:border-indigo-500/40 focus:ring-4 focus:ring-indigo-500/5 transition-all placeholder:text-muted-foreground/20"
     />
   );
 }
 
 /**
- * Checkbox field
+ * Checkbox field (Toggle Switch UI)
  */
-function CheckboxField({
+export function CheckboxField({
   value,
   onChange,
   label
@@ -255,23 +215,34 @@ function CheckboxField({
   onChange: (v: any) => void;
   label: string;
 }) {
+  const active = value === true;
   return (
-    <label className="flex items-center gap-2 cursor-pointer">
-      <input
-        type="checkbox"
-        checked={value === true}
-        onChange={(e) => onChange(e.target.checked ? true : false)}
-        className="w-4 h-4 rounded border border-border/40 bg-foreground/[0.03]"
-      />
-      <span className="text-xs text-foreground/80">Enable {label}</span>
-    </label>
+    <button 
+      onClick={() => onChange(!active)}
+      className="flex items-center gap-3 group text-left transition-colors"
+    >
+      <div className={`relative w-9 h-5 rounded-full transition-all duration-300 border ${
+        active 
+          ? 'bg-indigo-500/10 border-indigo-500/40' 
+          : 'bg-secondary border-border/40'
+      }`}>
+        <div className={`absolute top-1/2 -translate-y-1/2 transition-all duration-300 size-3 rounded-full ${
+          active 
+            ? 'left-[22px] bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' 
+            : 'left-[4px] bg-muted-foreground/30'
+        }`} />
+      </div>
+      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 group-hover:text-foreground/80 transition-colors">
+        Enable {label}
+      </span>
+    </button>
   );
 }
 
 /**
- * Select dropdown field
+ * Select dropdown field (Custom UI)
  */
-function SelectField({
+export function SelectField({
   value,
   options,
   onChange,
@@ -283,35 +254,56 @@ function SelectField({
   placeholder?: string;
 }) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setIsOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const selectedOption = options.find(o => (typeof o === 'object' ? o.value : o) === value);
+  const selectedLabel = typeof selectedOption === 'object' ? selectedOption.label : selectedOption;
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-2 bg-foreground/[0.03] border border-border/40 rounded-lg text-sm hover:border-border/80 transition-colors"
+        className={`w-full flex items-center justify-between px-4 py-3 bg-card border rounded-xl text-[12px] font-bold uppercase tracking-tight transition-all ${
+          isOpen ? 'border-indigo-500/40 ring-4 ring-indigo-500/5 shadow-lg shadow-indigo-500/5' : 'border-border hover:border-border/80 shadow-soft'
+        } ${value ? 'text-foreground' : 'text-muted-foreground/30'}`}
       >
-        <span className={value ? 'text-foreground' : 'text-muted/60'}>
-          {value || placeholder}
-        </span>
-        <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <span className="truncate">{selectedLabel || placeholder}</span>
+        <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? 'rotate-180 text-emerald-500' : 'text-muted-foreground/30'}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border/60 rounded-lg shadow-lg z-50 max-h-[200px] overflow-y-auto">
-          {options.map((option) => (
-            <button
-              key={option}
-              onClick={() => {
-                onChange(option);
-                setIsOpen(false);
-              }}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-foreground/5 transition-colors ${
-                value === option ? 'bg-foreground text-background font-semibold' : ''
-              }`}
-            >
-              {option}
-            </button>
-          ))}
+        <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-card border border-border shadow-2xl py-1 max-h-[200px] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-200">
+          {options.length === 0 ? (
+            <div className="px-4 py-3 text-[10px] italic text-muted-foreground/30 text-center uppercase tracking-widest">No options cataloged</div>
+          ) : options.map((opt, i) => {
+            const val = typeof opt === 'object' ? opt.value : opt;
+            const lab = typeof opt === 'object' ? opt.label : opt;
+            const isSelected = val === value;
+
+            return (
+              <button
+                key={i}
+                onClick={() => {
+                  onChange(val);
+                  setIsOpen(false);
+                }}
+                className={`w-full px-4 py-2 text-left text-[11px] font-bold uppercase tracking-tight transition-all flex items-center justify-between group ${
+                  isSelected ? 'bg-indigo-500/10 text-indigo-500' : 'hover:bg-muted text-muted-foreground/60 hover:text-foreground'
+                }`}
+              >
+                <span>{lab}</span>
+                {isSelected && <Check size={12} />}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
