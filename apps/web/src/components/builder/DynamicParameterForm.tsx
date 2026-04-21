@@ -6,9 +6,8 @@
  * Supports text, textarea, select, boolean, number, email, url, etc.
  */
 
-import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { ChevronDown, Check, Zap } from 'lucide-react';
-
+import React, { useMemo } from 'react';
+import { ChevronDown, Check } from 'lucide-react';
 import SmartInput from '@/components/builder/SmartInput';
 
 interface DynamicParameterFormProps {
@@ -33,10 +32,6 @@ interface SchemaProperty {
   options?: any[];
 }
 
-/**
- * Renders form fields based on JSON schema
- * Supports common field types: text, textarea, select, checkbox, number, etc.
- */
 export default function DynamicParameterForm({
   schema,
   values,
@@ -49,7 +44,6 @@ export default function DynamicParameterForm({
   const sortedFields = useMemo(() => {
     return Object.entries(properties)
       .sort(([, a], [, b]) => {
-        // Required fields first
         const aRequired = required.has(a.title || '');
         const bRequired = required.has(b.title || '');
         if (aRequired !== bRequired) return aRequired ? -1 : 1;
@@ -63,16 +57,16 @@ export default function DynamicParameterForm({
 
   if (sortedFields.length === 0) {
     return (
-      <div className="text-xs text-muted/60 py-2">
-        No parameters available
+      <div className="text-[10px] font-medium text-muted-foreground/40 py-4 text-center border border-dashed border-border rounded-xl">
+        No configurable parameters
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 p-5 bg-secondary border border-border/60 rounded-3xl shadow-inner">
+    <div className="space-y-4">
       {sortedFields.map(([key, prop]) => (
-        <div key={key} className="p-5 bg-card border border-border shadow-md rounded-2xl animate-in fade-in slide-in-from-top-1 duration-300 hover:border-indigo-500/20 transition-all group/field">
+        <div key={key} className="space-y-1.5 p-0.5 group/field">
           <FormField
             fieldKey={key}
             property={prop}
@@ -87,9 +81,6 @@ export default function DynamicParameterForm({
   );
 }
 
-/**
- * Individual form field component
- */
 interface FormFieldProps {
   fieldKey: string;
   property: SchemaProperty;
@@ -111,7 +102,6 @@ function FormField({
   const description = property.description || '';
   const type = property.type || 'string';
 
-  // Determine field type
   let fieldType = 'text';
   if (property.enum) fieldType = 'select';
   else if (type === 'boolean') fieldType = 'checkbox';
@@ -125,65 +115,65 @@ function FormField({
 
   return (
     <div className="space-y-2">
-      <label className="flex items-center gap-2">
-        <span className="text-[9px] font-bold uppercase tracking-tight text-muted-foreground">
+      <div className="flex items-center justify-between gap-2 px-0.5">
+        <label className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/60">
           {label}
-        </span>
+        </label>
         {isRequired && (
-          <span className="flex items-center gap-1">
-             <span className="text-red-500 font-bold">*</span>
-             <span className="text-[8px] font-bold uppercase text-red-500/60 tracking-widest bg-red-400/5 px-1 rounded">Required</span>
+          <span className="text-[8px] font-black uppercase text-red-500/80 tracking-widest bg-red-500/5 px-1.5 py-0.5 rounded-md border border-red-500/10">
+            Required
           </span>
         )}
-      </label>
+      </div>
 
       {description && (
-        <p className="text-[9px] text-muted-foreground/40 leading-relaxed italic mb-1">{description}</p>
+        <p className="text-[9px] text-muted-foreground/40 leading-relaxed font-medium mb-1.5 line-clamp-2 italic">
+          {description}
+        </p>
       )}
 
-      {fieldType === 'boolean' || fieldType === 'bool' ? (
-        <CheckboxField
-          value={value}
-          onChange={onChange}
-          label={label}
-        />
-      ) : fieldType === 'select' ? (
-        <SelectField
-          value={value}
-          options={property.enum || property.options || []}
-          onChange={onChange}
-          placeholder={`Select ${label.toLowerCase()}...`}
-        />
-      ) : fieldType === 'number' ? (
-        <NumberField
-          value={value}
-          onChange={onChange}
-          placeholder={`Enter ${label.toLowerCase()}...`}
-        />
-      ) : fieldType === 'textarea' ? (
-        <SmartInput
-          textarea
-          rows={3}
-          value={value}
-          onChange={(val) => onChange(val)}
-          placeholder={`Enter ${label.toLowerCase()}...`}
-          onTriggerPicker={(pos, cursor) => onTriggerPicker?.(fieldKey, pos, cursor)}
-        />
-      ) : (
-        <SmartInput
-          value={value}
-          onChange={(val) => onChange(val)}
-          placeholder={`Enter ${label.toLowerCase()}...`}
-          onTriggerPicker={(pos, cursor) => onTriggerPicker?.(fieldKey, pos, cursor)}
-        />
-      )}
+      <div className="relative">
+        {fieldType === 'boolean' || fieldType === 'bool' ? (
+          <CheckboxField
+            value={value}
+            onChange={onChange}
+            label={label}
+          />
+        ) : fieldType === 'select' ? (
+          <SelectField
+            value={value}
+            options={property.enum || property.options || []}
+            onChange={onChange}
+            placeholder={`Select ${label.toLowerCase()}...`}
+          />
+        ) : fieldType === 'number' ? (
+          <NumberField
+            value={value}
+            onChange={onChange}
+            placeholder={`Enter ${label.toLowerCase()}...`}
+          />
+        ) : fieldType === 'textarea' ? (
+          <SmartInput
+            textarea
+            rows={3}
+            value={value}
+            onChange={(val) => onChange(val)}
+            placeholder={`Enter ${label.toLowerCase()}...`}
+            onTriggerPicker={(pos, cursor) => onTriggerPicker?.(fieldKey, pos, cursor)}
+          />
+        ) : (
+          <SmartInput
+            value={value}
+            onChange={(val) => onChange(val)}
+            placeholder={`Enter ${label.toLowerCase()}...`}
+            onTriggerPicker={(pos, cursor) => onTriggerPicker?.(fieldKey, pos, cursor)}
+          />
+        )}
+      </div>
     </div>
   );
 }
 
-/**
- * Number field
- */
 export function NumberField({
   value,
   onChange,
@@ -199,14 +189,11 @@ export function NumberField({
       value={value ?? ''}
       onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
       placeholder={placeholder}
-      className="w-full bg-card border border-border shadow-soft rounded-xl py-2.5 px-4 text-[12px] font-bold text-foreground outline-none focus:border-indigo-500/40 focus:ring-4 focus:ring-indigo-500/5 transition-all placeholder:text-muted-foreground/20"
+      className="w-full bg-background border border-border rounded-xl py-2.5 px-4 text-[12px] font-medium text-foreground outline-none focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/10 transition-all placeholder:text-muted-foreground/30"
     />
   );
 }
 
-/**
- * Checkbox field (Toggle Switch UI)
- */
 export function CheckboxField({
   value,
   onChange,
@@ -220,29 +207,26 @@ export function CheckboxField({
   return (
     <button 
       onClick={() => onChange(!active)}
-      className="flex items-center gap-3 group text-left transition-colors"
+      className="flex items-center gap-3 p-3 bg-muted/50 border border-border rounded-xl hover:border-indigo-500/40 transition-all text-left w-full group"
     >
-      <div className={`relative w-9 h-5 rounded-full transition-all duration-300 border ${
+      <div className={`relative w-8 h-4 rounded-full transition-all duration-300 border shrink-0 ${
         active 
-          ? 'bg-indigo-500/10 border-indigo-500/40' 
-          : 'bg-secondary border-border/40'
+          ? 'bg-indigo-500 border-indigo-600' 
+          : 'bg-background border-border'
       }`}>
-        <div className={`absolute top-1/2 -translate-y-1/2 transition-all duration-300 size-3 rounded-full ${
+        <div className={`absolute top-1/2 -translate-y-1/2 transition-all duration-300 size-2.5 rounded-full ${
           active 
-            ? 'left-[22px] bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' 
-            : 'left-[4px] bg-muted-foreground/30'
+            ? 'left-[18px] bg-white' 
+            : 'left-[2.5px] bg-muted-foreground/30'
         }`} />
       </div>
-      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 group-hover:text-foreground/80 transition-colors">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
         Enable {label}
       </span>
     </button>
   );
 }
 
-/**
- * Select dropdown field (Custom UI)
- */
 export function SelectField({
   value,
   options,
@@ -272,18 +256,18 @@ export function SelectField({
     <div className="relative" ref={containerRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between px-4 py-3 bg-card border rounded-xl text-[12px] font-bold uppercase tracking-tight transition-all ${
-          isOpen ? 'border-indigo-500/40 ring-4 ring-indigo-500/5 shadow-lg shadow-indigo-500/5' : 'border-border hover:border-border/80 shadow-soft'
+        className={`w-full flex items-center justify-between px-4 py-2.5 bg-background border rounded-xl text-[12px] font-medium transition-all ${
+          isOpen ? 'border-indigo-500/60 ring-2 ring-indigo-500/10 shadow-sm' : 'border-border hover:border-border/80'
         } ${value ? 'text-foreground' : 'text-muted-foreground/30'}`}
       >
         <span className="truncate">{selectedLabel || placeholder}</span>
-        <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? 'rotate-180 text-emerald-500' : 'text-muted-foreground/30'}`} />
+        <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? 'rotate-180 text-foreground' : 'text-muted-foreground/30'}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-card border border-border shadow-2xl py-1 max-h-[200px] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-card border border-border rounded-xl shadow-xl py-1 max-h-[200px] overflow-y-auto no-scrollbar animate-in fade-in zoom-in-95 duration-200">
           {options.length === 0 ? (
-            <div className="px-4 py-3 text-[10px] italic text-muted-foreground/30 text-center uppercase tracking-widest">No options cataloged</div>
+            <div className="px-4 py-3 text-[10px] font-bold text-muted-foreground/30 text-center uppercase tracking-widest uppercase">No choices detected</div>
           ) : options.map((opt, i) => {
             const val = typeof opt === 'object' ? opt.value : opt;
             const lab = typeof opt === 'object' ? opt.label : opt;
@@ -296,12 +280,12 @@ export function SelectField({
                   onChange(val);
                   setIsOpen(false);
                 }}
-                className={`w-full px-4 py-2 text-left text-[11px] font-bold uppercase tracking-tight transition-all flex items-center justify-between group ${
-                  isSelected ? 'bg-indigo-500/10 text-indigo-500' : 'hover:bg-muted text-muted-foreground/60 hover:text-foreground'
+                className={`w-full px-4 py-2 text-left text-[11px] font-bold transition-all flex items-center justify-between group ${
+                  isSelected ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' : 'hover:bg-muted text-muted-foreground/60 hover:text-foreground'
                 }`}
               >
                 <span>{lab}</span>
-                {isSelected && <Check size={12} />}
+                {isSelected && <Check size={12} strokeWidth={3} />}
               </button>
             );
           })}

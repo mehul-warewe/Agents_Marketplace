@@ -135,7 +135,7 @@ export const employeesService = {
     return updated;
   },
 
-  async runEmployee(employeeId: string, userId: string, task: string, context: any = {}) {
+  async runEmployee(employeeId: string, userId: string, task: string, context: any = {}, threadId?: string) {
     const employee = await this.getEmployee(employeeId);
     if (!employee) throw new Error('Employee not found');
 
@@ -145,7 +145,7 @@ export const employeesService = {
     }
 
     // Delegate to engine for SSE streaming support
-    const runId = await employeeEngine.runEmployee(employeeId, userId, employee, task, context);
+    const runId = await employeeEngine.runEmployee(employeeId, userId, employee, task, context, threadId);
 
     return { runId, status: 'queued', message: `Operative ${employee.name} initialized via Reasoning Graph.` };
   },

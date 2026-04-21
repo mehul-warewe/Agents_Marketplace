@@ -119,7 +119,9 @@ export function useManagerStream(managerId: string) {
       setRunId(newRunId);
 
       // Open EventSource for streaming
-      const eventSource = new EventSource(`/managers/runs/${newRunId}/stream`);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const token = localStorage.getItem('workforce_token');
+      const eventSource = new EventSource(`${apiUrl}/managers/runs/${newRunId}/stream?token=${token}`);
       eventSourceRef.current = eventSource;
 
       eventSource.onmessage = (event) => {

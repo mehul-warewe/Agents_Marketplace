@@ -35,7 +35,9 @@ export const configOutputParserHandler: any = async () => ({ status: 'completed'
 
 // ─── LOGIC & FLOW CONTROL ────────────────────────────────────────────
 export * from './definitions/if/if.handler.js';
+export * from './definitions/branch/branch.handler.js';
 export * from './definitions/code/code.handler.js';
+export * from './definitions/api-call/api-call.handler.js';
 
 // ─── PIPEDREAM INTEGRATION HANDERS ────────────────────────────────────
 // Generic handler for all Pipedream platforms (dynamic action execution)
@@ -54,7 +56,9 @@ import { geminiHandler } from './definitions/gemini/gemini.handler.js';
 import { openrouterHandler } from './definitions/openrouter/openrouter.handler.js';
 import { llmActionHandler } from './definitions/llm-action/llm-action.handler.js';
 import { ifHandler } from './definitions/if/if.handler.js';
+import { branchHandler } from './definitions/branch/branch.handler.js';
 import { codeHandler } from './definitions/code/code.handler.js';
+import { apiCallHandler } from './definitions/api-call/api-call.handler.js';
 import { pipedreamActionHandler } from './definitions/pipedream/pipedream-action.handler.js';
 import { stickyNoteHandler } from './definitions/sticky-note/sticky-note.handler.js';
 
@@ -81,7 +85,9 @@ export const WORKER_NODES: Record<string, ToolHandler> = {
 
   // ─── LOGIC
   'logic_if': ifHandler,
+  'logic_branch': branchHandler,
   'logic_code': codeHandler,
+  'api_call': apiCallHandler,
 
   // ─── PIPEDREAM INTEGRATIONS
   // Generic handler for all Pipedream platforms (handles all 10,000+ actions dynamically)

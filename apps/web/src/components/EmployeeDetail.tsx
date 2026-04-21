@@ -283,6 +283,15 @@ function TalkTabContent({ localEmployee }: { localEmployee: any }) {
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
+  const [threadId] = useState(() => {
+    // Session-based persistence: memory follows the tab life
+    const sessionKey = `thread_session_${id}`;
+    const existing = typeof window !== 'undefined' ? sessionStorage.getItem(sessionKey) : null;
+    if (existing) return existing;
+    const newId = crypto.randomUUID();
+    if (typeof window !== 'undefined') sessionStorage.setItem(sessionKey, newId);
+    return newId;
+  });
   const toast = useToast();
 
   const handleSend = async () => {
@@ -294,15 +303,20 @@ function TalkTabContent({ localEmployee }: { localEmployee: any }) {
     setIsProcessing(true);
 
     try {
-      const { data } = await api.post(`/employees/${id}/run`, { task: inputValue });
-      setCurrentRunId(data.id);
+      const { data } = await api.post(`/employees/${id}/run`, { 
+        task: inputValue,
+        threadId: threadId 
+      });
+      const runId = data.runId;
+      setCurrentRunId(runId);
       
       const assistantMessageId = Math.random().toString(36).substring(7);
       setMessages(prev => [...prev, { id: assistantMessageId, role: 'assistant', content: '', steps: [] }]);
 
       // Establish SSE connection
       const token = localStorage.getItem('workforce_token');
-      const eventSource = new EventSource(`${api.defaults.baseURL}/employees/runs/${data.id}/stream?token=${token}`);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const eventSource = new EventSource(`${apiUrl}/employees/runs/${runId}/stream?token=${token}`);
 
       eventSource.onmessage = (event) => {
         const payload = JSON.parse(event.data);
@@ -324,10 +338,15 @@ function TalkTabContent({ localEmployee }: { localEmployee: any }) {
            setMessages(prev => {
               const last = prev[prev.length - 1];
               if (last.id === assistantMessageId) {
-                 return [
-                   ...prev.slice(0, -1),
-                   { ...last, content: payload.output || 'Task completed.', status: payload.status }
-                 ];
+                  const outputData = payload.output?.data || payload.output;
+                  return [
+                    ...prev.slice(0, -1),
+                    { 
+                       ...last, 
+                       content: typeof outputData === 'string' ? outputData : JSON.stringify(outputData, null, 2), 
+                       status: payload.status 
+                    }
+                  ];
               }
               return prev;
            });

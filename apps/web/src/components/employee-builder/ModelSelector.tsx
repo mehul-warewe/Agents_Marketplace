@@ -41,7 +41,7 @@ export default function ModelSelector({ value, onChange, onClose }: ModelSelecto
       
       const providerId = m.id.split('/')[0] || 'unknown';
       const matchProvider = selectedProviders.length === 0 || selectedProviders.includes(providerId);
-      const promptPrice = parseFloat(m.pricing.prompt) * 1000000;
+      const promptPrice = parseFloat(m.pricing?.prompt || '0') * 1000000;
       const matchCredits = promptPrice <= maxCredits;
       const matchContext = (m.context_length || 0) >= minContext;
       const outputLimit = m.top_provider?.max_completion_tokens || 0;
@@ -58,7 +58,7 @@ export default function ModelSelector({ value, onChange, onClose }: ModelSelecto
       );
 
       const inputModalities = m.architecture?.input_modalities || [];
-      const hasVision = inputModalities.includes('image') || parseFloat(m.pricing.image || '0') > 0;
+      const hasVision = inputModalities.includes('image') || parseFloat(m.pricing?.image || '0') > 0;
       const matchFileTypes = selectedFileTypes.length === 0 || (selectedFileTypes.includes('Images') && hasVision);
 
       return matchSearch && matchProvider && matchCredits && matchContext && matchOutput && matchCapabilities && matchFileTypes;
@@ -205,13 +205,13 @@ export default function ModelSelector({ value, onChange, onClose }: ModelSelecto
                     const provider = model.id.split('/')[0];
                     const isHovered = hoveredId === model.id;
                     const isSelected = selectedId === model.id;
-                    const inputPrice = (parseFloat(model.pricing.prompt) * 1000000).toFixed(2);
+                    const inputPrice = (parseFloat(model.pricing?.prompt || '0') * 1000000).toFixed(2);
                     
                     return (
                       <button key={model.id} onMouseEnter={() => setHoveredId(model.id)} onMouseLeave={() => setHoveredId(null)} onClick={() => setSelectedId(model.id)} className={`p-5 rounded-xl border text-left transition-all duration-200 relative flex flex-col gap-3 overflow-hidden group ${isSelected ? 'bg-primary/5 border-primary/50 shadow-lg' : 'bg-card border-border/10 hover:border-primary/20 shadow-sm'}`}>
                          <div className="flex items-center justify-between">
                             <div className={`px-2 py-0.5 rounded-md text-[8px] font-bold border ${isSelected ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-foreground/5 text-foreground/20 border-border/10'}`}>
-                              {parseFloat(model.pricing.prompt) === 0 ? 'Free' : `$${inputPrice}/1M`}
+                              {parseFloat(model.pricing?.prompt || '0') === 0 ? 'Free' : `$${inputPrice}/1M`}
                             </div>
                             {isSelected && <div className="w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center"><Check size={12} strokeWidth={3} /></div>}
                          </div>
@@ -274,11 +274,11 @@ export default function ModelSelector({ value, onChange, onClose }: ModelSelecto
                      <div className="space-y-2">
                         <div className="flex justify-between items-center">
                            <span className="text-[9px] font-bold text-foreground/30 uppercase tracking-widest">Input / 1M tokens</span>
-                           <span className="text-sm font-bold">${(parseFloat(displayedModel.pricing.prompt) * 1000000).toFixed(4)}</span>
+                           <span className="text-sm font-bold">${(parseFloat(displayedModel.pricing?.prompt || '0') * 1000000).toFixed(4)}</span>
                         </div>
                         <div className="flex justify-between items-center">
                            <span className="text-[9px] font-bold text-foreground/30 uppercase tracking-widest">Output / 1M tokens</span>
-                           <span className="text-sm font-bold text-primary">${(parseFloat(displayedModel.pricing.completion) * 1000000).toFixed(4)}</span>
+                           <span className="text-sm font-bold text-primary">${(parseFloat(displayedModel.pricing?.completion || '0') * 1000000).toFixed(4)}</span>
                         </div>
                      </div>
                   </section>

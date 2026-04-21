@@ -160,7 +160,7 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
 
   return (
     <aside
-      className={`fixed top-14 left-0 h-[calc(100vh-3.5rem)] bg-card border-r border-border/40 transition-all duration-500 z-40 flex flex-col shadow-xl ${
+      className={`fixed top-14 left-0 h-[calc(100vh-3.5rem)] bg-card border-r border-border transition-all duration-500 z-40 flex flex-col shadow-xl ${
         isOpen ? 'w-80' : 'w-0 overflow-hidden border-none'
       }`}
     >
@@ -182,7 +182,7 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
         </div>
 
         <div className="relative group/search">
-          <div className="relative flex items-center bg-secondary border border-border/60 rounded-xl p-1 group-focus-within/search:border-indigo-500/40 transition-all shadow-inner">
+          <div className="relative flex items-center bg-muted border border-border rounded-xl p-1 focus-within:border-indigo-600 transition-all">
             <Search className="absolute left-3.5 text-muted-foreground/30 group-focus-within/search:text-indigo-500 transition-all z-10" size={13} strokeWidth={2.5} />
             <input
               type="text"
@@ -272,7 +272,7 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
                     setActivePlatform(null);
                     setSelectedPlatformName('');
                   }}
-                  className="w-full flex items-center gap-2 mb-4 p-2.5 bg-secondary border border-border/40 rounded-lg text-[9px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted transition-all group"
+                  className="w-full flex items-center gap-2 mb-4 p-2.5 bg-muted border border-border rounded-lg text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-all group"
                 >
                   <ChevronLeft size={12} strokeWidth={2.5} className="group-hover:-translate-x-1 transition-transform" />
                   Return to Core
@@ -284,7 +284,7 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 italic">Syncing Index...</span>
                   </div>
                 ) : (
-                  <div className="space-y-2 p-3 bg-secondary border border-border/60 rounded-3xl shadow-inner">
+                  <div className="space-y-2 p-3 bg-muted/30 border border-border rounded-2xl">
                     <div className="px-1 mb-4 flex flex-col gap-1">
                        <div className="flex items-center gap-2">
                           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
@@ -327,7 +327,7 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
               <div>
                 <button
                   onClick={() => setActivePlatform('__integrations_view__')}
-                  className="w-full flex items-center gap-2 mb-4 p-3 bg-secondary border border-border/40 rounded-xl text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted transition-all group"
+                  className="w-full flex items-center gap-2 mb-4 p-3 bg-muted border border-border rounded-xl text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-all group"
                 >
                   <ChevronLeft size={14} strokeWidth={2.5} className="group-hover:-translate-x-1 transition-transform" />
                   Ecosystem Index
@@ -349,7 +349,7 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 italic">Syncing Protocols...</span>
                   </div>
                 ) : (
-                  <div className="space-y-2 p-3 bg-secondary border border-border/60 rounded-3xl shadow-inner">
+                  <div className="space-y-2 p-3 bg-muted/30 border border-border rounded-2xl">
                     {platformTools.map((tool) => {
                       return (
                         <button
@@ -384,14 +384,13 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
             ) : (
               /* MAIN REGISTRY VIEW */
               <>
-                <div className="p-3 bg-secondary border border-border/60 rounded-3xl shadow-inner mb-10">
+                <div className="space-y-2 p-3 bg-muted border border-border rounded-2xl mb-10">
                   <button
                     onClick={() => setActivePlatform('__integrations_view__')}
                     className="w-full flex items-center justify-between p-4 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all group relative overflow-hidden shadow-lg shadow-indigo-500/20 border border-indigo-500/30"
                   >
-                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
                     <div className="flex items-center gap-4 relative z-10">
-                       <div className="w-10 h-10 rounded-lg bg-secondary border border-border/40 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                       <div className="w-10 h-10 rounded-lg bg-white/10 border border-white/10 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                           <Zap size={18} fill="white" className="text-white" />
                        </div>
                         <div className="flex flex-col text-left">
@@ -425,7 +424,7 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
                       </button>
 
                       {!isCollapsed && (
-                        <div className="space-y-2 p-3 bg-secondary border border-border/60 rounded-3xl shadow-inner mt-2">
+                        <div className="space-y-2 p-3 bg-muted/30 border border-border rounded-2xl mt-2">
                           {items.map((tool: any) => {
                             const Icon = tool.icon as any;
                             const toolLabel = tool.label || tool.name;
@@ -475,7 +474,7 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
         )}
       </div>
 
-      <div className="p-4 border-t border-border/40 bg-secondary/20 block">
+      <div className="p-4 border-t border-border bg-muted/20 block">
         <div className="flex items-center justify-between">
            <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest leading-none">Registry v4.1.0</span>
            <div className="flex items-center gap-2">

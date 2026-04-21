@@ -68,4 +68,35 @@ router.get('/oauth/slack/callback', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ─── Pipedream Integration ───────────────────────────────────────────────
+
+router.get('/pipedream/apps', async (req, res, next) => {
+  try {
+    const { q, search, limit, offset } = req.query;
+    const { results, total } = await pipedreamAppsService.searchApps(
+      (search as string) || (q as string),
+      limit ? parseInt(limit as string, 10) : 100,
+      offset ? parseInt(offset as string, 10) : 0
+    );
+    res.json({ results, total });
+  } catch (err) { next(err); }
+});
+
+router.get('/pipedream/accounts', async (req: any, res, next) => {
+  try {
+    const rawSlug = req.query.appSlug as string;
+    // We treat the slug literally here, as the service handles resolution if needed
+    const accounts = await pipedreamService.getConnectedAccounts(req.user.id, rawSlug);
+    res.json({ accounts });
+  } catch (err) { next(err); }
+});
+
+router.post('/pipedream/token', async (req: any, res, next) => {
+  try {
+    const { appSlug } = req.body;
+    const result = await pipedreamService.generateConnectToken(req.user.id, appSlug);
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
 export default router;

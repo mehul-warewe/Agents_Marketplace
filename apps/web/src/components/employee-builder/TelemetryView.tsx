@@ -185,7 +185,9 @@ export function RunDetailsModal({ run, onClose }: { run: RunRecord, onClose: () 
                   </div>
 
                   {step.thought && (
-                    <p className="text-sm font-medium leading-relaxed text-foreground/90">"{step.thought}"</p>
+                    <p className="text-sm font-medium leading-relaxed text-foreground/90">
+                      "{typeof step.thought === 'string' ? step.thought : JSON.stringify(step.thought)}"
+                    </p>
                   )}
 
                   {step.action && (
@@ -204,7 +206,7 @@ export function RunDetailsModal({ run, onClose }: { run: RunRecord, onClose: () 
                       </button>
                       {expandedObservations[idx] && (
                         <pre className="p-4 bg-background/50 rounded-xl border border-current/10 text-[10px] font-medium overflow-x-auto custom-scrollbar no-scrollbar whitespace-pre-wrap max-h-48">
-                          {step.observation}
+                          {typeof step.observation === 'string' ? step.observation : JSON.stringify(step.observation, null, 2)}
                         </pre>
                       )}
                       {!expandedObservations[idx] && (
@@ -229,7 +231,10 @@ export function RunDetailsModal({ run, onClose }: { run: RunRecord, onClose: () 
                 <CheckCircle size={12} /> Final Output
               </h4>
               <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-6 text-sm font-medium leading-relaxed">
-                {typeof run.output === 'string' ? run.output : run.output?.data || JSON.stringify(run.output)}
+                {(() => {
+                  const finalVal = run.output?.data ?? run.output;
+                  return typeof finalVal === 'string' ? finalVal : JSON.stringify(finalVal, null, 2);
+                })()}
               </div>
             </div>
           )}

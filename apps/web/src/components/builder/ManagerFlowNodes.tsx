@@ -2,164 +2,230 @@
 
 import React, { memo } from 'react';
 import { Handle, Position } from 'reactflow';
-import { Users, Shield, Zap, Target, Cpu, MessageSquare, ListTree, StickyNote, Activity, Plus } from 'lucide-react';
+import { Users, Zap, Activity, ListTree, StickyNote, Plus, Bot } from 'lucide-react';
 
+/* ─── Manager Hub Node ─────────────────────────────────────────────────────── */
 export const ManagerHubNode = memo(({ data }: any) => {
   return (
-    <div className="group relative">
-      <div className="absolute -inset-4 bg-indigo-500/10 rounded-[3rem] blur-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-700" />
-      <div className="relative w-80 bg-card border-2 border-indigo-500/50 rounded-[2.5rem] shadow-2xl p-6 overflow-hidden">
-        <header className="flex items-center gap-4 mb-4 relative z-10 drag-handle cursor-move">
-          <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-            <Users size={24} strokeWidth={2.5} />
+    <div className="w-80 bg-card border-2 border-indigo-500 rounded-2xl shadow-md overflow-hidden">
+      {/* Color stripe accent */}
+      <div className="h-1 bg-indigo-600 w-full" />
+      <div className="p-5 drag-handle cursor-move">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shrink-0">
+            <Users size={18} strokeWidth={2.5} />
           </div>
-          <div>
-             <div className="flex items-center gap-2 mb-1">
-                <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-500/10 px-2 py-0.5 rounded-full italic">Manager Hub</span>
-                <div className="size-1.5 rounded-full bg-indigo-500 animate-pulse" />
-             </div>
-             <h3 className="text-md font-black italic tracking-tighter uppercase leading-none truncate max-w-[150px] text-foreground">{data.name || 'Unnamed'}</h3>
-          </div>
-        </header>
-        <div className="p-4 bg-muted border border-border rounded-2xl relative z-10">
-           <p className="text-[9px] font-black text-muted uppercase tracking-widest mb-1 italic">Goal Registry</p>
-           <p className="text-[10px] font-bold text-foreground/80 leading-relaxed italic line-clamp-2">{data.goal || 'Define Core goal...'}</p>
-        </div>
-        <Handle type="source" position={Position.Right} className="!w-4 !h-4 !bg-indigo-600 !border-2 !border-card !shadow-lg hover:scale-125 transition-transform" />
-      </div>
-    </div>
-  );
-});
-
-export const EmployeeNode = memo(({ data }: any) => {
-  return (
-    <div className="group relative">
-      <div className={`relative w-72 bg-card border ${data.isPlaceholder ? 'border-dashed border-border' : 'border-indigo-500/40'} rounded-[1.75rem] shadow-xl p-5 hover:border-indigo-500 transition-all duration-500`}>
-        <header className="flex items-center gap-4 mb-3 drag-handle cursor-move">
-          <div className={`w-11 h-11 ${data.isPlaceholder ? 'bg-foreground/5 text-muted/40' : 'bg-indigo-500/10 text-indigo-500'} rounded-xl flex items-center justify-center border border-border/10 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 shadow-sm`}>
-            <Cpu size={20} />
-          </div>
-          <div className="min-w-0 flex-1">
-             <div className="flex items-center gap-1.5 mb-0.5">
-                <span className="text-[7px] font-black text-indigo-400 uppercase tracking-widest opacity-60">Employee Assignment</span>
-                {!data.isPlaceholder && <div className="size-1 rounded-full bg-indigo-500/40" />}
-             </div>
-            <h3 className={`text-xs font-black italic tracking-tight uppercase truncate ${data.isPlaceholder ? 'text-muted/40 font-bold' : 'text-foreground'}`}>
-              {data.name}
+          <div className="min-w-0">
+            <span className="block text-[9px] font-black text-indigo-500 uppercase tracking-[0.2em] leading-none mb-1">
+              Manager Hub
+            </span>
+            <h3 className="text-sm font-bold tracking-tight text-foreground truncate leading-none">
+              {data.name || 'New Manager'}
             </h3>
           </div>
-        </header>
+          <div className="ml-auto w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+        </div>
 
-        {data.isPlaceholder && (
-           <div className="flex items-center gap-2 mt-4 px-3 py-2 bg-indigo-500/5 border border-dashed border-indigo-500/10 rounded-xl">
-              <Plus size={10} className="text-indigo-500/40" />
-              <span className="text-[8px] font-black uppercase tracking-widest text-indigo-500/30 italic">Select employee</span>
-           </div>
-        )}
-
-        <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-background !border-2 !border-indigo-500/20 !shadow-sm hover:!bg-indigo-500 hover:!border-indigo-500 transition-colors" />
-        <Handle type="source" position={Position.Right} className="!w-3 !h-3 !bg-background !border-2 !border-indigo-500/20 !shadow-sm hover:!bg-indigo-500 hover:!border-indigo-500 transition-colors" />
+        <div className="px-4 py-3 bg-muted rounded-xl border border-border">
+          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5">
+            Primary Objective
+          </p>
+          <p className="text-[11px] font-medium text-foreground/80 leading-relaxed line-clamp-2">
+            {data.goal || 'Define core objective...'}
+          </p>
+        </div>
       </div>
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="!w-3.5 !h-3.5 !bg-indigo-600 !border-2 !border-card !shadow-sm"
+      />
     </div>
   );
 });
 
+/* ─── Employee Node ─────────────────────────────────────────────────────────── */
+export const EmployeeNode = memo(({ data }: any) => {
+  const isPlaceholder = data.isPlaceholder;
+  return (
+    <div
+      className={`w-68 bg-card border rounded-2xl shadow-sm overflow-hidden transition-all duration-200
+        ${isPlaceholder ? 'border-dashed border-border' : 'border-border hover:border-indigo-500/60'}`}
+    >
+      <div className={`h-0.5 w-full ${isPlaceholder ? 'bg-border' : 'bg-indigo-500'}`} />
+      <div className="p-4 drag-handle cursor-move">
+        <div className="flex items-center gap-3">
+          <div
+            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border transition-colors
+              ${isPlaceholder
+                ? 'bg-muted border-border text-muted-foreground/40'
+                : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-500'
+              }`}
+          >
+            <Bot size={16} strokeWidth={2} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="block text-[8px] font-black uppercase tracking-[0.18em] text-muted-foreground/60 leading-none mb-1">
+              Employee Assignment
+            </span>
+            <h3 className={`text-xs font-bold tracking-tight truncate leading-none
+              ${isPlaceholder ? 'text-muted-foreground/40 italic' : 'text-foreground'}`}
+            >
+              {data.name || 'Unassigned'}
+            </h3>
+          </div>
+        </div>
+
+        {isPlaceholder && (
+          <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-muted rounded-lg border border-dashed border-border">
+            <Plus size={10} className="text-muted-foreground/40 shrink-0" />
+            <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/40">
+              Click to assign employee
+            </span>
+          </div>
+        )}
+      </div>
+      <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-card !border-2 !border-indigo-500/40" />
+      <Handle type="source" position={Position.Right} className="!w-3 !h-3 !bg-card !border-2 !border-indigo-500/40" />
+    </div>
+  );
+});
+
+/* ─── Tool Node ─────────────────────────────────────────────────────────────── */
 export const ToolNode = memo(({ data }: any) => {
+  const isPlaceholder = data.isPlaceholder;
   return (
-    <div className="group relative">
-      <div className={`relative w-64 bg-card border ${data.isPlaceholder ? 'border-dashed border-border' : 'border-emerald-500/40'} rounded-[1.5rem] shadow-lg p-4 hover:border-emerald-500 transition-all duration-500`}>
-        <header className="flex items-center gap-3 mb-2 drag-handle cursor-move">
-          <div className={`w-10 h-10 ${data.isPlaceholder ? 'bg-emerald-500/5 text-emerald-500/40' : 'bg-emerald-500/10 text-emerald-500'} rounded-xl flex items-center justify-center border border-emerald-500/20 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-500 shadow-sm`}>
-            <Zap size={18} />
+    <div
+      className={`w-60 bg-card border rounded-2xl shadow-sm overflow-hidden transition-all duration-200
+        ${isPlaceholder ? 'border-dashed border-border' : 'border-border hover:border-emerald-500/60'}`}
+    >
+      <div className={`h-0.5 w-full ${isPlaceholder ? 'bg-border' : 'bg-emerald-500'}`} />
+      <div className="p-4 drag-handle cursor-move">
+        <div className="flex items-center gap-3">
+          <div
+            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border
+              ${isPlaceholder
+                ? 'bg-muted border-border text-muted-foreground/40'
+                : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+              }`}
+          >
+            <Zap size={16} strokeWidth={2} />
           </div>
           <div className="min-w-0 flex-1">
-             <div className="flex items-center gap-1.5 mb-0.5">
-                <span className="text-[7px] font-black text-emerald-500/60 uppercase tracking-widest">Execution Skill</span>
-             </div>
-            <h3 className={`text-[10px] font-black italic uppercase truncate ${data.isPlaceholder ? 'text-muted/40' : 'text-foreground'}`}>{data.name}</h3>
+            <span className="block text-[8px] font-black uppercase tracking-[0.18em] text-muted-foreground/60 leading-none mb-1">
+              Skill Node
+            </span>
+            <h3 className={`text-xs font-bold tracking-tight truncate leading-none
+              ${isPlaceholder ? 'text-muted-foreground/40 italic' : 'text-foreground'}`}
+            >
+              {data.name || 'Unassigned'}
+            </h3>
           </div>
-        </header>
-        
-        {data.isPlaceholder && (
-           <div className="flex items-center gap-2 mt-2 px-2 py-1.5 bg-emerald-500/5 border border-dashed border-emerald-500/10 rounded-lg">
-              <Plus size={10} className="text-emerald-500/40" />
-              <span className="text-[7.5px] font-black uppercase tracking-widest text-emerald-500/30">Link tool</span>
-           </div>
+        </div>
+        {isPlaceholder && (
+          <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-muted rounded-lg border border-dashed border-border">
+            <Plus size={10} className="text-muted-foreground/40 shrink-0" />
+            <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/40">
+              Click to link skill
+            </span>
+          </div>
         )}
-
-        <Handle type="target" position={Position.Left} className="!w-2.5 !h-2.5 !bg-background !border-2 !border-emerald-500/20 !shadow-sm hover:!bg-emerald-500 hover:!border-emerald-500" />
-        <Handle type="source" position={Position.Right} className="!w-2.5 !h-2.5 !bg-background !border-2 !border-emerald-500/20 !shadow-sm hover:!bg-emerald-500 hover:!border-emerald-500" />
       </div>
+      <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-card !border-2 !border-emerald-500/40" />
+      <Handle type="source" position={Position.Right} className="!w-3 !h-3 !bg-card !border-2 !border-emerald-500/40" />
     </div>
   );
 });
 
+/* ─── Trigger Node ──────────────────────────────────────────────────────────── */
 export const TriggerNode = memo(({ data }: any) => {
+  const isPlaceholder = data.isPlaceholder;
   return (
-    <div className="group relative">
-      <div className={`relative w-64 bg-card border ${data.isPlaceholder ? 'border-dashed border-border' : 'border-orange-500/40'} rounded-[1.5rem] shadow-lg p-4 hover:border-orange-500 transition-all duration-500`}>
-        <header className="flex items-center gap-3 mb-2 drag-handle cursor-move">
-          <div className={`w-10 h-10 ${data.isPlaceholder ? 'bg-orange-500/5 text-orange-500/40' : 'bg-orange-500/10 text-orange-500'} rounded-xl flex items-center justify-center border border-orange-500/20 group-hover:bg-orange-500 group-hover:text-white transition-all duration-500 shadow-sm`}>
-            <Activity size={18} />
+    <div
+      className={`w-60 bg-card border rounded-2xl shadow-sm overflow-hidden transition-all duration-200
+        ${isPlaceholder ? 'border-dashed border-border' : 'border-border hover:border-orange-500/60'}`}
+    >
+      <div className={`h-0.5 w-full ${isPlaceholder ? 'bg-border' : 'bg-orange-500'}`} />
+      <div className="p-4 drag-handle cursor-move">
+        <div className="flex items-center gap-3">
+          <div
+            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border
+              ${isPlaceholder
+                ? 'bg-muted border-border text-muted-foreground/40'
+                : 'bg-orange-500/10 border-orange-500/20 text-orange-600 dark:text-orange-400'
+              }`}
+          >
+            <Activity size={16} strokeWidth={2} />
           </div>
           <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <span className="text-[7px] font-black text-orange-500/60 uppercase tracking-widest">Event Hub</span>
-             </div>
-             <h3 className={`text-[10px] font-black italic uppercase truncate ${data.isPlaceholder ? 'text-muted/40 font-bold' : 'text-foreground'}`}>
-               {data.name}
-             </h3>
+            <span className="block text-[8px] font-black uppercase tracking-[0.18em] text-muted-foreground/60 leading-none mb-1">
+              Event Trigger
+            </span>
+            <h3 className={`text-xs font-bold tracking-tight truncate leading-none
+              ${isPlaceholder ? 'text-muted-foreground/40 italic' : 'text-foreground'}`}
+            >
+              {data.name || 'Unassigned'}
+            </h3>
           </div>
-        </header>
-
-        {data.isPlaceholder && (
-           <div className="flex items-center gap-2 mt-2 px-2 py-1.5 bg-orange-500/5 border border-dashed border-orange-500/10 rounded-lg">
-              <Plus size={10} className="text-orange-500/40" />
-              <span className="text-[7.5px] font-black uppercase tracking-widest text-orange-500/30">Connect event</span>
-           </div>
+        </div>
+        {isPlaceholder && (
+          <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-muted rounded-lg border border-dashed border-border">
+            <Plus size={10} className="text-muted-foreground/40 shrink-0" />
+            <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/40">
+              Click to connect event
+            </span>
+          </div>
         )}
-
-        <Handle type="source" position={Position.Right} className="!w-2.5 !h-2.5 !bg-background !border-2 !border-orange-500/20 !shadow-sm hover:!bg-orange-500 hover:!border-orange-500 transition-colors" />
       </div>
+      <Handle type="source" position={Position.Right} className="!w-3 !h-3 !bg-card !border-2 !border-orange-500/40" />
     </div>
   );
 });
 
+/* ─── Condition Node ────────────────────────────────────────────────────────── */
 export const ConditionNode = memo(({ data }: any) => {
   return (
-    <div className="group relative">
-      <div className="relative w-64 bg-card border border-purple-500/40 rounded-[1.5rem] shadow-lg p-4 hover:border-purple-500 transition-all duration-500">
-        <header className="flex items-center gap-3 mb-2 drag-handle cursor-move">
-          <div className="w-10 h-10 bg-purple-500/10 text-purple-500 rounded-xl flex items-center justify-center border border-purple-500/20 group-hover:bg-purple-500 group-hover:text-white transition-all duration-500 shadow-sm">
-            <ListTree size={18} />
+    <div className="w-60 bg-card border border-border hover:border-purple-500/60 rounded-2xl shadow-sm overflow-hidden transition-all duration-200">
+      <div className="h-0.5 w-full bg-purple-500" />
+      <div className="p-4 drag-handle cursor-move">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+            <ListTree size={16} strokeWidth={2} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 mb-0.5">
-               <span className="text-[7px] font-black text-purple-500/60 uppercase tracking-widest">Logic Gateway</span>
-            </div>
-            <h3 className="text-[10px] font-black italic uppercase truncate text-foreground">{data.name || 'Decision Gate'}</h3>
+            <span className="block text-[8px] font-black uppercase tracking-[0.18em] text-muted-foreground/60 leading-none mb-1">
+              Logic Gateway
+            </span>
+            <h3 className="text-xs font-bold tracking-tight truncate leading-none text-foreground">
+              {data.name || 'Decision Gate'}
+            </h3>
           </div>
-        </header>
-        <Handle type="target" position={Position.Left} className="!w-2.5 !h-2.5 !bg-background !border-2 !border-purple-500/20 !shadow-sm hover:!bg-purple-500 hover:!border-purple-500" />
-        <Handle type="source" position={Position.Right} className="!w-2.5 !h-2.5 !bg-background !border-2 !border-purple-500/20 !shadow-sm hover:!bg-purple-500 hover:!border-purple-500" />
+        </div>
       </div>
+      <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-card !border-2 !border-purple-500/40" />
+      <Handle type="source" position={Position.Right} className="!w-3 !h-3 !bg-card !border-2 !border-purple-500/40" />
     </div>
   );
 });
 
+/* ─── Note Node ─────────────────────────────────────────────────────────────── */
 export const NoteNode = memo(({ data }: any) => {
   return (
-    <div className="group relative">
-      <div className="relative w-64 bg-yellow-400/10 border border-yellow-500/40 rounded-[1.5rem] shadow-lg p-5">
-        <div className="flex items-center gap-3 mb-3">
-          <StickyNote size={14} className="text-yellow-500" />
-          <span className="text-[8px] font-black text-yellow-500 uppercase tracking-widest">Documentation</span>
+    <div className="w-60 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-400/60 dark:border-yellow-500/40 rounded-2xl shadow-sm overflow-hidden">
+      <div className="h-0.5 w-full bg-yellow-400" />
+      <div className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <StickyNote size={13} className="text-yellow-600 dark:text-yellow-400 shrink-0" />
+          <span className="text-[8px] font-black uppercase tracking-[0.18em] text-yellow-700 dark:text-yellow-400">
+            Annotation
+          </span>
         </div>
-        <textarea 
+        <textarea
           value={data.label}
           disabled
-          className="w-full bg-transparent border-none outline-none resize-none text-[10px] font-bold text-foreground/60 italic leading-relaxed"
-          placeholder="Reference notes..."
+          rows={3}
+          className="w-full bg-transparent border-none outline-none resize-none text-[11px] font-medium text-yellow-900/70 dark:text-yellow-200/60 leading-relaxed placeholder:text-yellow-700/30"
+          placeholder="Write a note..."
         />
       </div>
     </div>
@@ -172,6 +238,3 @@ ToolNode.displayName = 'ToolNode';
 TriggerNode.displayName = 'TriggerNode';
 ConditionNode.displayName = 'ConditionNode';
 NoteNode.displayName = 'NoteNode';
-
-ManagerHubNode.displayName = 'ManagerHubNode';
-EmployeeNode.displayName = 'EmployeeNode';

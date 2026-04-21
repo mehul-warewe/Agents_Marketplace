@@ -196,7 +196,11 @@ export default function ManagerDetailPage() {
                                           
                                           <Card className={`p-6 rounded-2xl border-border/40 shadow-sm transition-all duration-300 ${isFinal ? 'bg-card border-indigo-500/20 ring-1 ring-indigo-500/10' : 'bg-card/50'}`}>
                                              <p className={`text-[13px] leading-relaxed font-medium ${isFinal ? 'text-foreground' : 'text-muted-foreground'}`}>
-                                                {step.thought || step.output || 'Analyzing request data...'}
+                                                {(() => {
+                                                   const val = step.thought || step.output;
+                                                   if (!val) return 'Analyzing request data...';
+                                                   return typeof val === 'string' ? val : JSON.stringify(val, null, 2);
+                                                 })()}
                                              </p>
                                           </Card>
                                        </div>

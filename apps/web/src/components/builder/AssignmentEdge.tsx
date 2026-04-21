@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { EdgeProps, getSmoothStepPath, EdgeLabelRenderer, MarkerType } from 'reactflow';
-import { Zap, MessageSquare, ArrowRight } from 'lucide-react';
+import { EdgeProps, getSmoothStepPath, EdgeLabelRenderer } from 'reactflow';
+import { MessageSquare, ArrowRight } from 'lucide-react';
 
 export default function AssignmentEdge({
   id,
@@ -32,11 +32,11 @@ export default function AssignmentEdge({
         id={id}
         style={{
           ...style,
-          strokeWidth: 2.5,
-          stroke: '#6366f1',
-          opacity: 0.4,
+          strokeWidth: 2,
+          stroke: 'currentColor',
+          opacity: 0.2,
         }}
-        className="react-flow__edge-path"
+        className="react-flow__edge-path text-foreground"
         d={edgePath}
         markerEnd={markerEnd}
       />
@@ -44,9 +44,9 @@ export default function AssignmentEdge({
         id={`${id}-animation`}
         style={{
           ...style,
-          strokeWidth: 2.5,
+          strokeWidth: 2,
           stroke: '#6366f1',
-          strokeDasharray: '8, 8',
+          strokeDasharray: '6, 6',
         }}
         className="react-flow__edge-path animate-[dash_30s_linear_infinite]"
         d={edgePath}
@@ -61,21 +61,20 @@ export default function AssignmentEdge({
           }}
           className="group"
         >
-          <div className="bg-card border border-indigo-500/20 rounded-full px-4 py-2 flex items-center gap-2 shadow-2xl hover:scale-110 transition-all cursor-pointer hover:border-indigo-500/50">
+          <div className="bg-card border border-border rounded-full px-3 py-1.5 flex items-center gap-2 shadow-sm hover:scale-105 transition-all cursor-pointer hover:border-indigo-500/40">
             <ArrowRight size={10} className="text-indigo-500" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500">ASSIGNMENT</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 group-hover:text-indigo-500 transition-colors">ASSIGNMENT</span>
             
             {/* Tooltip Content */}
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-64 p-5 bg-background border border-border/40 rounded-[2rem] shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 overflow-hidden">
-               <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-full -mr-10 -mt-10" />
-               <div className="flex items-center gap-2 mb-3 relative z-10">
-                 <MessageSquare size={12} className="text-muted" />
-                  <span className="text-[8px] font-black uppercase tracking-widest text-muted">Instructional Flow</span>
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-56 p-4 bg-card border border-border rounded-xl shadow-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50">
+               <div className="flex items-center gap-2 mb-2">
+                 <MessageSquare size={12} className="text-muted-foreground/40" />
+                  <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40">Instructional Context</span>
                </div>
-               <p className="text-[10px] font-bold text-foreground opacity-80 italic leading-relaxed relative z-10">
-                 {data?.instruction || "Manager will decide delegate parameters dynamically based on current workflow state."}
+               <p className="text-[10px] font-medium text-foreground/80 leading-relaxed italic">
+                 {data?.instruction || "Manager will delegate tasks dynamically based on the current objective and workflow state."}
                </p>
-               <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-background border-r border-b border-border/40 rotate-45" />
+               <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-card border-r border-b border-border rotate-45" />
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 'use client';
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Loader2, Wand2, ChevronDown, ChevronUp, Send, Bot, User, Info, RotateCcw } from 'lucide-react';
+import { Sparkles, Loader2, Wand2, ChevronDown, Send, Bot, User, Info, RotateCcw } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -21,7 +22,7 @@ export default function ArchitectBar({ onGenerate, isGenerating }: ArchitectBarP
     {
       id: 'welcome',
       role: 'assistant',
-      content: 'Hi! I\'m the Workflow Architect. Tell me what logic you want to automate and I\'ll build a linear pipeline for you. Try: "Email me daily YouTube analytics summaries"',
+      content: 'Hello. I am the Architecture Synthesis engine. Describe the business logic or process you wish to automate, and I will generate the workflow structure for you.',
       type: 'explanation',
     }
   ]);
@@ -50,16 +51,14 @@ export default function ArchitectBar({ onGenerate, isGenerating }: ArchitectBarP
     setMessages(newMessages);
     setInput('');
 
-    // Build history for API (exclude welcome message, format for API)
     const history = newMessages
       .filter(m => m.id !== 'welcome')
-      .slice(-8) // last 4 exchanges
+      .slice(-8)
       .map(m => ({ role: m.role, content: m.content }));
 
     onGenerate(input.trim(), history);
   };
 
-  // Called by parent to add a response message
   const addAssistantMessage = (content: string, type?: 'explanation' | 'error') => {
     setMessages(prev => [...prev, {
       id: `assistant-${Date.now()}`,
@@ -69,7 +68,6 @@ export default function ArchitectBar({ onGenerate, isGenerating }: ArchitectBarP
     }]);
   };
 
-  // Expose addAssistantMessage via imperative handle alternative (stored on window for simplicity)
   useEffect(() => {
     (window as any).__architectAddMsg = addAssistantMessage;
     return () => { delete (window as any).__architectAddMsg; };
@@ -79,37 +77,35 @@ export default function ArchitectBar({ onGenerate, isGenerating }: ArchitectBarP
     setMessages([{
       id: 'welcome',
       role: 'assistant',
-      content: 'Chat cleared! Describe another workflow to build.',
+      content: 'Context cleared. Please describe a new operational workflow.',
       type: 'explanation',
     }]);
   };
 
   return (
-    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-40 font-inter pointer-events-none">
-      <div className={`pointer-events-auto bg-card border border-border/40 shadow-2xl shadow-black/30 rounded-2xl transition-all duration-300 ${isExpanded ? 'rounded-2xl' : 'rounded-2xl'}`}>
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-6 z-40 pointer-events-none">
+      <div className={`pointer-events-auto bg-card border border-border rounded-2xl transition-all duration-300 shadow-xl ${isExpanded ? 'ring-1 ring-indigo-500/10' : ''}`}>
         
-        {/* Chat History — visible when expanded */}
+        {/* Chat History */}
         {isExpanded && (
-          <div className="max-h-[320px] overflow-y-auto no-scrollbar p-4 space-y-3 border-b border-border/30">
+          <div className="max-h-[320px] overflow-y-auto no-scrollbar p-5 space-y-4 border-b border-border">
             {messages.map(msg => (
-              <div key={msg.id} className={`flex gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                {/* Avatar */}
-                <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${msg.role === 'user' ? 'bg-foreground text-background' : 'bg-accent/20 text-accent'}`}>
-                  {msg.role === 'user' ? <User size={11} /> : <Bot size={11} />}
+              <div key={msg.id} className={`flex gap-3.5 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className={`shrink-0 w-7 h-7 rounded-lg flex items-center justify-center border ${msg.role === 'user' ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-muted text-muted-foreground border-border'}`}>
+                  {msg.role === 'user' ? <User size={13} strokeWidth={2.5} /> : <Bot size={13} strokeWidth={2.5} />}
                 </div>
-                {/* Bubble */}
-                <div className={`max-w-[85%] px-3 py-2 rounded-xl text-[11px] leading-relaxed whitespace-pre-wrap
+                <div className={`max-w-[85%] px-4 py-3 rounded-2xl text-[12px] leading-relaxed
                   ${msg.role === 'user' 
-                    ? 'bg-foreground text-background rounded-tr-none font-medium' 
+                    ? 'bg-indigo-600 text-white rounded-tr-none font-medium' 
                     : msg.type === 'error'
-                      ? 'bg-red-500/10 border border-red-500/20 text-red-400 rounded-tl-none'
-                      : 'bg-foreground/[0.05] border border-border/30 text-foreground/80 rounded-tl-none'
+                      ? 'bg-red-500/5 border border-red-500/10 text-red-500 rounded-tl-none font-medium'
+                      : 'bg-muted border border-border text-foreground/80 rounded-tl-none font-medium'
                   }`}
                 >
                   {msg.type === 'explanation' && msg.id !== 'welcome' && (
-                    <div className="flex items-center gap-1 mb-1.5 text-accent text-[9px] font-black uppercase tracking-widest">
-                      <Info size={10} />
-                      Workflow Built
+                    <div className="flex items-center gap-1.5 mb-1.5 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase tracking-widest">
+                      <Info size={11} strokeWidth={3} />
+                      Architecture Generated
                     </div>
                   )}
                   {msg.content}
@@ -117,30 +113,30 @@ export default function ArchitectBar({ onGenerate, isGenerating }: ArchitectBarP
               </div>
             ))}
 
-            {/* Neural HUD — Visualizing the 5-step Creation Process */}
+            {/* Creation HUD */}
             {isGenerating && (
-              <div className="flex flex-col gap-4 p-4 bg-foreground/[0.03] border border-border/30 rounded-2xl animate-in fade-in slide-in-from-bottom-2 duration-500">
-                <div className="flex items-center justify-between border-b border-border/20 pb-2 mb-2">
+              <div className="p-5 bg-muted/50 border border-border rounded-2xl animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
                    <div className="flex items-center gap-2">
-                     <Sparkles size={14} className="text-accent animate-pulse" />
-                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground">Neural_Mesh_Architecting</span>
+                     <Sparkles size={14} className="text-indigo-600 animate-pulse" />
+                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground">Synthesis_In_Progress</span>
                    </div>
-                   <Loader2 size={12} className="animate-spin text-muted/40" />
+                   <Loader2 size={12} className="animate-spin text-muted-foreground/40" />
                 </div>
                 
-                <div className="space-y-3">
+                <div className="space-y-4">
                    {[
-                     { id: 1, label: 'Goal Analysis & Objective Mapping', sub: 'Analyzing user prompt for intent...' },
-                     { id: 2, label: 'Node Discovery & Platform Selection', sub: 'Identifying required tools from registry...' },
-                     { id: 3, label: 'Functional Schema Alignment', sub: 'Connecting input/output contracts...' },
-                     { id: 4, label: 'Sequential Logic Wiring', sub: 'Building execution paths and edges...' },
-                     { id: 5, label: 'Data Flow & Variable Finalization', sub: 'Propagating {{ parameters }} across nodes...' },
+                     { id: 1, label: 'Tactical Intent Mapping', sub: 'Analyzing user objectives...' },
+                     { id: 2, label: 'Registry Discovery', sub: 'Locating optimal skills and employees...' },
+                     { id: 3, label: 'Schema Connection', sub: 'Aligning data flow contracts...' },
+                     { id: 4, label: 'Link Validation', sub: 'Structuring sequential execution paths...' },
+                     { id: 5, label: 'Logic Synthesis', sub: 'Finalizing behavioral parameters...' },
                    ].map((step, i) => (
-                     <div key={step.id} className="flex gap-3">
-                        <div className={`w-1 h-8 rounded-full transition-all duration-700 ${i === 0 ? 'bg-accent shadow-[0_0_8px_rgba(59,130,246,0.5)] animate-pulse' : 'bg-border/20'}`} />
+                     <div key={step.id} className="flex gap-4">
+                        <div className={`w-1 h-8 rounded-full transition-all duration-700 ${i === 0 ? 'bg-indigo-600 shadow-[0_0_8px_rgba(79,70,229,0.4)] animate-pulse' : 'bg-border'}`} />
                         <div className="flex flex-col">
-                           <p className={`text-[10px] font-bold uppercase tracking-widest ${i === 0 ? 'text-foreground' : 'text-muted/40'}`}>{step.label}</p>
-                           <p className={`text-[9px] ${i === 0 ? 'text-muted opacity-80' : 'text-muted/20'}`}>{step.sub}</p>
+                           <p className={`text-[10px] font-black uppercase tracking-widest ${i === 0 ? 'text-foreground' : 'text-muted-foreground/30'}`}>{step.label}</p>
+                           <p className={`text-[9px] font-medium leading-none mt-1 ${i === 0 ? 'text-muted-foreground' : 'text-muted-foreground/10'}`}>{step.sub}</p>
                         </div>
                      </div>
                    ))}
@@ -151,25 +147,21 @@ export default function ArchitectBar({ onGenerate, isGenerating }: ArchitectBarP
           </div>
         )}
 
-        {/* Input Bar */}
-        <div className="flex items-center gap-2 p-2">
-          {/* Expand/Collapse toggle */}
+        {/* Input Area */}
+        <div className="flex items-center gap-2 p-2.5">
           <button
             onClick={() => setIsExpanded(v => !v)}
-            className="p-2 rounded-xl text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-all"
-            title={isExpanded ? 'Collapse' : 'Open Architect'}
+            className="w-9 h-9 flex items-center justify-center rounded-xl text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-all"
           >
-            {isExpanded ? <ChevronDown size={15} /> : <Wand2 size={15} />}
+            {isExpanded ? <ChevronDown size={16} strokeWidth={2.5} /> : <Wand2 size={16} strokeWidth={2.5} />}
           </button>
 
-          {/* Architect label when collapsed */}
           {!isExpanded && (
-            <span className="text-[10px] font-black text-muted/50 uppercase tracking-widest select-none">
+            <span className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-[0.2em] select-none ml-1">
               Architect
             </span>
           )}
 
-          {/* Input */}
           <input
             ref={inputRef}
             value={input}
@@ -180,37 +172,35 @@ export default function ArchitectBar({ onGenerate, isGenerating }: ArchitectBarP
             }}
             onFocus={() => setIsExpanded(true)}
             disabled={isGenerating}
-            placeholder={isExpanded ? 'Describe what you want to automate...' : 'Ask the Architect...'}
-            className="flex-1 text-[12px] bg-transparent border-none outline-none text-foreground placeholder:text-muted/30 font-medium"
+            placeholder={isExpanded ? 'Define your workflow requirements...' : 'Synthesize architecture...'}
+            className="flex-1 text-[13px] bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/20 font-medium px-2"
           />
 
-          {/* Clear chat */}
           {isExpanded && messages.length > 1 && (
             <button
               onClick={clearChat}
-              className="p-2 text-muted/40 hover:text-muted transition-all"
-              title="Clear chat"
+              className="p-2 text-muted-foreground/20 hover:text-red-500 transition-all"
+              title="Clear history"
             >
-              <RotateCcw size={12} />
+              <RotateCcw size={14} />
             </button>
           )}
 
-          {/* Send Button */}
           <button
             onClick={handleSend}
             disabled={isGenerating || !input.trim()}
             className={`
-              flex items-center justify-center gap-2 px-4 h-9 rounded-xl
-              font-black text-[10px] uppercase tracking-widest transition-all
+              flex items-center justify-center gap-2 px-6 h-9 rounded-xl
+              font-black text-[10px] uppercase tracking-[0.2em] transition-all
               ${isGenerating || !input.trim()
-                ? 'opacity-20 cursor-not-allowed bg-transparent text-muted'
-                : 'bg-foreground text-background hover:opacity-90 active:scale-[0.95]'}
+                ? 'opacity-20 cursor-not-allowed text-muted-foreground'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.96] shadow-sm'}
             `}
           >
             {isGenerating ? (
               <Loader2 size={13} className="animate-spin" />
             ) : (
-              <><Send size={12} /> Build</>
+              <><Send size={12} strokeWidth={2.5} /> Build</>
             )}
           </button>
         </div>

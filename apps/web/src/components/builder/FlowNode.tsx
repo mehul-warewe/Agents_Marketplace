@@ -1,4 +1,5 @@
 'use client';
+
 import React, { useCallback, useMemo } from 'react';
 import { Handle, Position, useEdges, NodeResizer } from 'reactflow';
 import { 
@@ -8,8 +9,8 @@ import {
   Loader2, 
   Zap, 
   Plus, 
-  Trash2, 
-  StickyNote as StickyIcon 
+  Trash2,
+  Settings2,
 } from 'lucide-react';
 import { getToolByExecutionKey, getToolById } from './toolRegistry';
 import ReactMarkdown from 'react-markdown';
@@ -39,7 +40,7 @@ interface FlowNodeProps {
 
 const MemoizedMarkdown = React.memo(({ content }: { content: string }) => {
   return (
-    <div className="prose prose-sm prose-invert max-w-none">
+    <div className="prose prose-xs dark:prose-invert max-w-none">
       <ReactMarkdown 
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw]}
@@ -59,7 +60,6 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
       ? getToolById(data.toolId) 
       : getToolByExecutionKey(data.executionKey);
     
-    // Prioritize icon from data (set by makeNode override)
     if (base && (data as any).icon && typeof (data as any).icon === 'string') {
       return { ...base, icon: (data as any).icon };
     }
@@ -80,25 +80,29 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
     data.onDelete?.(id);
   }, [data, id]);
 
-  // ─── Sticky Note Variant ───────────────────────────────────────────────────
+  const isTrigger = data.isTrigger || tool?.isTrigger;
+  const config = data.config || {};
+  const needsCredential = !!(tool?.credentialTypes?.length || tool?.configFields?.some(f => f.type === 'credential'));
+  const isMissingCredential = needsCredential && !config.credentialId;
+
+  /* ── Sticky Note Variant ─────────────────────────────────────────────────── */
   if (isStickyNote) {
     const content = data.config?.content || "";
-    const noteColor = data.config?.noteColor || '#468feeff';
+    const noteColor = data.config?.noteColor || '#4f46e5';
 
     return (
-      <div className="group relative w-full h-full">
+      <div className="relative w-full h-full group">
         <NodeResizer 
           minWidth={100} 
-          minHeight={50} 
-          isVisible={true}
-          lineStyle={{ border: '16px solid transparent' }}
-          handleStyle={{ width: 12, height: 12, background: 'var(--primary)', border: 'none', borderRadius: '50%' }}
+          minHeight={60} 
+          isVisible={selected}
+          lineStyle={{ border: 'none' }}
+          handleStyle={{ width: 8, height: 8, background: '#6366f1', border: 'none', borderRadius: '50%' }}
         />
 
-        {/* Note Toolbar - Moved to the left and vertical */}
-        <div className="absolute -left-12 top-1/2 -translate-y-1/2 hidden group-hover:flex flex-col items-center gap-3 px-1.5 py-3 bg-card border border-border rounded-xl shadow-xl z-[100] animate-in fade-in zoom-in-95 duration-200">
-          <div className="relative group/color p-1.5 cursor-pointer">
-            <Palette size={14} className="text-muted-foreground hover:text-foreground transition-colors" />
+        <div className="absolute -left-10 top-0 hidden group-hover:flex flex-col gap-2 p-1.5 bg-card border border-border rounded-xl shadow-lg z-[100] animate-in slide-in-from-right-1">
+          <div className="relative p-1.5 cursor-pointer hover:bg-muted rounded-lg transition-colors">
+            <Palette size={13} className="text-muted-foreground" />
             <input 
               type="color" 
               className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
@@ -106,18 +110,18 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
               onChange={(e) => data.onUpdate?.(id, { config: { ...data.config, noteColor: e.target.value } })}
             />
           </div>
-          <button onClick={onDeleteClick} className="p-1.5 text-muted-foreground hover:text-red-500 transition-colors">
-            <Trash2 size={14} />
+          <button onClick={onDeleteClick} className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors">
+            <Trash2 size={13} />
           </button>
         </div>
 
         <div 
-          style={{ backgroundColor: noteColor }}
+          style={{ borderLeftColor: noteColor }}
           onDoubleClick={() => setIsEditing(true)}
           className={`
-            w-full h-full p-6 rounded-2xl shadow-lg transition-all duration-300
-            ${selected ? 'opacity-100 ring-2 ring-primary/20' : 'opacity-90 hover:opacity-100'}
-            text-zinc-900 flex flex-col cursor-text overflow-hidden
+            w-full h-full p-6 bg-card border border-border border-l-4 rounded-xl shadow-sm transition-all duration-300
+            ${selected ? 'ring-2 ring-indigo-500/10 border-indigo-500/40' : 'hover:border-border/80'}
+            flex flex-col cursor-text overflow-hidden
           `}
         >
           <div className="flex-1 overflow-hidden">
@@ -125,14 +129,14 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
               <textarea
                 ref={textAreaRef}
                 autoFocus
-                className="w-full h-full bg-transparent border-none outline-none resize-none text-sm font-medium leading-relaxed overflow-hidden placeholder:text-black/20"
+                className="w-full h-full bg-transparent border-none outline-none resize-none text-[11px] font-medium leading-relaxed overflow-hidden placeholder:text-muted-foreground/20"
                 value={content}
                 onChange={(e) => data.onUpdate?.(id, { config: { ...data.config, content: e.target.value } })}
                 onBlur={() => setIsEditing(false)}
-                placeholder="Type your notes here..."
+                placeholder="Type your notes..."
               />
             ) : (
-              <div className="h-full overflow-hidden text-sm font-medium leading-relaxed opacity-80">
+              <div className="h-full overflow-hidden text-[11px] font-medium leading-relaxed text-foreground/80 lowercase">
                 <MemoizedMarkdown content={content || "*Double click to edit*"} />
               </div>
             )}
@@ -144,206 +148,172 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
 
   if (!tool) return null;
 
-  // ─── Status & Security Detection ──────────────────────────────────────────
-  const isTrigger = data.isTrigger || tool.isTrigger;
-  const config = data.config || {};
-  
-  // Detect "Missing Credential" state
-  const needsCredential = !!(tool.credentialTypes?.length || tool.configFields?.some(f => f.type === 'credential'));
-  const isMissingCredential = needsCredential && !config.credentialId;
-
-  const statusStyles = {
-    idle: isMissingCredential ? 'border-red-500 bg-red-500/10' : 'border-border bg-card',
-    pending: 'border-primary/40 bg-card',
-    running: 'border-primary shadow-lg shadow-primary/20 bg-primary/10',
-    completed: 'border-primary/40 bg-card shadow-md',
-    failed: 'border-red-500/60 bg-card',
-  };
-
   const Icon = tool.icon as any;
+  const isOutput = data.toolId === 'skill.output';
+  const isInput  = data.toolId === 'skill.input';
 
   return (
     <div className={`group relative transition-all duration-300 ${selected ? 'scale-[1.02]' : ''}`}>
       
-      {/* Node Toolbar - Moved to the left and vertical */}
+      {/* Node Mini Toolbar */}
       <div className={`
-        absolute -left-12 top-1/2 -translate-y-1/2 hidden group-hover:flex flex-col items-center gap-3 px-2 py-3 bg-card border border-border rounded-xl shadow-xl z-[100] animate-in fade-in zoom-in-95 duration-200
-        ${(data.toolId === 'skill.output') ? '!hidden' : ''}
+        absolute -top-10 left-1/2 -translate-x-1/2 flex items-center gap-1 p-1 bg-card border border-border rounded-xl shadow-lg z-[100] scale-90 opacity-0 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200
+        ${isOutput ? '!hidden' : ''}
       `}>
-        <button onClick={onPlayClick} className="p-1.5 text-muted-foreground hover:text-primary transition-colors relative z-[101]"><Play size={14} fill="currentColor" /></button>
-        {data.toolId !== 'skill.input' && (
-          <button onClick={onDeleteClick} className="p-1.5 text-muted-foreground hover:text-red-500 transition-colors relative z-[101]"><Trash2 size={14} /></button>
+        <button 
+          onClick={onPlayClick} 
+          className="p-1.5 text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-500/5 rounded-lg transition-all"
+          title="Run from here"
+        >
+          <Play size={13} fill="currentColor" />
+        </button>
+        <div className="w-px h-3 bg-border mx-0.5" />
+        {!isInput && (
+          <button 
+            onClick={onDeleteClick} 
+            className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/5 rounded-lg transition-all"
+            title="Delete node"
+          >
+            <Trash2 size={13} />
+          </button>
         )}
       </div>
 
       {/* Main Body */}
       <div 
         className={`
-          w-[220px] min-h-[70px] rounded-xl border p-3 flex items-center gap-3 transition-all duration-300
-          ${statusStyles[status]}
-          ${selected ? 'border-primary shadow-xl ring-4 ring-primary/5' : 'hover:border-primary/20 shadow-md'}
+          w-[200px] min-h-[64px] bg-card border rounded-2xl flex items-center gap-3 px-3 py-2.5 transition-all duration-300 relative
+          ${status === 'running' ? 'border-indigo-500 ring-4 ring-indigo-500/5' : ''}
+          ${isMissingCredential && status === 'idle' ? 'border-red-500/50 bg-red-500/5' : 'border-border'}
+          ${selected ? 'border-indigo-500/60 shadow-lg ring-4 ring-indigo-500/5' : 'hover:border-border/80 shadow-sm'}
         `}
       >
-        {/* Status indicator pulse ring */}
+        {/* Pulse for running state */}
         {status === 'running' && (
-          <div className="absolute inset-0 -m-1 rounded-3xl border-2 border-primary animate-ping opacity-20 pointer-events-none" />
+          <div className="absolute inset-0 -m-1 rounded-[22px] border-2 border-indigo-500 animate-pulse opacity-20 pointer-events-none" />
         )}
 
         {/* Icon Section */}
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-border transition-all duration-300 overflow-hidden p-2.5 bg-secondary group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary shadow-sm`}>
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border transition-all duration-300 bg-muted/50 ${selected ? 'border-indigo-500/30 text-indigo-600' : 'border-border text-muted-foreground/60'}`}>
           {typeof tool.icon === 'string' && (tool.icon.startsWith('http') || tool.icon.startsWith('/')) ? (
-            <img src={tool.icon} alt={tool.label} className="w-full h-full object-contain" />
+            <img src={tool.icon} alt={tool.label} className="w-5 h-5 object-contain" />
           ) : (
-            <Icon size={18} strokeWidth={2.5} className="transition-colors group-hover:text-primary-foreground text-indigo-500" />
+            <Icon size={16} strokeWidth={2.5} />
           )}
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-[12px] font-bold font-display text-foreground truncate leading-tight tracking-tight uppercase">
+          <p className="text-[11px] font-bold text-foreground truncate leading-tight tracking-tight uppercase">
             {data.label}
           </p>
-          <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest truncate mt-1">
-             {status === 'running' ? 'Active' : tool.name.replace(' node', '')}
+          <p className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-[0.15em] truncate mt-1">
+             {status === 'running' ? 'Active' : (isInput ? 'Trigger' : isOutput ? 'Terminal' : 'Operation')}
           </p>
         </div>
 
-        {/* Internal Status Icon (Top Right) */}
-        <div className="absolute top-4 right-4 animate-in fade-in slide-in-from-top-1">
-           {status === 'completed' && <CheckCircle size={14} className="text-primary" />}
-           {status === 'failed' && <AlertCircle size={14} className="text-red-500" />}
-           {status === 'running' && <Loader2 size={14} className="animate-spin text-primary" />}
-           {isTrigger && status === 'idle' && !isMissingCredential && <Zap size={10} className="text-amber-500 fill-amber-500 animate-pulse" />}
-           {isMissingCredential && status === 'idle' && (
-             <div className="group/warn relative">
-                <AlertCircle size={14} className="text-red-500 animate-pulse" />
-                <div className="absolute bottom-full right-0 mb-2 px-2 py-1 bg-red-500 text-white text-[8px] font-black uppercase rounded opacity-0 group-hover/warn:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                   Credential Required
-                </div>
-             </div>
-           )}
+        {/* Floating Status Icon */}
+        <div className="absolute top-2 right-2">
+           {status === 'completed' && <CheckCircle size={10} className="text-emerald-500" strokeWidth={3} />}
+           {status === 'failed' && <AlertCircle size={10} className="text-red-500" strokeWidth={3} />}
+           {status === 'running' && <Loader2 size={10} className="animate-spin text-indigo-500" strokeWidth={3} />}
+           {isTrigger && status === 'idle' && !isMissingCredential && <Zap size={8} className="text-amber-500 fill-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />}
         </div>
+        
+        {isMissingCredential && status === 'idle' && (
+          <div className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 bg-red-500 rounded text-[7px] font-black uppercase text-white shadow-sm animate-pulse">
+            <AlertCircle size={8} strokeWidth={4} />
+            Setup Required
+          </div>
+        )}
       </div>
 
-      {/* Handles */}
+      {/* Connection Handles */}
       {!isTrigger && (
         <Handle
           type="target"
           position={Position.Top}
-          className="!opacity-0 !pointer-events-none"
-          style={{ top: -4 }}
+          className="!w-1.5 !h-1.5 !bg-border !border-none !opacity-0 !pointer-events-none"
         />
       )}
       
-      {/* Dynamic Sockets for Multiple Outputs (like Split Branch) */}
-      {((data.inputSchema?.length || 0) > 0 || tool.outputs.length > 1) && data.toolId !== 'skill.input' && (
+      {/* Dynamic Sockets */}
+      {((data.inputSchema?.length || 0) > 0 || tool.outputs.length > 1) && !isOutput && (
         <div className="absolute inset-x-0 bottom-[-4px] flex justify-around px-2 pointer-events-none gap-4">
           {(data.inputSchema || tool.outputs).map((socket: any) => {
             const socketName = socket.name;
             const isConnected = edges.some(e => e.source === id && e.sourceHandle === socketName);
-            const isTruePath = socketName.toLowerCase() === 'true';
-            const isFalsePath = socketName.toLowerCase() === 'false';
-            const isParallelPath = socketName.startsWith('path_');
+            const isChoice = socketName.toLowerCase() === 'true' || socketName.toLowerCase() === 'false';
             
             return (
-              <div key={socketName} className="relative flex flex-col items-center pointer-events-auto min-w-[60px]">
+              <div key={socketName} className="relative flex flex-col items-center pointer-events-auto">
                 <Handle
                   type="source"
                   position={Position.Bottom}
                   id={socketName}
-                  className={`!w-3 !h-3 !border-2 !border-background !opacity-100 !relative !bottom-0 !left-auto !translate-x-0 transition-colors ${
-                    isTruePath ? '!bg-emerald-500' : isFalsePath ? '!bg-red-500' : isParallelPath ? '!bg-purple-500' : '!bg-indigo-500'
+                  className={`!w-2 !h-2 !border-none !opacity-100 !relative !bottom-0 !left-auto !translate-x-0 transition-all ${
+                    isConnected ? '!bg-indigo-500 shadow-sm' : '!bg-border hover:!bg-indigo-500'
                   }`}
                 />
                 {!isConnected && (
-                  <div className="flex flex-col items-center mt-2 group/socket">
-                    <div className={`w-[1px] h-5 border-l border-dashed transition-colors ${
-                      isTruePath ? 'border-emerald-500/40 group-hover/socket:border-emerald-500' : 
-                      isFalsePath ? 'border-red-500/40 group-hover/socket:border-red-500' : 
-                      isParallelPath ? 'border-purple-500/40 group-hover/socket:border-purple-500' :
-                      'border-border/40 group-hover/socket:border-indigo-500/40'
-                    }`} />
-                    <div 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        data.onAddConnect?.({
-                          nodeId: id,
-                          handleId: socketName,
-                          handleType: 'source',
-                          socketType: socket.type || 'any',
-                          clientX: e.clientX,
-                          clientY: e.clientY
-                        });
-                      }}
-                      className={`w-7 h-7 bg-card border rounded-lg flex flex-col items-center justify-center transition-all cursor-pointer shadow-lg scale-90 hover:scale-100 z-50 mb-1.5 ${
-                        isTruePath ? 'border-emerald-500/20 text-emerald-500/40 hover:bg-emerald-500 hover:text-white hover:border-emerald-500' :
-                        isFalsePath ? 'border-red-500/20 text-red-500/40 hover:bg-red-500 hover:text-white hover:border-red-500' :
-                        isParallelPath ? 'border-purple-500/20 text-purple-500/40 hover:bg-purple-500 hover:text-white hover:border-purple-500' :
-                        'border-border/40 text-muted-foreground/30 hover:bg-indigo-500 hover:text-white hover:border-indigo-500'
-                      }`}
-                    >
-                      <Plus size={14} strokeWidth={3} />
-                    </div>
-                    <span className={`text-[8px] font-black uppercase tracking-widest transition-colors ${
-                      isTruePath ? 'text-emerald-500/60 group-hover/socket:text-emerald-500' :
-                      isFalsePath ? 'text-red-500/60 group-hover/socket:text-red-500' :
-                      isParallelPath ? 'text-purple-500/60 group-hover/socket:text-purple-500' :
-                      'text-muted-foreground/40 group-hover/socket:text-indigo-500'
-                    }`}>
-                      {socket.label || socket.name}
-                    </span>
-                  </div>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      data.onAddConnect?.({
+                        nodeId: id,
+                        handleId: socketName,
+                        handleType: 'source',
+                        socketType: socket.type || 'any',
+                        clientX: e.clientX,
+                        clientY: e.clientY
+                      });
+                    }}
+                    className="w-6 h-6 mt-3 bg-card border border-border rounded-lg flex items-center justify-center text-muted-foreground/40 hover:bg-muted hover:text-foreground transition-all shadow-sm group/plus"
+                  >
+                    <Plus size={12} strokeWidth={3} className="group-hover:scale-110 transition-transform" />
+                  </button>
                 )}
-                {isConnected && (
-                  <span className={`mt-2 text-[7px] font-black uppercase tracking-[0.2em] transition-colors ${
-                    isTruePath ? 'text-emerald-500/40' : isFalsePath ? 'text-red-500/40' : isParallelPath ? 'text-purple-500/40' : 'text-muted-foreground/20'
-                  }`}>
-                    {socket.label || socket.name}
-                  </span>
-                )}
+                <span className={`mt-1.5 text-[8px] font-black uppercase tracking-[0.1em] transition-colors ${isConnected ? 'text-indigo-500' : 'text-muted-foreground/30'}`}>
+                  {socket.label || socket.name}
+                </span>
               </div>
             );
           })}
         </div>
       )}
 
-      {/* Standard Handle (Single Output) */}
-      {(tool.outputs.length === 1 && (!data.inputSchema || data.inputSchema.length === 0 || data.toolId === 'skill.input')) && (
+      {/* Standard Single Handle */}
+      {(tool.outputs.length === 1 && (!data.inputSchema || data.inputSchema.length === 0 || isInput)) && !isOutput && (
         <>
           <Handle
             type="source"
             position={Position.Bottom}
             id={tool.outputs[0]?.name}
-            className="!opacity-0 !pointer-events-none"
-            style={{ bottom: -4 }}
+            className="!w-2 !h-2 !bg-indigo-500 !border-none !opacity-0 !pointer-events-none"
           />
           
           {(() => {
-            const socket = tool.outputs[0];
-            const isConnected = data.isEmployeeMode 
-              ? edges.some(e => e.source === id) 
-              : edges.some(e => e.source === id && e.sourceHandle === socket?.name);
-
+            const isConnected = edges.some(e => e.source === id);
             if (isConnected) return null;
 
             return (
               <div className="absolute top-[100%] left-1/2 -translate-x-1/2 flex flex-col items-center">
-                <div className="w-[1px] h-6 border-l border-dashed border-border/60" />
-                  <div 
+                <div className="w-px h-5 border-l border-dashed border-border/40" />
+                  <button 
                     onClick={(e) => {
                       e.stopPropagation();
                       data.onAddConnect?.({
                         nodeId: id,
-                        handleId: socket?.name || 'output',
+                        handleId: tool.outputs[0]?.name || 'output',
                         handleType: 'source',
-                        socketType: socket?.type || 'any',
+                        socketType: tool.outputs[0]?.type || 'any',
                         clientX: e.clientX,
                         clientY: e.clientY
                       });
                     }}
-                    className="w-8 h-8 bg-card border border-border rounded-xl flex items-center justify-center text-muted-foreground/60 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all cursor-pointer shadow-lg scale-90 hover:scale-100 z-50 mt-0"
+                    className="w-7 h-7 bg-card border border-border rounded-xl flex items-center justify-center text-muted-foreground/40 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all shadow-md active:scale-95"
                   >
-                  <Plus size={16} strokeWidth={2.5} />
-                </div>
+                  <Plus size={14} strokeWidth={3} />
+                </button>
               </div>
             );
           })()}

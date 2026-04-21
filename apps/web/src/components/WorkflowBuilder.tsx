@@ -1088,9 +1088,9 @@ function WorkflowBuilderInner() {
   // ── Loading state ──────────────────────────────────────────────────────────
   if (authLoading || !user || (itemId && isItemLoading)) {
     return (
-      <div className="h-screen w-full bg-background flex flex-col items-center justify-center">
-        <div className="w-12 h-12 border-4 border-foreground border-t-transparent animate-spin rounded-full mb-8" />
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted opacity-40">Initialising_Protocol...</p>
+      <div className="h-screen w-full bg-background flex flex-col items-center justify-center gap-6">
+        <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent animate-spin rounded-full" />
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Initializing Workspace...</p>
       </div>
     );
   }
@@ -1098,7 +1098,7 @@ function WorkflowBuilderInner() {
 
 
   return (
-    <div className="flex flex-col h-screen w-full overflow-hidden bg-secondary">
+    <div className="flex flex-col h-screen w-full overflow-hidden bg-muted/30">
 
       {/* ── Topbar */}
       <BuilderTopbar
@@ -1123,7 +1123,7 @@ function WorkflowBuilderInner() {
       />
 
       {/* ── Body */}
-      <div className="flex flex-1 overflow-hidden p-4">
+      <div className="flex flex-1 overflow-hidden p-4 gap-4">
 
         {/* Left: Node palette */}
         <div className="z-50">
@@ -1138,7 +1138,7 @@ function WorkflowBuilderInner() {
         </div>
 
         {/* Centre: Canvas Area */}
-        <div className="flex-1 relative overflow-hidden bg-background rounded-[2.5rem] border border-border ml-4 shadow-2xl">
+        <div className="flex-1 relative overflow-hidden bg-background rounded-3xl border border-border shadow-sm">
           <ReactFlow
             nodes={nodesWithHandlers}
             edges={edges}
@@ -1176,26 +1176,26 @@ function WorkflowBuilderInner() {
             <Background 
               variant={BackgroundVariant.Dots} 
               gap={24} 
-              size={1} 
+              size={1.5} 
               color="currentColor" 
-              className="text-foreground/[0.03]"
+              className="text-foreground/[0.04]"
             />
 
             {/* Zoom Controls — bottom-right (n8n style) */}
             <Controls
-              className="!bg-card !border-border/40 !shadow-2xl !rounded-2xl overflow-hidden !m-8 scale-[0.85] !flex-row !h-fit"
+              className="!bg-card !border-border !shadow-sm !rounded-xl overflow-hidden !m-6 scale-[0.85] !flex-row !h-fit"
               position="bottom-right"
               showInteractive={false}
             />
 
             {/* MiniMap — bottom-left */}
             <MiniMap 
-              className="!bg-card !border-border/40 !rounded-2xl !shadow-2xl !m-8 overflow-hidden"
+              className="!bg-card !border-border !rounded-xl !shadow-sm !m-6 overflow-hidden"
               zoomable
               nodeBorderRadius={12}
-              maskColor="var(--secondary)"
-              nodeColor="var(--primary)"
-              nodeStrokeColor="var(--primary)"
+              maskColor="var(--muted)"
+              nodeColor="#6366f1"
+              nodeStrokeColor="#6366f1"
               nodeStrokeWidth={2}
             />
           </ReactFlow>

@@ -162,7 +162,7 @@ function ContractEditor({ mode, inputSchema, outputDescription, onChange, onTrig
                <h3 className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 leading-none">
                 INPUT_SCHEMA
                </h3>
-               <div className="flex-1 h-px bg-border/40" />
+               <div className="flex-1 h-px bg-border" />
             </div>
             <h4 className="text-[11px] font-bold text-foreground uppercase tracking-wider">Input Configuration</h4>
             <p className="text-[9px] text-muted-foreground font-medium italic leading-none">Define the data structure for this skill</p>
@@ -173,7 +173,7 @@ function ContractEditor({ mode, inputSchema, outputDescription, onChange, onTrig
               <button
                 key={t.type}
                 onClick={() => addParam(t.type)}
-                className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-secondary/30 border border-border/40 hover:bg-indigo-500/10 hover:border-indigo-500/40 transition-all group/type shadow-sm"
+                className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-muted border border-border hover:bg-indigo-500/5 hover:border-indigo-500/40 transition-all group/type shadow-sm"
                 title={`Add ${t.label} Parameter`}
               >
                 <t.icon size={12} className="text-muted-foreground group-hover/type:text-indigo-500 transition-colors" />
@@ -182,10 +182,10 @@ function ContractEditor({ mode, inputSchema, outputDescription, onChange, onTrig
             ))}
           </div>
 
-          <div className="space-y-3 p-3 bg-secondary border border-border/60 rounded-2xl shadow-inner min-h-[80px]">
+          <div className="space-y-3 p-3 bg-muted/30 border border-border rounded-2xl min-h-[80px]">
             {params.length === 0 ? (
-              <div className="py-12 border border-dashed border-border/40 rounded-xl flex flex-col items-center justify-center text-center px-8">
-                <div className="w-10 h-10 bg-secondary border border-border/40 rounded-lg flex items-center justify-center text-muted-foreground/20 mb-3">
+              <div className="py-12 border border-dashed border-border rounded-xl flex flex-col items-center justify-center text-center px-8">
+                <div className="w-10 h-10 bg-muted border border-border rounded-lg flex items-center justify-center text-muted-foreground/20 mb-3">
                   <Database size={18} />
                 </div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 italic">No parameters configured</p>

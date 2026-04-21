@@ -92,8 +92,8 @@ export function useRemoveSkill() {
 export function useRunEmployee() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ employeeId, task }: { employeeId: string, task: string }) => {
-      const { data } = await api.post(`/employees/${employeeId}/run`, { task });
+    mutationFn: async ({ employeeId, task, threadId }: { employeeId: string, task: string, threadId?: string }) => {
+      const { data } = await api.post(`/employees/${employeeId}/run`, { task, threadId });
       return data;
     },
     onSuccess: (_, { employeeId }) => {
@@ -172,12 +172,8 @@ export function useEmployeeStream(runId: string | null) {
     setStatus('running');
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    const eventSource = new EventSource(`${apiUrl}/employees/runs/${runId}/stream`, {
-      withCredentials: true,
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('workforce_token')}`
-      }
-    } as any);
+    const token = localStorage.getItem('workforce_token');
+    const eventSource = new EventSource(`${apiUrl}/employees/runs/${runId}/stream?token=${token}`);
 
     const handleMessage = (event: MessageEvent) => {
       try {

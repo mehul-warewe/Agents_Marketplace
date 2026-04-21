@@ -10,7 +10,6 @@ import React, { useRef, useMemo, useEffect } from 'react';
  * - Auto-closing braces
  * - Smart deletion (backspace on variable tags)
  * - Variable picker trigger on '{{'
- * - Fixed overlap and layout issues
  */
 
 interface SmartInputProps {
@@ -72,48 +71,38 @@ export default function SmartInput({
     stringValue = escapeHtml(stringValue);
 
     // 2. TOKEN-SAFE HIGHLIGHTING (Single Pass)
-    // We use a pattern that matches technical tokens without corrupting previously added HTML.
-    // The key is to match EVERYTHING that needs highlighting in one pass.
-    
-    // Pattern parts:
-    // A: Keys -> (&quot;.*&quot;)(\s*:)
-    // B: Values (strings) -> (:\s*)(&quot;.*&quot;)
-    // C: Literals -> \b(true|false|null)\b
-    // D: Numbers -> \b(\d+(?:\.\d+)?)\b
-    // E: Variables -> \{\{\s*[\s\S]+?\s*\}\}
-
     const tokenRegex = /(&quot;[^&]*&quot;(?:\s*:))|(:\s*&quot;[^&]*&quot;)|(\b(?:true|false|null)\b)|(\b\d+(?:\.\d+)?\b)|(\{\{\s*[\s\S]+?\s*\}\})/g;
 
     const processed = stringValue.replace(tokenRegex, (match, key, val, literal, num, variable) => {
       if (key) {
-        return `<span style="color: #a5b4fc; font-weight: 600;">${key}</span>`;
+        return `<span style="color: #6366f1; font-weight: 700;">${key}</span>`;
       }
       if (val) {
         const colonPart = val.match(/^:\s*/);
         const prefix = colonPart ? colonPart[0] : ': ';
         const content = val.substring(prefix.length);
-        return `${prefix}<span style="color: #fcd34d;">${content}</span>`;
+        return `${prefix}<span style="color: #059669; font-weight: 500;">${content}</span>`;
       }
       if (literal) {
-        return `<span style="color: #f472b6; font-weight: 600;">${literal}</span>`;
+        return `<span style="color: #db2777; font-weight: 700;">${literal}</span>`;
       }
       if (num) {
-        return `<span style="color: #60a5fa;">${num}</span>`;
+        return `<span style="color: #2563eb; font-weight: 600;">${num}</span>`;
       }
       if (variable) {
         return (
           `<span style="
-            background: rgba(16, 185, 129, 0.15); 
-            border: 1px solid rgba(16, 185, 129, 0.35); 
-            color: #10b981; 
+            background: #6366f115; 
+            border: 1px solid #6366f130; 
+            color: #6366f1; 
             font-weight: 800; 
             border-radius: 6px; 
-            padding: 0px 5px; 
+            padding: 1px 4px; 
             margin: 0 1px; 
             display: inline-block; 
             line-height: normal;
-            text-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
             font-family: inherit;
+            font-size: 0.95em;
           ">${variable}</span>`
         );
       }
@@ -141,7 +130,7 @@ export default function SmartInput({
     const target = e.currentTarget;
     const val = value || '';
 
-    // ─── TAB SUPPORT ──────────────────────────────────────────────────────────
+    // TAB SUPPORT
     if (e.key === 'Tab') {
       e.preventDefault();
       const newVal = val.substring(0, pos) + '  ' + val.substring(endPos);
@@ -152,7 +141,7 @@ export default function SmartInput({
       return;
     }
 
-    // ─── SMART ENTER (AUTO-INDENT) ─────────────────────────────────────────────
+    // SMART ENTER (AUTO-INDENT)
     if (e.key === 'Enter' && textarea) {
       const lineStart = val.lastIndexOf('\n', pos - 1) + 1;
       const currentLine = val.substring(lineStart, pos);
@@ -182,7 +171,7 @@ export default function SmartInput({
       }
     }
 
-    // ─── AUTO-BRACKETS / QUOTES / STEP-OVER ───────────────────────────────────
+    // AUTO-BRACKETS
     const pairs: Record<string, string> = {
       '{': '}',
       '[': ']',
@@ -193,7 +182,6 @@ export default function SmartInput({
 
     const closingChars = new Set(['}', ']', ')', '"', "'"]);
 
-    // STEP-OVER LOGIC
     if (closingChars.has(e.key) && val.charAt(pos) === e.key && pos === endPos) {
       e.preventDefault();
       target.selectionStart = target.selectionEnd = pos + 1;
@@ -201,7 +189,6 @@ export default function SmartInput({
     }
 
     if (pairs[e.key]) {
-      // ─── SPECIAL CASE: VARIABLE PICKER TRIGGER {{ ───
       if (e.key === '{' && val.charAt(pos - 1) === '{') {
         e.preventDefault();
         const newVal = val.substring(0, pos) + '{}}' + val.substring(pos);
@@ -209,7 +196,6 @@ export default function SmartInput({
         
         if (onTriggerPicker) {
           const rect = target.getBoundingClientRect();
-          // Provide coordinates for the popover
           onTriggerPicker({ x: rect.left, y: rect.top }, pos + 1);
         }
         
@@ -240,12 +226,11 @@ export default function SmartInput({
       }
     }
 
-    // ─── BACKSPACE PROTECTION ──────────────────────────────────────────────────
+    // BACKSPACE PROTECTION
     if (e.key === 'Backspace' && pos === endPos) {
       const textBefore = val.substring(0, pos);
       const textAfter = val.substring(pos);
 
-      // Variable tags
       if (textBefore.endsWith('}}')) {
         const startIdx = textBefore.lastIndexOf('{{');
         if (startIdx !== -1) {
@@ -259,7 +244,6 @@ export default function SmartInput({
         }
       }
 
-      // Smart-Backspace
       const lastChar = textBefore.charAt(textBefore.length - 1);
       const nextChar = textAfter.charAt(0);
       if (pairs[lastChar] === nextChar) {
@@ -271,31 +255,16 @@ export default function SmartInput({
         }, 0);
         return;
       }
-      
-      const lastStart = textBefore.lastIndexOf('{{');
-      const lastEnd = textBefore.lastIndexOf('}}');
-      const nextEnd = textAfter.indexOf('}}');
-      const nextStart = textAfter.indexOf('{{');
-
-      if (lastStart > lastEnd && nextEnd !== -1 && (nextStart === -1 || nextEnd < nextStart)) {
-        e.preventDefault();
-        const newVal = val.substring(0, lastStart) + val.substring(pos + nextEnd + 2);
-        onChange(newVal);
-        setTimeout(() => {
-          target.selectionStart = target.selectionEnd = lastStart;
-        }, 0);
-        return;
-      }
     }
   };
 
   const commonStyles: React.CSSProperties = {
     lineHeight: '1.6',
-    fontFamily: mono ? '"JetBrains Mono", "Roboto Mono", monospace' : '"Inter", ui-sans-serif, system-ui, -apple-system, sans-serif',
+    fontFamily: mono ? '"JetBrains Mono", monospace' : 'inherit',
     fontSize: '12px',
     letterSpacing: '0.01em',
     wordBreak: 'break-word',
-    padding: '12px 16px',
+    padding: '12px 14px',
     minHeight: textarea ? `${rows * 1.6}em` : '42px',
     margin: 0,
     border: 'none',
@@ -308,8 +277,8 @@ export default function SmartInput({
     ...commonStyles,
     background: 'transparent',
     outline: 'none',
-    color: 'transparent', // Make text transparent to see highlights beneath
-    caretColor: '#10b981', // Vivid emerald caret
+    color: 'transparent',
+    caretColor: '#6366f1',
     position: 'relative',
     zIndex: 1,
     resize: textarea ? 'vertical' : 'none',
@@ -320,7 +289,7 @@ export default function SmartInput({
     position: 'absolute',
     top: 0,
     left: 0,
-    color: 'var(--foreground)', // Standardize on theme-aware foreground
+    color: 'var(--foreground)',
     zIndex: 0,
     pointerEvents: 'none',
     overflowY: 'auto',
@@ -332,17 +301,15 @@ export default function SmartInput({
   return (
     <div className={`
       relative w-full overflow-hidden rounded-xl border border-border 
-      bg-secondary
-      group-hover:bg-muted
-      focus-within:border-indigo-500/40 focus-within:bg-card 
-      focus-within:shadow-xl
+      bg-background
+      focus-within:border-indigo-500/60 focus-within:ring-2 focus-within:ring-indigo-500/10
       transition-all duration-300
       ${className}
     `}>
       <div 
         ref={backdropRef}
         aria-hidden="true"
-        className="custom-scrollbar antialiased opacity-80"
+        className="no-scrollbar antialiased opacity-90"
         style={backdropStyles}
         dangerouslySetInnerHTML={{ __html: highlighted + (textarea ? '<br/>' : '') }}
       />
@@ -356,7 +323,7 @@ export default function SmartInput({
           rows={rows}
           placeholder={placeholder}
           spellCheck={false}
-          className="custom-scrollbar antialiased"
+          className="no-scrollbar antialiased"
           style={inputStyles}
         />
       ) : (

@@ -285,7 +285,7 @@ export const skillsService = {
     const deadline = Date.now() + timeoutMs;
     // Exponential backoff: 500ms → 1s → 2s → 4s → cap at 8s
     // Reduces DB hammering from the agent loop while still being responsive.
-    let pollInterval = 500;
+    let pollInterval = 200;
     const MAX_POLL_INTERVAL = 8_000;
 
     while (Date.now() < deadline) {

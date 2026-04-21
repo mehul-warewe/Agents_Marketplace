@@ -1,8 +1,8 @@
 'use client';
+
 import React, { useRef, useState, useEffect } from 'react';
 import {
-  ChevronLeft, Save, RotateCcw, Bot,
-  ChevronDown, CheckCircle2, Zap, LayoutGrid, Check, ArrowLeft, Play, Loader2
+  ChevronDown, CheckCircle2, Zap, LayoutGrid, Check, ArrowLeft, Play, Loader2, Save
 } from 'lucide-react';
 import { MODEL_TYPES } from './toolRegistry';
 
@@ -22,7 +22,6 @@ interface BuilderTopbarProps {
   userAvatar?: string;
   isEmployeeMode?: boolean;
 }
-
 
 export default function BuilderTopbar({
   name, onNameChange,
@@ -48,31 +47,34 @@ export default function BuilderTopbar({
   }, []);
 
   return (
-    <header className="h-16 bg-card border-b border-border/40 flex items-center justify-between px-6 shrink-0 z-[60]">
+    <header className="h-14 bg-card border-b border-border flex items-center justify-between px-5 shrink-0 z-[60]">
 
       {/* ── Left Side */}
       <div className="flex items-center gap-4">
         <button
           onClick={onBack}
-          className="w-9 h-9 flex items-center justify-center rounded-xl text-muted-foreground hover:bg-secondary transition-all border border-border/40"
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground/50 hover:bg-muted hover:text-foreground transition-all border border-border/60"
           title="Back"
         >
           <ArrowLeft size={16} strokeWidth={2.5} />
         </button>
 
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-             <LayoutGrid size={16} strokeWidth={2.5} />
+          <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-600 border border-indigo-500/20">
+             <LayoutGrid size={15} strokeWidth={2.5} />
           </div>
-          <input
-            value={name}
-            onChange={e => onNameChange(e.target.value)}
-            className="bg-transparent border-none outline-none text-sm font-bold font-display text-foreground w-64 placeholder:text-muted-foreground/30"
-            placeholder="Untitled Project"
-          />
+          <div className="flex flex-col -gap-0.5">
+            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 leading-none mb-1">Skill Architecture</span>
+            <input
+              value={name}
+              onChange={e => onNameChange(e.target.value)}
+              className="bg-transparent border-none outline-none text-[13px] font-bold text-foreground w-64 placeholder:text-muted-foreground/30 leading-none truncate"
+              placeholder="Untitled Skill"
+            />
+          </div>
           {isEmployeeMode && (
-            <div className="px-2.5 py-1 bg-amber-500/5 border border-amber-500/20 rounded-md">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-amber-600/80">Employee Instance</span>
+            <div className="px-2 py-0.5 bg-indigo-500/5 border border-indigo-500/10 rounded-md">
+              <span className="text-[8px] font-black uppercase tracking-[0.15em] text-indigo-600/80">Employee Instance</span>
             </div>
           )}
         </div>
@@ -84,17 +86,17 @@ export default function BuilderTopbar({
           onClick={onRun}
           disabled={isRunning}
           className={`
-            flex items-center gap-2 px-6 py-2 rounded-xl
-            text-[11px] font-bold uppercase tracking-widest transition-all
+            h-8 flex items-center gap-2 px-6 rounded-xl
+            text-[9px] font-bold uppercase tracking-widest transition-all
             ${isRunning
-              ? 'bg-primary/10 text-primary border border-primary/20 cursor-wait'
-              : 'bg-primary text-primary-foreground hover:opacity-90 active:scale-[0.97] shadow-lg shadow-primary/20'}
+              ? 'bg-muted text-muted-foreground border border-border cursor-wait'
+              : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.97] shadow-sm'}
           `}
         >
           {isRunning ? (
-            <><Loader2 size={14} className="animate-spin" /> Running...</>
+            <><Loader2 size={12} className="animate-spin" /> Executing...</>
           ) : (
-            <><Play size={14} fill="currentColor" /> Run Workflow</>
+            <><Play size={12} fill="currentColor" /> Run Workflow</>
           )}
         </button>
       </div>
@@ -104,17 +106,16 @@ export default function BuilderTopbar({
         <button
           onClick={onSave}
           disabled={isSaving}
-          className="flex items-center gap-2 px-5 py-2 hover:bg-secondary rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all border border-border/40 disabled:opacity-40"
+          className="h-8 flex items-center gap-2 px-5 bg-card hover:bg-muted rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all border border-border disabled:opacity-40"
         >
-          {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} strokeWidth={2.5} />}
-          {isEmployeeMode ? 'Provision Unit' : (isEditMode ? 'Save Changes' : 'Deploy')}
+          {isSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} strokeWidth={2.5} />}
+          {isEmployeeMode ? 'Publish Employee' : (isEditMode ? 'Save Changes' : 'Publish')}
         </button>
 
-        <div className="h-4 w-px bg-border/40 mx-2 hidden sm:block" />
+        <div className="h-4 w-px bg-border mx-2 hidden sm:block" />
 
-        {/* User Profile */}
         <div className="hidden md:flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-foreground font-bold text-xs shrink-0 overflow-hidden border border-border/40">
+            <div className="w-8 h-8 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground text-[10px] font-bold shrink-0 overflow-hidden">
               {userAvatar
                 ? <img src={userAvatar} className="w-full h-full object-cover" alt="avatar" />
                 : userName.charAt(0).toUpperCase()}

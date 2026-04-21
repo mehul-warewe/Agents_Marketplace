@@ -116,7 +116,15 @@ router.get('/:id/runs', async (req: any, res, next) => {
 });
 
 router.post('/:id/run', async (req: any, res, next) => {
-  try { res.json(await employeesService.runEmployee(req.params.id, req.user.id, req.body.task)); } catch (err) { next(err); }
+  try { 
+    res.json(await employeesService.runEmployee(
+      req.params.id, 
+      req.user.id, 
+      req.body.task, 
+      req.body.context, 
+      req.body.threadId
+    )); 
+  } catch (err) { next(err); }
 });
 
 router.post('/:id/skills', async (req: any, res, next) => {

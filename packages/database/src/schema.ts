@@ -61,6 +61,8 @@ export const employeeRuns = pgTable('employee_runs', {
   steps: jsonb('steps'),
   duration: integer('duration'),
   logs: jsonb('logs'),
+  threadId: uuid('thread_id'),
+  messages: jsonb('messages'),
   startTime: timestamp('start_time').defaultNow().notNull(),
   endTime: timestamp('end_time'),
 });

@@ -143,9 +143,10 @@ INSTRUCTIONS:
 - Reason step by step. You MUST use at least one tool if available.
 - When you have a final answer, respond directly without calling any more tools.`;
 
-    const msgs = state.messages.length === 0
-      ? [new SystemMessage(systemPrompt), new HumanMessage(state.task)]
-      : [new SystemMessage(systemPrompt), ...state.messages];
+    const msgs = [
+      new SystemMessage(systemPrompt),
+      ...state.messages
+    ];
 
     const response = await model.invoke(msgs);
     const hasToolCalls = (response as any).tool_calls?.length > 0;
@@ -172,36 +173,35 @@ INSTRUCTIONS:
   workflow.addNode("execute_tool", (async (state: EmployeeGraphState) => {
     const lastMessage = state.messages[state.messages.length - 1] as any;
     const toolCalls = lastMessage?.tool_calls || [];
-    const toolResults: ToolMessage[] = [];
 
-    for (const tc of toolCalls) {
-      // Find the matching tool and invoke it
+    const toolResults = await Promise.all(toolCalls.map(async (tc: any) => {
       const tool = skillTools.find(t => t.name === tc.name);
-      if (tool) {
-        try {
-          const result = await tool.invoke(tc.args);
-          toolResults.push(new ToolMessage({
-            content: typeof result === 'string' ? result : JSON.stringify(result),
-            tool_call_id: tc.id,
-          }));
-        } catch (err: any) {
-          toolResults.push(new ToolMessage({
-            content: `Tool error: ${err.message}`,
-            tool_call_id: tc.id,
-          }));
-        }
+      if (!tool) return null;
+      try {
+        const result = await tool.invoke(tc.args);
+        return new ToolMessage({
+          content: typeof result === 'string' ? result : JSON.stringify(result),
+          tool_call_id: tc.id,
+        });
+      } catch (err: any) {
+        return new ToolMessage({
+          content: `Tool error: ${err.message}`,
+          tool_call_id: tc.id,
+        });
       }
-    }
+    }));
+
+    const validResults = toolResults.filter((r): r is ToolMessage => r !== null);
 
     const step = {
       type: 'observation',
-      observation: toolResults.map(tr => tr.content).join('\n---\n'),
+      observation: validResults.map(tr => tr.content).join('\n---\n'),
       timestamp: new Date()
     };
     if (onStep) onStep(step);
 
     return { 
-      messages: toolResults,
+      messages: validResults,
       steps: [step]
     };
   }) as any);
