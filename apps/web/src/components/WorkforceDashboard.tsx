@@ -4,16 +4,16 @@ import React, { useEffect } from 'react';
 import { Activity, CheckCircle, XCircle, Clock, Zap, Bot, Terminal, ChevronRight, LayoutGrid, ArrowUpRight, Search, Play, Plus } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'next/navigation';
-import { useDashboardStats, useAgentRuns } from '@/hooks/useApi';
+import { useDashboardStats, useWorkforceRuns } from '@/hooks/useApi';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 
-export default function AgentDashboard() {
+export default function WorkforceDashboard() {
   const { user, isLoading: authLoading } = useAuthStore();
   const router = useRouter();
   
-  const { data: runs, isLoading: runsLoading } = useAgentRuns();
+  const { data: runs, isLoading: runsLoading } = useWorkforceRuns();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export default function AgentDashboard() {
     return (
       <div className="flex-1 bg-background min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-6">
         <div className="w-10 h-10 border-4 border-foreground border-t-transparent rounded-full animate-spin"></div>
-        <p className="mt-6 text-muted font-black text-xs uppercase tracking-widest">Initialising Terminal...</p>
+        <p className="mt-6 text-muted font-black text-xs uppercase tracking-widest">Initializing Dashboard...</p>
       </div>
     );
   }
@@ -64,7 +64,7 @@ export default function AgentDashboard() {
            <div className="relative z-10 flex flex-col md:flex-row justify-between gap-4 items-center">
               <div className="space-y-1">
                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-display text-foreground">
-                   Welcome Back, <span className="text-indigo-500">{user?.name?.split(' ')[0] || 'Operator'}</span>
+                   Welcome Back, <span className="text-indigo-500">{user?.name?.split(' ')[0] || 'Manager'}</span>
                  </h1>
                  <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest leading-none">Status: All systems operational</p>
               </div>
@@ -74,7 +74,7 @@ export default function AgentDashboard() {
                     size="sm"
                     className="h-9 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/20 border-none transition-all"
                  >
-                    <Plus size={14} strokeWidth={2.5} /> Deploy Agent
+                    <Plus size={14} strokeWidth={2.5} /> Create Employee
                  </Button>
               </div>
            </div>
@@ -83,8 +83,8 @@ export default function AgentDashboard() {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard 
-            title="Active Fleet" 
-            value={stats?.activeAgents || 0} 
+            title="Active Workforce" 
+            value={stats?.activeWorkforce || 0} 
             loading={statsLoading} 
             icon={<Bot size={28} />} 
             trend="OPERATIONAL"
@@ -119,7 +119,7 @@ export default function AgentDashboard() {
           {/* Recent Activity Table */}
           <div className="lg:col-span-3 space-y-4">
             <div className="flex items-center justify-between">
-               <h2 className="text-2xl font-bold tracking-tight font-display">Registry Logs</h2>
+               <h2 className="text-2xl font-bold tracking-tight font-display">Workforce Logs</h2>
                <Button 
                 variant="ghost"
                 size="sm"
@@ -134,7 +134,7 @@ export default function AgentDashboard() {
               {runsLoading ? (
                 <div className="flex flex-col items-center justify-center py-32">
                   <Activity className="w-8 h-8 text-primary animate-spin opacity-50 mb-4" />
-                  <p className="text-sm font-medium text-muted-foreground">Gathering telemetry...</p>
+                  <p className="text-sm font-medium text-muted-foreground">Gathering workspace data...</p>
                 </div>
               ) : !runs || runs.length === 0 ? (
                  <div className="flex flex-col items-center justify-center py-32 text-center px-12">
@@ -152,9 +152,9 @@ export default function AgentDashboard() {
                    <table className="w-full text-left">
                       <thead>
                          <tr className="bg-muted/50 border-b border-border">
-                            <th className="px-6 py-4 text-xs font-medium text-muted-foreground uppercase">Agent Entity</th>
-                            <th className="px-6 py-4 text-xs font-medium text-muted-foreground uppercase">Logic Status</th>
-                            <th className="px-6 py-4 text-xs font-medium text-muted-foreground uppercase text-right">Last Sync</th>
+                            <th className="px-6 py-4 text-xs font-medium text-muted-foreground uppercase">Employee Assignment</th>
+                            <th className="px-6 py-4 text-xs font-medium text-muted-foreground uppercase">Execution Status</th>
+                            <th className="px-6 py-4 text-xs font-medium text-muted-foreground uppercase text-right">Last Active</th>
                          </tr>
                       </thead>
                        <tbody className="divide-y divide-border">
@@ -166,7 +166,7 @@ export default function AgentDashboard() {
                                        <Bot size={16} />
                                     </div>
                                     <div className="flex flex-col min-w-0">
-                                       <div className="font-bold text-sm truncate">{run.agentName}</div>
+                                       <div className="font-bold text-sm truncate">{run.employeeName}</div>
                                        <span className="text-xs text-muted-foreground">{run.id.slice(0, 8)}</span>
                                     </div>
                                  </div>
@@ -201,7 +201,7 @@ export default function AgentDashboard() {
                             <Activity size={14} />
                          </div>
                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold truncate">{run.agentName}</p>
+                            <p className="text-sm font-bold truncate">{run.employeeName}</p>
                             <p className="text-xs text-muted-foreground uppercase">{run.status}</p>
                          </div>
                       </div>
@@ -224,15 +224,15 @@ export default function AgentDashboard() {
                       <LayoutGrid size={20} />
                    </div>
                    <div>
-                      <h3 className="text-xl font-bold font-display mb-1">Scale Logistics</h3>
-                      <p className="text-background/70 text-sm">Deploy new specialized logic units into the cluster.</p>
+                      <h3 className="text-xl font-bold font-display mb-1">Scale Workforce</h3>
+                      <p className="text-background/70 text-sm">Add new specialized employees to your team.</p>
                    </div>
                    <Button 
                      variant="secondary"
                      className="w-full"
                      onClick={() => router.push('/skills/builder')} 
                    >
-                     Deploy Now
+                     Create Now
                    </Button>
                 </div>
              </Card>

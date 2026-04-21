@@ -15,33 +15,6 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-export const agents = pgTable('agents', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  name: text('name').notNull(),
-  description: text('description'),
-  creatorId: uuid('creator_id').references(() => users.id).notNull(),
-  workflow: jsonb('workflow').notNull(),
-  isPublished: boolean('is_published').default(false).notNull(),
-  isWorker: boolean('is_worker').default(false).notNull(),
-  workerDescription: text('worker_description'),
-  workerInputSchema: jsonb('worker_input_schema'),
-  category: text('category'),
-  price: doublePrecision('price').default(0),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
-
-export const agentRuns = pgTable('agent_runs', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  agentId: uuid('agent_id').references(() => agents.id),
-  userId: uuid('user_id').references(() => users.id).notNull(),
-  status: text('status').notNull(),
-  startTime: timestamp('start_time').defaultNow().notNull(),
-  endTime: timestamp('end_time'),
-  duration: integer('duration'),
-  logs: jsonb('logs'),
-  output: jsonb('output'),
-});
 
 export const skills = pgTable('skills', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -113,6 +86,8 @@ export const managerRuns = pgTable('manager_runs', {
   status: text('status').notNull(),
   inputData: jsonb('input_data'),
   output: jsonb('output'),
+  steps: jsonb('steps').default([]),
+  childRunIds: jsonb('child_run_ids').default([]),
   startTime: timestamp('start_time').defaultNow().notNull(),
   endTime: timestamp('end_time'),
 });

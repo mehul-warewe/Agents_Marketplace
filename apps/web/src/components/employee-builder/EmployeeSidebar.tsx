@@ -31,7 +31,7 @@ interface EmployeeSidebarProps {
 
 export function LeftSubNav({ activeSubTab, setActiveSubTab }: { activeSubTab: string, setActiveSubTab: (id: any) => void }) {
   const primaryItems: SidebarItem[] = [
-    { id: 'prompt', icon: MessageSquare, label: 'Instructions', desc: 'Agent persona' },
+    { id: 'prompt', icon: MessageSquare, label: 'Instructions', desc: 'Employee persona' },
     { id: 'tools', icon: Wrench, label: 'Skills', desc: 'Capabilities' },
     { id: 'knowledge', icon: BookOpen, label: 'Knowledge', desc: 'Context data' },
     { id: 'triggers', icon: Target, label: 'Triggers', desc: 'Events', soon: true },
@@ -127,10 +127,10 @@ export function RightConfigPane({
              
              <div className="space-y-0.5">
                 <h2 className="text-[11px] font-bold tracking-tight text-foreground truncate max-w-[150px]">
-                   {localEmployee?.name || 'New Agent'}
+                   {localEmployee?.name || 'New Employee'}
                 </h2>
                 <p className="text-[8px] font-bold text-foreground/20 uppercase tracking-widest leading-none">
-                   Active Protocol
+                   Active Professional
                 </p>
              </div>
              

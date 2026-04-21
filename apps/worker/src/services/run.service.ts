@@ -1,4 +1,4 @@
-import { agentRuns, employeeRuns, eq, createClient } from '@repo/database';
+import { employeeRuns, eq, createClient } from '@repo/database';
 import { resolveCredential, resolveGoogleToken, resolveDefaultCredential } from '../credentialResolver.js';
 import { deductCredits } from '../credit-manager.js';
 import { WORKER_NODES } from '../nodes/index.js';
@@ -20,10 +20,11 @@ function sanitize(input: any): any {
 }
 
 export async function executeRun(job: any) {
-  const { runId, workflow, runTable = 'agent_runs' } = job.data;
+  const { runId, workflow, runTable = 'employee_runs' } = job.data;
   console.log(`[Worker] Starting Run (${runTable}): ${runId}`);
 
-  const table = runTable === 'employee_runs' ? employeeRuns : agentRuns;
+  // All runs now use employee_runs table in the consolidated 3-tier system
+  const table = employeeRuns;
 
   const logs: any[] = [];
   try {
@@ -33,7 +34,7 @@ export async function executeRun(job: any) {
 
     // Credit Check
     const COST_PER_RUN = 5;
-    const creditResult = await deductCredits(job.data.userId, COST_PER_RUN, `Agent Run: ${workflow.name || 'Untitled'}`);
+    const creditResult = await deductCredits(job.data.userId, COST_PER_RUN, `Workforce Run: ${workflow.name || 'Untitled'}`);
     if (!creditResult.success) {
       await db.update(table).set({ 
         status: 'failed', endTime: new Date(),

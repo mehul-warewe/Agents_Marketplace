@@ -72,7 +72,7 @@ export default function AuthModal() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={closeAuthModal}
-            className="absolute inset-0 bg-black/40 backdrop-blur-xl"
+            className="absolute inset-0 bg-black/60"
           />
           
           <motion.div

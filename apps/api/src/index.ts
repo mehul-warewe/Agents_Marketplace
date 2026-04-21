@@ -19,7 +19,7 @@ import knowledgeRoutes from './routes/knowledge.routes.js';
 import modelsRoutes from './routes/models.routes.js';
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = Number(process.env.PORT) || 3001;
 
 app.set('trust proxy', 1);
 app.use(globalLimiter);

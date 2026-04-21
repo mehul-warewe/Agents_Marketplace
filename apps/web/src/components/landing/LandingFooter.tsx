@@ -13,7 +13,7 @@ export default function LandingFooter() {
             <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-primary-foreground shadow-xl">
               <Bot size={22} strokeWidth={2.5} />
             </div>
-            <span className="font-bold text-xl tracking-tight font-display">AgentsHub</span>
+            <span className="font-bold text-xl tracking-tight font-display">WorkforceHub</span>
           </div>
           <p className="text-muted-foreground font-medium leading-relaxed max-w-sm">
             Professional AI orchestration for high-performance teams. Build, deploy, and scale your digital workforce with a visual-first workspace.
@@ -37,7 +37,7 @@ export default function LandingFooter() {
         </div>
       </div>
       <div className="max-w-7xl mx-auto pt-16 mt-16 border-t border-border/40 flex flex-col sm:flex-row justify-between items-center gap-8 text-xs font-medium text-muted-foreground/60">
-         <p>© 2026 AgentsHub. All rights reserved.</p>
+         <p>© 2026 WorkforceHub. All rights reserved.</p>
          <div className="flex items-center gap-8">
             <Link href="#" className="hover:text-primary transition-colors">𝕏 Twitter</Link>
             <Link href="#" className="hover:text-primary transition-colors">GitHub</Link>

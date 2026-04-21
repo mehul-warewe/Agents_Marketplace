@@ -62,12 +62,12 @@ export const employeesService = {
       throw new Error('Unauthorized or not found');
     }
 
-    const skillIds = employee.skillIds || [];
+    const skillIds = (employee.skillIds as string[]) || [];
     if (!skillIds.includes(data.skillId)) {
       skillIds.push(data.skillId);
     }
 
-    const skillInstructions = employee.skillInstructions || {};
+    const skillInstructions = (employee.skillInstructions as Record<string, string>) || {};
     if (data.instruction) {
       skillInstructions[data.skillId] = data.instruction;
     }
@@ -87,8 +87,8 @@ export const employeesService = {
       throw new Error('Unauthorized or not found');
     }
 
-    const skillIds = (employee.skillIds || []).filter(id => id !== skillId);
-    const skillInstructions = { ...employee.skillInstructions };
+    const skillIds = ((employee.skillIds as string[]) || []).filter(id => id !== skillId);
+    const skillInstructions = { ...(employee.skillInstructions as Record<string, string>) };
     delete skillInstructions[skillId];
 
     const [updated] = await db.update(employees).set({
@@ -139,7 +139,7 @@ export const employeesService = {
     const employee = await this.getEmployee(employeeId);
     if (!employee) throw new Error('Employee not found');
 
-    const skillIds = employee.skillIds || [];
+    const skillIds = (employee.skillIds as string[]) || [];
     if (skillIds.length === 0) {
       throw new Error('Employee has no logic units (skills) assigned.');
     }
@@ -195,9 +195,9 @@ export const employeesService = {
     const successfulRuns = eRuns.filter(r => r.status === 'completed').length;
     const successRate = totalRuns > 0 ? Math.round((successfulRuns / totalRuns) * 100) : 100;
 
-    return { 
+    return {
       totalRuns, 
-      activeAgents: activeEntities,
+      activeWorkforce: activeEntities,
       successRate,
       aiUsage: totalRuns > 0 ? `${(totalRuns * 0.12).toFixed(1)}K` : "0", 
       toolsConnected: 4

@@ -11,9 +11,9 @@ export function useSkills() {
   });
 }
 
-export function usePublishedSkills() {
+export function useMarketplaceSkills() {
   return useQuery({
-    queryKey: ['published-skills'],
+    queryKey: ['marketplace-skills'],
     queryFn: async () => {
       const { data } = await api.get('/skills');
       return data;
@@ -91,5 +91,58 @@ export function useSkillArchitect() {
       const { data } = await api.post('/skills/architect', { prompt, history });
       return data;
     },
+  });
+}
+
+export function usePublishSkill() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, published, price, category }: { id: string, published: boolean, price?: number, category?: string }) => {
+      const { data } = await api.post(`/skills/${id}/publish`, { published, price, category });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['marketplace-skills'] });
+      queryClient.invalidateQueries({ queryKey: ['skills'] });
+    },
+  });
+}
+
+export function useAcquireSkill() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.post(`/skills/${id}/clone`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['skills'] });
+      queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+    },
+  });
+}
+export function useUpdateSkillFromOriginal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.post(`/skills/${id}/sync`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['skills'] });
+    },
+  });
+}
+
+export function usePipedreamAppDetails(slug: string) {
+  return useQuery({
+    queryKey: ['pipedream-app', slug],
+    queryFn: async () => {
+      if (!slug) return null;
+      const { data } = await api.get(`/skills/pipedream/apps/${slug}`);
+      return data;
+    },
+    enabled: !!slug,
+    staleTime: 1000 * 60 * 60 * 24, // 24 hours
   });
 }

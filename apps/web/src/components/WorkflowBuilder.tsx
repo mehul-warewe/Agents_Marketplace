@@ -26,9 +26,9 @@ import 'reactflow/dist/style.css';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useTheme } from 'next-themes';
-import { useCreateAgent, useUpdateAgent, useArchitect, useAgent, useRunAgent, useAgentRun, usePublishAgent } from '@/hooks/useApi';
-import { useCreateSkill, useUpdateSkill, useSkill, useRunSkill, useSkillArchitect } from '@/hooks/useSkills';
-import { usePublishAsWorker } from '@/hooks/useApi'; // Legacy
+import { useWorkforceRuns, useWorkforceRunDetails, useKnowledgeBase, useTools } from '@/hooks/useApi';
+import { useCreateSkill, useUpdateSkill, useSkill, useRunSkill, useSkillArchitect, usePublishSkill } from '@/hooks/useSkills';
+import { useCreateEmployee, useUpdateEmployee, useEmployee, useRunEmployee, usePublishEmployee } from '@/hooks/useEmployees';
 import { useToast } from '@/components/ui/Toast';
 
 import FlowNode from './builder/FlowNode';
@@ -213,24 +213,19 @@ function WorkflowBuilderInner() {
   const itemId = searchParams.get('id');
   const mode = searchParams.get('mode'); // 'skill' or 'employee' (legacy)
   const isSkillMode = mode === 'skill' || pathname.includes('/skills');
+  const [activeRunId, setActiveRunId] = useState<string | null>(null);
 
-  // Switchable Hooks
-  const { data: existingItem, isLoading: isItemLoading } = isSkillMode ? useSkill(itemId) : useAgent(itemId);
-  
-  const { mutateAsync: createAgent, isPending: isCreatingAgent } = useCreateAgent();
-  const { mutateAsync: updateAgent, isPending: isUpdatingAgent } = useUpdateAgent();
-  const { mutateAsync: createSkill, isPending: isCreatingSkill } = useCreateSkill();
-  const { mutateAsync: updateSkill, isPending: isUpdatingSkill } = useUpdateSkill();
-  
-  const isCreating = isCreatingAgent || isCreatingSkill;
-  const isUpdating = isUpdatingAgent || isUpdatingSkill;
-  
-  const { mutate: architectAgent, isPending: isArchitectingAgent } = useArchitect();
-  const { mutate: architectSkill, isPending: isArchitectingSkill } = useSkillArchitect();
-  const isArchitecting = isArchitectingAgent || isArchitectingSkill;
-  
-  const { mutate: runAgent } = useRunAgent();
+  // Unified Hooks
+  const { data: existingItem, isLoading: isItemLoading } = useSkill(itemId);
+  const { mutateAsync: createSkill, isPending: isCreating } = useCreateSkill();
+  const { mutateAsync: updateSkill, isPending: isUpdating } = useUpdateSkill();
+  const { mutate: architectSkill, isPending: isArchitecting } = useSkillArchitect();
   const { mutate: runSkill } = useRunSkill();
+  const { data: runData } = useWorkforceRunDetails(activeRunId);
+  const { mutateAsync: publishSkill, isPending: isPublishingSkill } = usePublishSkill();
+  const { mutateAsync: publishAsWorker, isPending: isPublishingWorker } = usePublishEmployee();
+
+  const isSaving = isCreating || isUpdating;
 
   // Sync Intelligence (Models) - Segregated by provider
   useEffect(() => {
@@ -298,7 +293,6 @@ function WorkflowBuilderInner() {
   const [model, setModel]             = useState<string>(MODEL_TYPES[0]?.id || 'google/gemini-2.0-flash-001');
   const [prompt, setPrompt]           = useState('');
   const [selectedNode, setSelectedNode] = useState<any>(null);
-  const [activeRunId, setActiveRunId]   = useState<string | null>(null);
   const [isRunning,   setIsRunning]     = useState(false);
   const [pickerState, setPickerState]   = useState<any>(null);
   const [sidebarOpen, setSidebarOpen]   = useState(false);
@@ -357,9 +351,6 @@ function WorkflowBuilderInner() {
   }, []);
 
   const { user, isLoading: authLoading } = useAuthStore();
-  const { mutateAsync: publishAsWorker, isPending: isPublishingWorker } = usePublishAsWorker();
-
-  const { data: runData } = useAgentRun(activeRunId);
   const { theme } = useTheme();
   const router = useRouter();
   const toast = useToast();
@@ -373,9 +364,6 @@ function WorkflowBuilderInner() {
     }, 50);
     return () => clearTimeout(timer);
   }, [nodes.length, fitView]); // Only trigger on structural changes to avoid jitter
-
-  // ── Save ──────────────────────────────────────────────────────────────────
-  const { mutateAsync: publishSkill } = usePublishAgent();
 
   const handleSave = useCallback(async (options: { silent?: boolean, nodesOverride?: any[], publishOptions?: { published: boolean, price: number } } = {}) => {
     // Validate employee mode: description is required
@@ -428,17 +416,9 @@ function WorkflowBuilderInner() {
     try {
       let savedItem: any;
       if (itemId) {
-        if (isSkillMode) {
-          savedItem = await updateSkill({ id: itemId, skillData: payload });
-        } else {
-          savedItem = await updateAgent({ id: itemId, agentData: payload });
-        }
+        savedItem = await updateSkill({ id: itemId, skillData: payload });
       } else {
-        if (isSkillMode) {
-          savedItem = await createSkill(payload);
-        } else {
-          savedItem = await createAgent(payload);
-        }
+        savedItem = await createSkill(payload);
       }
 
       // If in employee mode and not silent save, also promote/update as worker
@@ -447,9 +427,7 @@ function WorkflowBuilderInner() {
           const schemaObj = employeeInputSchema.trim() ? JSON.parse(employeeInputSchema) : {};
           publishAsWorker({
             id: savedItem.id,
-            isWorker: true,
-            workerDescription: employeeDescription,
-            workerInputSchema: schemaObj
+            published: true,
           }, {
             onSuccess: () => {
               setIsPublishing(false); // Close modal on success
@@ -490,7 +468,7 @@ function WorkflowBuilderInner() {
       console.error("Save failed:", err);
       throw err;
     }
-  }, [nodes, edges, name, description, model, itemId, updateAgent, createAgent, router, isEmployeeMode, employeeDescription, employeeInputSchema, publishAsWorker, publishSkill, toast]);
+  }, [nodes, edges, name, description, model, itemId, updateSkill, createSkill, router, isEmployeeMode, employeeDescription, employeeInputSchema, publishAsWorker, publishSkill, toast, isSkillMode, skillInputSchema, skillOutputDescription]);
 
   const handleTrigger = useCallback(async (nodeId?: string, inputDataOverride?: any) => {
     if (isRunning) return;
@@ -551,12 +529,8 @@ function WorkflowBuilderInner() {
       }
     };
 
-    if (isSkillMode) {
       runSkill({ skillId: currentItemId as string, triggerNodeId: targetId, inputData, runMode: isSingleMode ? 'single' : 'full' }, runOptions);
-    } else {
-      runAgent({ agentId: currentItemId as string, triggerNodeId: targetId, inputData, runMode: isSingleMode ? 'single' : 'full' }, runOptions);
-    }
-  }, [itemId, isRunning, runAgent, runSkill, setNodes, nodes, edges, name, description, model, handleSave, isSkillMode]);
+  }, [itemId, isRunning, runSkill, setNodes, nodes, edges, name, description, model, handleSave, isSkillMode]);
 
   // Sync Node Statuses from Polling Run Data
   useEffect(() => {
@@ -1108,11 +1082,7 @@ function WorkflowBuilderInner() {
       }
     };
     
-    if (isSkillMode) {
-      architectSkill({ prompt, history }, archOptions);
-    } else {
-      architectAgent({ prompt, history }, archOptions);
-    }
+    architectSkill({ prompt, history }, archOptions);
   };
 
   // ── Loading state ──────────────────────────────────────────────────────────
@@ -1125,7 +1095,7 @@ function WorkflowBuilderInner() {
     );
   }
 
-  const isSaving = isCreating || isUpdating;
+
 
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-secondary">
@@ -1145,7 +1115,7 @@ function WorkflowBuilderInner() {
         onSave={() => setIsPublishModalOpen(true)}
         onRun={handleTrigger}
         isRunning={isRunning}
-        isSaving={isSaving || isPublishingWorker}
+        isSaving={isSaving || isPublishingWorker || isPublishingSkill}
         isEditMode={!!itemId}
         userName={user.name}
         userAvatar={user.avatarUrl}

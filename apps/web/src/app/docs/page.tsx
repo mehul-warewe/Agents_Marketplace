@@ -5,13 +5,13 @@ export default function DocsPage() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Navigation */}
-      <nav className="border-b border-[#1a1a1a] bg-[#0a0a0a]/80 backdrop-blur-md z-50 sticky top-0">
+      <nav className="border-b border-border bg-card z-50 sticky top-0">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded overflow-hidden flex items-center justify-center">
-              <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+            <div className="w-8 h-8 rounded bg-primary overflow-hidden flex items-center justify-center">
+              <Book size={18} className="text-primary-foreground" />
             </div>
-            <span className="font-bold text-xl tracking-tight">AgentHub <span className="text-gray-500 font-normal">/ Docs</span></span>
+            <span className="font-bold text-xl tracking-tight text-foreground font-display">WorkforceHub <span className="text-muted-foreground font-normal">/ Docs</span></span>
           </div>
           <div className="flex items-center gap-6">
             <Link href="/" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">← Back to App</Link>

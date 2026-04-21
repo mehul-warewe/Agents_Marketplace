@@ -14,8 +14,8 @@ import {
   usePipedreamToken,
   usePipedreamAccounts,
   useDeletePdAccount,
-  usePipedreamAppDetails
 } from '@/hooks/useApi';
+import { usePipedreamAppDetails } from '@/hooks/useSkills';
 import { 
   Link2, Plus, Trash2, 
   ExternalLink, ShieldCheck, 
@@ -277,7 +277,7 @@ export default function ConnectionsPage() {
       };
     });
     
-    const pd = (pdAccounts || []).map((acc: any) => {
+    const pd = (pdAccounts?.accounts || []).map((acc: any) => {
       const rawSlug = acc.app_slug || (acc.app?.slug) || 'app';
       const normalizedSlug = rawSlug.replace(/_/g, '-');
       const meta = platformMetaMap[rawSlug] || platformMetaMap[normalizedSlug];
@@ -397,7 +397,7 @@ export default function ConnectionsPage() {
                   {[1, 2, 3, 4].map(i => <div key={i} className="h-20 bg-card/40 border border-border/40 rounded-3xl animate-pulse" />)}
                </div>
              ) : unifiedBridges.length === 0 ? (
-               <div className="flex flex-col items-center justify-center py-20 text-center px-10 border border-border border-dashed rounded-3xl bg-card/30 backdrop-blur-sm max-w-lg mx-auto">
+               <div className="flex flex-col items-center justify-center py-20 text-center px-10 border border-border border-dashed rounded-3xl bg-card/30 max-w-lg mx-auto">
                    <div className="w-12 h-12 bg-secondary/50 rounded-2xl flex items-center justify-center text-muted-foreground/30 border border-border/40 mb-6 font-display">
                       <Link size={24} />
                    </div>
@@ -446,7 +446,7 @@ export default function ConnectionsPage() {
                    <div className="relative">
                     <Search size={14} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${searchFocused ? 'text-indigo-500' : 'text-muted-foreground/30'}`} />
                       <input 
-                        type="text"
+                        type="text" 
                         value={searchQuery}
                         onFocus={() => setSearchFocused(true)}
                         onBlur={() => setSearchFocused(false)}
@@ -511,7 +511,7 @@ export default function ConnectionsPage() {
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-background/80 backdrop-blur-xl" 
+              className="absolute inset-0 bg-background/80" 
               onClick={() => setIsModalOpen(false)} 
             />
             <motion.div 

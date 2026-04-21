@@ -86,7 +86,7 @@ export default function ArchitectBar({ onGenerate, isGenerating }: ArchitectBarP
 
   return (
     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-40 font-inter pointer-events-none">
-      <div className={`pointer-events-auto bg-card/70 backdrop-blur-2xl border border-border/40 shadow-2xl shadow-black/30 rounded-2xl transition-all duration-300 ${isExpanded ? 'rounded-2xl' : 'rounded-2xl'}`}>
+      <div className={`pointer-events-auto bg-card border border-border/40 shadow-2xl shadow-black/30 rounded-2xl transition-all duration-300 ${isExpanded ? 'rounded-2xl' : 'rounded-2xl'}`}>
         
         {/* Chat History — visible when expanded */}
         {isExpanded && (

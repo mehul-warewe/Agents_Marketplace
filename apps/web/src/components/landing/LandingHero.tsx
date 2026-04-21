@@ -26,7 +26,7 @@ export default function LandingHero() {
             <span className="text-primary italic">Autonomous Workforce</span>
           </h1>
           <p className="text-xl text-muted-foreground font-medium leading-relaxed max-w-2xl mx-auto">
-            Deploy specialized AI agents designed to orchestrate complex operations <br className="hidden md:block" /> and automate high-value workflows at scale.
+            Deploy specialized AI professionals designed to orchestrate complex projects <br className="hidden md:block" /> and automate high-value workflows at scale.
           </p>
         </div>
 
@@ -52,7 +52,7 @@ export default function LandingHero() {
             <div className="bg-secondary/50 rounded-[1.75rem] border border-border/40 overflow-hidden relative aspect-[16/9]">
               <img 
                  src="/images/landing.png" 
-                 alt="AgentsHub Workspace" 
+                 alt="WorkforceHub Workspace" 
                  className="w-full h-full object-cover rounded-[1.75rem] shadow-inner"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background/40 to-transparent pointer-events-none" />

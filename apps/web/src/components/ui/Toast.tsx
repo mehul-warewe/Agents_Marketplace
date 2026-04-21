@@ -69,8 +69,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             key={t.id}
             className={`
               flex items-start gap-3 px-4 py-3 rounded-xl
-              border backdrop-blur-xl shadow-2xl shadow-black/30
-              bg-card/80 ${styles[t.type]}
+              border shadow-2xl shadow-black/30
+              bg-card ${styles[t.type]}
               text-[11px] font-medium text-foreground/90
               max-w-[420px] w-full
               pointer-events-auto

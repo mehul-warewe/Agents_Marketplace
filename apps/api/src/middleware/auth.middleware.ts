@@ -26,8 +26,8 @@ passport.use(
         if (!user) {
           const newUserRows = await db.insert(users).values({
             email,
-            name: profile.displayName,
-            avatarUrl: profile.photos?.[0]?.value,
+            name: profile.displayName || 'Google User',
+            avatarUrl: profile.photos?.[0]?.value || null,
             provider: 'google',
           }).returning();
           user = newUserRows[0]!;

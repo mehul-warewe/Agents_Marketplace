@@ -22,8 +22,8 @@ export const ManagerHubNode = memo(({ data }: any) => {
           </div>
         </header>
         <div className="p-4 bg-muted border border-border rounded-2xl relative z-10">
-           <p className="text-[9px] font-black text-muted uppercase tracking-widest mb-1 italic">Strategic Core</p>
-           <p className="text-[10px] font-bold text-foreground/80 leading-relaxed italic line-clamp-2">{data.goal || 'Define strategic goal...'}</p>
+           <p className="text-[9px] font-black text-muted uppercase tracking-widest mb-1 italic">Goal Registry</p>
+           <p className="text-[10px] font-bold text-foreground/80 leading-relaxed italic line-clamp-2">{data.goal || 'Define Core goal...'}</p>
         </div>
         <Handle type="source" position={Position.Right} className="!w-4 !h-4 !bg-indigo-600 !border-2 !border-card !shadow-lg hover:scale-125 transition-transform" />
       </div>
@@ -41,7 +41,7 @@ export const EmployeeNode = memo(({ data }: any) => {
           </div>
           <div className="min-w-0 flex-1">
              <div className="flex items-center gap-1.5 mb-0.5">
-                <span className="text-[7px] font-black text-indigo-400 uppercase tracking-widest opacity-60">Operative Unit</span>
+                <span className="text-[7px] font-black text-indigo-400 uppercase tracking-widest opacity-60">Employee Assignment</span>
                 {!data.isPlaceholder && <div className="size-1 rounded-full bg-indigo-500/40" />}
              </div>
             <h3 className={`text-xs font-black italic tracking-tight uppercase truncate ${data.isPlaceholder ? 'text-muted/40 font-bold' : 'text-foreground'}`}>
@@ -53,7 +53,7 @@ export const EmployeeNode = memo(({ data }: any) => {
         {data.isPlaceholder && (
            <div className="flex items-center gap-2 mt-4 px-3 py-2 bg-indigo-500/5 border border-dashed border-indigo-500/10 rounded-xl">
               <Plus size={10} className="text-indigo-500/40" />
-              <span className="text-[8px] font-black uppercase tracking-widest text-indigo-500/30 italic">Select operative</span>
+              <span className="text-[8px] font-black uppercase tracking-widest text-indigo-500/30 italic">Select employee</span>
            </div>
         )}
 
@@ -104,7 +104,7 @@ export const TriggerNode = memo(({ data }: any) => {
           </div>
           <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 mb-0.5">
-                <span className="text-[7px] font-black text-orange-500/60 uppercase tracking-widest">Entry Protocol</span>
+                <span className="text-[7px] font-black text-orange-500/60 uppercase tracking-widest">Event Hub</span>
              </div>
              <h3 className={`text-[10px] font-black italic uppercase truncate ${data.isPlaceholder ? 'text-muted/40 font-bold' : 'text-foreground'}`}>
                {data.name}
@@ -153,13 +153,13 @@ export const NoteNode = memo(({ data }: any) => {
       <div className="relative w-64 bg-yellow-400/10 border border-yellow-500/40 rounded-[1.5rem] shadow-lg p-5">
         <div className="flex items-center gap-3 mb-3">
           <StickyNote size={14} className="text-yellow-500" />
-          <span className="text-[8px] font-black text-yellow-500 uppercase tracking-widest">Strategy Note</span>
+          <span className="text-[8px] font-black text-yellow-500 uppercase tracking-widest">Documentation</span>
         </div>
         <textarea 
           value={data.label}
           disabled
           className="w-full bg-transparent border-none outline-none resize-none text-[10px] font-bold text-foreground/60 italic leading-relaxed"
-          placeholder="Strategic annotation..."
+          placeholder="Reference notes..."
         />
       </div>
     </div>

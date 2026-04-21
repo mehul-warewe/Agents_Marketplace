@@ -80,11 +80,11 @@ export function BuildTabContent({
                
                <div className="flex-1 space-y-1">
                   <div className="flex flex-col">
-                     <span className="text-[8px] font-bold uppercase tracking-widest text-foreground/30">Agent Identity</span>
+                     <span className="text-[8px] font-bold uppercase tracking-widest text-foreground/30">Employee Identity</span>
                      <input 
                        value={localEmployee.name}
                        onChange={e => setLocalEmployee({ ...localEmployee, name: e.target.value })}
-                       placeholder="Enter agent name..."
+                       placeholder="Enter employee name..."
                        className="bg-transparent border-none text-2xl font-bold tracking-tight text-foreground outline-none w-full transition-all placeholder:text-foreground/10"
                      />
                   </div>
@@ -103,7 +103,7 @@ export function BuildTabContent({
             <input 
               value={localEmployee.description || ''}
               onChange={e => setLocalEmployee({ ...localEmployee, description: e.target.value })}
-              placeholder="Briefly describe the agent's role..."
+              placeholder="Briefly describe the employee's role..."
               className="w-full bg-transparent border-none text-sm font-medium text-foreground/60 outline-none transition-all placeholder:text-foreground/10"
             />
           </div>
@@ -151,7 +151,7 @@ export function BuildTabContent({
                <textarea 
                  value={localEmployee.systemPrompt}
                  onChange={e => setLocalEmployee({ ...localEmployee, systemPrompt: e.target.value })}
-                 placeholder="Provide detailed instructions for the agent to follow..."
+                 placeholder="Provide detailed instructions for the employee to follow..."
                  className="w-full min-h-[350px] bg-secondary/50 border border-border/40 rounded-xl text-[11px] leading-relaxed p-6 pt-12 outline-none focus:border-border/60 focus:bg-card transition-all resize-none placeholder:text-foreground/5 font-medium font-mono shadow-inner"
                />
                
@@ -201,8 +201,8 @@ export function BuildTabContent({
         <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-8 h-full flex flex-col pt-6">
            <header className="flex justify-between items-end border-b border-border pb-6 px-4">
               <div className="space-y-1">
-                 <h2 className="text-2xl font-bold tracking-tight text-foreground">Agent Skills</h2>
-                 <p className="text-muted text-sm font-medium">Enable specialized tools and functional capabilities for this agent.</p>
+                 <h2 className="text-2xl font-bold tracking-tight text-foreground">Employee Skills</h2>
+                 <p className="text-muted text-sm font-medium">Enable specialized tools and functional capabilities for this employee.</p>
               </div>
               <button 
                 onClick={() => setShowSkillPicker(true)} 
@@ -238,7 +238,7 @@ export function BuildTabContent({
            <header className="flex justify-between items-end border-b border-border pb-6">
               <div className="space-y-1">
                  <h2 className="text-2xl font-bold tracking-tight text-foreground">Knowledge Base</h2>
-                 <p className="text-muted text-sm font-medium">Attach documents and context to anchor the agent's knowledge.</p>
+                 <p className="text-muted text-sm font-medium">Attach documents and background context to anchor the employee's knowledge.</p>
               </div>
               <button 
                 onClick={() => setShowKnowledgeCreator(true)}

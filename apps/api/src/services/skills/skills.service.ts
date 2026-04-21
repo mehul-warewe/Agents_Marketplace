@@ -140,11 +140,8 @@ export const skillsService = {
       skillId: skill.id, 
       userId, 
       status: 'pending',
-      // Since it's a direct skill run, there might be no employeeId
-      // In a real employee run, employeeId would be mandatory.
-      // We'll handle this by allowing null employeeId in employeeRuns if needed,
-      // or we can create a "System" employee. 
-      // Actually, the schema allows it to be null if we didn't add .notNull()
+      inputData: inputData || {},
+      startTime: new Date(),
     } as any).returning();
     
     if (!run) throw new Error('Failed to initiate skill run');

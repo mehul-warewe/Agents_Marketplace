@@ -59,7 +59,7 @@ export function buildEmployeeGraph(employee: any, userId: string, onStep?: (step
       task: null,
       userId: null,
       employee: null,
-      groundingData: { default: () => "" },
+      groundingData: null,
       messages: {
         reducer: (a, b) => a.concat(b),
         default: () => [],
@@ -75,7 +75,7 @@ export function buildEmployeeGraph(employee: any, userId: string, onStep?: (step
 
   // ── Node 1: Grounding ─────────────────────────────────────────────────────
   // Fetches relevant knowledge from the employee's knowledge base via keyword search
-  workflow.addNode("grounding", async (state) => {
+  workflow.addNode("grounding", (async (state: EmployeeGraphState) => {
     const knowledgeIds = (state.employee as any).knowledgeIds || [];
     let groundingData = "";
     if (knowledgeIds.length > 0) {
@@ -89,13 +89,15 @@ export function buildEmployeeGraph(employee: any, userId: string, onStep?: (step
       }
     }
     return { groundingData };
-  });
+  }) as any);
 
   // ── Node 2: Prepare Tools ─────────────────────────────────────────────────
   // Loads assigned skills from DB and builds them as typed LangChain tools
-  workflow.addNode("prepare_tools", async (state) => {
+  workflow.addNode("prepare_tools", (async (state: EmployeeGraphState) => {
     const skillIds = (state.employee.skillIds as string[]) || [];
-    if (skillIds.length === 0) return {};
+    if (skillIds.length === 0) {
+      return {};
+    }
 
     const assignedSkills = await db.select().from(skills).where(inArray(skills.id, skillIds));
 
@@ -123,11 +125,11 @@ export function buildEmployeeGraph(employee: any, userId: string, onStep?: (step
     });
 
     return {};
-  });
+  }) as any);
 
   // ── Node 3: ReAct Loop ────────────────────────────────────────────────────
   // Full Thought → Act → Observe reasoning loop using the skill tools
-  workflow.addNode("reason", async (state) => {
+  workflow.addNode("reason", (async (state: EmployeeGraphState) => {
     const model = createLLM(state.employee.model, state.employee.temperature ?? 0.1).bindTools(skillTools);
 
     const systemPrompt = `IDENTITY & ROLE:
@@ -163,11 +165,11 @@ INSTRUCTIONS:
       status: hasToolCalls ? 'pending' : 'completed',
       result: hasToolCalls ? null : response.content,
     };
-  });
+  }) as any);
 
   // ── Node 4: Execute Tool ──────────────────────────────────────────────────
   // Runs the selected skill tool and injects the observation back as a ToolMessage
-  workflow.addNode("execute_tool", async (state) => {
+  workflow.addNode("execute_tool", (async (state: EmployeeGraphState) => {
     const lastMessage = state.messages[state.messages.length - 1] as any;
     const toolCalls = lastMessage?.tool_calls || [];
     const toolResults: ToolMessage[] = [];
@@ -202,7 +204,7 @@ INSTRUCTIONS:
       messages: toolResults,
       steps: [step]
     };
-  });
+  }) as any);
 
   // ─── Edges ────────────────────────────────────────────────────────────────
 
@@ -211,7 +213,7 @@ INSTRUCTIONS:
   workflow.addEdge("prepare_tools" as any, "reason" as any);
 
   // Conditional: if the model made tool calls, execute them and loop back to reason
-  workflow.addConditionalEdges("reason" as any, (state: EmployeeGraphState) => {
+  workflow.addConditionalEdges("reason" as any, (state: any) => {
     return state.status === 'completed' ? "done" : "execute";
   }, {
     execute: "execute_tool" as any,

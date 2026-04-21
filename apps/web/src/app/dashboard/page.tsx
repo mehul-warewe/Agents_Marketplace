@@ -1,10 +1,10 @@
 import SidebarLayout from '@/components/SidebarLayout';
-import AgentDashboard from '@/components/AgentDashboard';
+import WorkforceDashboard from '@/components/WorkforceDashboard';
 
 export default function DashboardPage() {
   return (
     <SidebarLayout title="Overview">
-      <AgentDashboard />
+      <WorkforceDashboard />
     </SidebarLayout>
   );
 }

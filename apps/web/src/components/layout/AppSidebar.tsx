@@ -56,8 +56,8 @@ export function AppSidebar({
         </div>
         {!isCollapsed && (
           <div className="flex flex-col min-w-0 animate-in fade-in slide-in-from-left-2 duration-300">
-            <span className="font-bold text-base font-display tracking-tight leading-none truncate">Agent Hub</span>
-            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5 truncate">Workspace</span>
+            <span className="font-bold text-base font-display tracking-tight leading-none truncate">WorkforceHub</span>
+            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5 truncate">Digital Mesh</span>
           </div>
         )}
         
@@ -149,7 +149,7 @@ export function AppSidebar({
               {!isCollapsed && (
                 <>
                   <div className="flex flex-col text-left min-w-0 flex-1 animate-in fade-in slide-in-from-left-2 duration-300">
-                     <span className="text-xs font-bold truncate font-display">{user?.name || "Operator"}</span>
+                     <span className="text-xs font-bold truncate font-display">{user?.name || "Manager"}</span>
                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mt-1">{user?.tier || 'PRO'} Plan</span>
                   </div>
                   <ChevronUp size={14} className={`text-muted-foreground transition-transform duration-300 ${showSettings ? '' : 'rotate-180 opacity-50'}`} />

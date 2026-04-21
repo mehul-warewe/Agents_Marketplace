@@ -9,7 +9,7 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('agent_token');
+    const token = localStorage.getItem('workforce_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

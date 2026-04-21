@@ -175,7 +175,7 @@ export function useEmployeeStream(runId: string | null) {
     const eventSource = new EventSource(`${apiUrl}/employees/runs/${runId}/stream`, {
       withCredentials: true,
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('agent_token')}`
+        'Authorization': `Bearer ${localStorage.getItem('workforce_token')}`
       }
     } as any);
 
@@ -220,4 +220,13 @@ export function useEmployeeStream(runId: string | null) {
   }, [runId]);
 
   return { steps, status, output, isStreaming };
+}
+export function useEmployeeDirectory() {
+  return useQuery({
+    queryKey: ['operative-directory'],
+    queryFn: async () => {
+      const { data } = await api.get('/employees/directory');
+      return data;
+    },
+  });
 }

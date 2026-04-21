@@ -2,7 +2,8 @@
 import React, { useState, useRef } from 'react';
 import { Search, Star, Filter, Bot, ChevronRight, Zap, Target, ArrowRight, Shield, Download, Lock, Plus, Layers } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useAgents, useAcquireAgent, useMyAgents, useWorkerDirectory } from '@/hooks/useApi';
+import { useMarketplaceSkills, useAcquireSkill, useSkills } from '@/hooks/useSkills';
+import { useOperativeDirectory } from '@/hooks/useEmployees';
 import { useManagerDirectory } from '@/hooks/useManager';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/Button';
@@ -11,18 +12,18 @@ import { Input } from '@/components/ui/Input';
 import { formatLabel } from '@/components/ui/utils';
 import { useDebounce } from '@/hooks/useDebounce';
 
-export default function AgentMarketplace() {
-  const { data: agents = [], isLoading: isLoadingAgents } = useAgents();
-  const { data: employeeDirectory = [], isLoading: isLoadingEmployees } = useWorkerDirectory();
+export default function FleetMarketplace() {
+  const { data: agents = [], isLoading: isLoadingAgents } = useMarketplaceSkills();
+  const { data: employeeDirectory = [], isLoading: isLoadingEmployees } = useOperativeDirectory();
   const { data: managerDirectory = [], isLoading: isLoadingManagers } = useManagerDirectory();
-  const { data: mySkills } = useMyAgents();
-  const { mutate: acquireAgent } = useAcquireAgent();
+  const { data: mySkills } = useSkills();
+  const { mutate: acquireSkill } = useAcquireSkill();
   const { user } = useAuthStore();
   const router = useRouter();
 
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
-  const [activeCategory, setActiveCategory] = useState('All Units');
+  const [activeCategory, setActiveCategory] = useState('All Categories');
   const [selectedMeshTier, setSelectedMeshTier] = useState<'skills' | 'employees' | 'managers'>('skills');
 
   const ownedIds = React.useMemo(() => {
@@ -44,7 +45,7 @@ export default function AgentMarketplace() {
   };
 
   const handleAcquireAgent = async (agentId: string) => {
-    acquireAgent(agentId, {
+    acquireSkill(agentId, {
       onSuccess: () => {
         setConfirmingUnit(null);
         router.push('/skills');
@@ -60,19 +61,19 @@ export default function AgentMarketplace() {
     return (agents as any[]).filter(agent => {
       const matchesSearch = agent.name.toLowerCase().includes(debouncedSearch.toLowerCase()) || 
                           (agent.description || '').toLowerCase().includes(debouncedSearch.toLowerCase());
-      const matchesCategory = activeCategory === 'All Units' || agent.category === activeCategory;
+      const matchesCategory = activeCategory === 'All Categories' || agent.category === activeCategory;
       return matchesSearch && matchesCategory;
     });
   };
 
-  const getActiveUnits = () => {
+  const getActiveassets = () => {
     const rawSearch = debouncedSearch.toLowerCase();
     if (selectedMeshTier === 'skills') return getFilteredSkills();
     if (selectedMeshTier === 'employees') return (employeeDirectory as any[]).filter(e => e.name.toLowerCase().includes(rawSearch) || e.description?.toLowerCase().includes(rawSearch));
     return (managerDirectory as any[]).filter(m => m.name.toLowerCase().includes(rawSearch) || m.description?.toLowerCase().includes(rawSearch));
   };
 
-  const activeUnits = getActiveUnits();
+  const activeassets = getActiveassets();
   const isLoading = selectedMeshTier === 'skills' ? isLoadingAgents : 
                     selectedMeshTier === 'employees' ? isLoadingEmployees : 
                     isLoadingManagers;
@@ -84,10 +85,10 @@ export default function AgentMarketplace() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="space-y-1">
              <h1 className="text-3xl font-bold font-display tracking-tight text-foreground">
-               {selectedMeshTier === 'skills' ? 'Skill' : selectedMeshTier === 'employees' ? 'Employee' : 'Manager'} Marketplace
+               Marketplace Registry
              </h1>
              <p className="text-muted-foreground font-medium text-[11px] max-w-xl">
-                Discover and deploy high-performance {selectedMeshTier} into your workforce repository.
+                Discover and deploy high-performance {selectedMeshTier} assets into your workforce repository.
              </p>
           </div>
         </div>
@@ -128,13 +129,13 @@ export default function AgentMarketplace() {
                 />
             </div>
             <Button variant="outline" className="h-10 w-full gap-2 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-background border-border/40 shadow-sm transition-all">
-                <Filter size={14} /> Filter Logic
+                <Filter size={14} /> Filter Categories
             </Button>
           </div>
 
           {selectedMeshTier === 'skills' && (
             <div className="flex gap-2 overflow-x-auto pb-0 no-scrollbar">
-              {['All Units', 'Automation', 'Intelligence', 'Analysis', 'Enterprise', 'Social'].map((cat) => (
+              {['All Categories', 'Automation', 'Intelligence', 'Analysis', 'Enterprise', 'Social'].map((cat) => (
                 <Button 
                   key={cat} 
                   onClick={() => setActiveCategory(cat)}
@@ -149,7 +150,7 @@ export default function AgentMarketplace() {
         </div>
       </header>
 
-      {/* Operational Deck (No Vertical Scroll) */}
+      {/* Selection Deck (No Vertical Scroll) */}
       <div className="flex-1 overflow-hidden p-6 bg-secondary/5 pt-8 flex flex-col">
 
         {/* Explorer Content */}
@@ -161,13 +162,13 @@ export default function AgentMarketplace() {
                  <div key={i} className="w-72 flex-shrink-0 h-[320px] bg-muted animate-pulse rounded-2xl" />
               ))}
            </div>
-        ) : activeUnits.length === 0 ? (
+        ) : activeassets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 bg-card rounded-2xl border border-border border-dashed text-center px-8">
              <div className="w-16 h-16 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-500 mb-6 shadow-sm">
                 <Target size={32} />
              </div>
              <h3 className="text-xl font-bold font-display mb-2">No {selectedMeshTier} found</h3>
-             <p className="text-muted-foreground text-sm mb-8 max-w-sm mx-auto">Either the registry is empty or no units match your current search parameters.</p>
+             <p className="text-muted-foreground text-sm mb-8 max-w-sm mx-auto">Either the registry is empty or no assets match your current search parameters.</p>
              <Button onClick={() => setSearchTerm('')}>
                 Clear Search
              </Button>
@@ -178,7 +179,7 @@ export default function AgentMarketplace() {
             onWheel={handleWheel}
             className="flex-1 overflow-x-auto pb-12 pt-2 flex flex-row gap-4 items-start scrollbar-thin scrollbar-thumb-indigo-500/10 hover:scrollbar-thumb-indigo-500/20 scrollbar-track-transparent pr-20 scroll-smooth px-6"
           >
-            {activeUnits.map((agent: any) => (
+            {activeassets.map((agent: any) => (
               <div 
                 key={agent.id} 
                 className="group relative bg-card border border-border/40 hover:border-indigo-500/30 rounded-2xl p-5 flex flex-col transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/5 overflow-hidden flex-shrink-0 w-72 h-[320px]"
@@ -240,7 +241,7 @@ export default function AgentMarketplace() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/5 border border-amber-500/20 text-[7px] font-bold text-amber-600/80 uppercase">
-                       <Bot size={7} /> {agent.fleetSize || 0} Units Orchestrated
+                       <Bot size={7} /> {agent.fleetSize || 0} assets Orchestrated
                     </div>
                   )}
                 </div>
@@ -284,8 +285,8 @@ export default function AgentMarketplace() {
                     ) : (
                       <>
                         {selectedMeshTier === 'skills' ? 'Learn Skill' : 
-                         selectedMeshTier === 'employees' ? 'Hire Operative' : 
-                         'Enlist Manager'} 
+                         selectedMeshTier === 'employees' ? 'Onboard Employee' : 
+                         'Select Manager'} 
                         <ArrowRight size={12} strokeWidth={3} />
                       </>
                     )}
@@ -302,7 +303,7 @@ export default function AgentMarketplace() {
 
       {/* Confirmation Modal */}
       {confirmingUnit && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/95 animate-in fade-in duration-300">
            <Card className="w-full max-w-md bg-card border-border/40 shadow-2xl overflow-hidden rounded-3xl animate-in zoom-in-95 duration-300">
               <div className="relative p-8 space-y-6">
                  <div className="flex items-center justify-center">
@@ -312,13 +313,13 @@ export default function AgentMarketplace() {
                  </div>
                  
                  <div className="text-center space-y-2">
-                    <h2 className="text-2xl font-bold font-display tracking-tight text-foreground">Strategic Commitment</h2>
-                    <p className="text-muted-foreground text-[11px] font-medium uppercase tracking-[0.15em]">Confirming Unit Acquisition</p>
+                    <h2 className="text-2xl font-bold font-display tracking-tight text-foreground">Professional Selection</h2>
+                    <p className="text-muted-foreground text-[11px] font-medium uppercase tracking-[0.15em]">Confirming Acquisition</p>
                  </div>
 
                  <div className="bg-secondary/30 rounded-2xl p-6 border border-border/20 space-y-4">
                     <div className="flex justify-between items-center">
-                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Unit Name</span>
+                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Logic Name</span>
                        <span className="text-xs font-bold text-foreground">{confirmingUnit.name}</span>
                     </div>
                     <div className="flex justify-between items-center">
@@ -329,7 +330,7 @@ export default function AgentMarketplace() {
                     </div>
                     <div className="pt-4 border-t border-border/20">
                        <p className="text-[10px] text-center text-muted-foreground/60 font-medium italic">
-                          This action will bind the unit logic to your repository. Credits will be finalized upon confirmation.
+                          This action will bind the professional logic to your workspace. Credits will be finalized upon confirmation.
                        </p>
                     </div>
                  </div>
@@ -339,7 +340,7 @@ export default function AgentMarketplace() {
                        onClick={() => handleAcquireAgent(confirmingUnit.id)}
                        className="h-11 w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/20 active:scale-[0.98]"
                     >
-                       Confirm & Deploy
+                       Confirm & Acquire
                     </button>
                     <button 
                        onClick={() => setConfirmingUnit(null)}

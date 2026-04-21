@@ -33,7 +33,7 @@ export default function SettingsModal({ isOpen, onClose, onUpgrade }: SettingsMo
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-black/40 backdrop-blur-xl"
+          className="absolute inset-0 bg-black/60"
         />
         
         <motion.div 

@@ -17,7 +17,7 @@ export const managerEngine = {
     const [run] = await db.insert(managerRuns).values({
       managerId,
       userId,
-      input: userInput,
+      inputData: userInput,
       status: 'running',
     }).returning();
 

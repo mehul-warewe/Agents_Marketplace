@@ -33,7 +33,7 @@ export const usePipedreamApps = (
   return useQuery({
     queryKey: ['pipedream-apps', search, limit, offset],
     queryFn: async () => {
-      const response = await api.get('/credentials/pipedream/apps', {
+      const response = await api.get('/skills/pipedream/apps', {
         params: { search, limit, offset }
       });
       return response.data as PipedreamApp[];
@@ -56,7 +56,7 @@ export const usePipedreamTools = (
     queryFn: async () => {
       if (!appSlug) throw new Error('appSlug is required');
 
-      const response = await api.get('/credentials/pipedream/tools', {
+      const response = await api.get('/skills/pipedream/tools', {
         params: { appSlug }
       });
       return response.data as PipedreamTool[];

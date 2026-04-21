@@ -391,7 +391,7 @@ export default function ToolSidebar({ onAddTool, isOpen, onToggle, socketType, f
                   >
                     <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
                     <div className="flex items-center gap-4 relative z-10">
-                       <div className="w-10 h-10 rounded-lg bg-white/10 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/20 group-hover:scale-110 transition-transform">
+                       <div className="w-10 h-10 rounded-lg bg-secondary border border-border/40 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                           <Zap size={18} fill="white" className="text-white" />
                        </div>
                         <div className="flex flex-col text-left">

@@ -160,7 +160,7 @@ function ContractEditor({ mode, inputSchema, outputDescription, onChange, onTrig
             <div className="flex items-center gap-2">
                <div className="w-1 h-1 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]" />
                <h3 className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 leading-none">
-                INPUT_PROTOCOL
+                INPUT_SCHEMA
                </h3>
                <div className="flex-1 h-px bg-border/40" />
             </div>
@@ -188,7 +188,7 @@ function ContractEditor({ mode, inputSchema, outputDescription, onChange, onTrig
                 <div className="w-10 h-10 bg-secondary border border-border/40 rounded-lg flex items-center justify-center text-muted-foreground/20 mb-3">
                   <Database size={18} />
                 </div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 italic">No protocols initialized</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 italic">No parameters configured</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -315,7 +315,7 @@ function ContractEditor({ mode, inputSchema, outputDescription, onChange, onTrig
                               value={p.defaultValue || ''}
                               onChange={(val) => updateParam(p.id, { defaultValue: val })}
                               onTriggerPicker={onTriggerPicker}
-                              placeholder="Describe the default signal..."
+                              placeholder="Describe the default value..."
                               className="w-full text-[12px]"
                             />
                             <div className="absolute top-2 right-2 text-muted-foreground/10 group-focus-within/text:text-indigo-500/40 transition-all pointer-events-none">
@@ -367,11 +367,11 @@ function ContractEditor({ mode, inputSchema, outputDescription, onChange, onTrig
             <div className="flex items-center gap-2">
                <div className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
                <h3 className="text-[10px] font-bold uppercase tracking-widest text-emerald-500 leading-none">
-                OUTPUT_SCHEMA
+                OUTPUT_SIGNATURE
                </h3>
                <div className="flex-1 h-px bg-border/40" />
             </div>
-            <h4 className="text-[11px] font-bold text-foreground uppercase tracking-wider">Return Protocol</h4>
+            <h4 className="text-[11px] font-bold text-foreground uppercase tracking-wider">Return Signature</h4>
             <p className="text-[9px] text-muted-foreground font-medium italic">Describe the return signature for this node</p>
           </div>
           <div className="p-3 bg-secondary border border-border/60 rounded-2xl shadow-inner">
@@ -539,7 +539,7 @@ export const VariablePicker = ({
              <SlidersHorizontal size={18} />
           </div>
           <div className="flex flex-col">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500 leading-none">CONFIG_COCKPIT</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500 leading-none">COMPONENT_EDITOR</span>
             <span className="text-[12px] font-black italic tracking-tighter text-foreground uppercase mt-1">
               {formatLabel(node?.data.label || 'Node')}
             </span>
@@ -646,7 +646,7 @@ export const VariablePicker = ({
                     onClick={() => onSelect(activePath.nodeId, activePath.path)}
                     className="w-full h-14 bg-indigo-600 hover:bg-indigo-500 rounded-[1.25rem] text-[11px] font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-indigo-500/20 transition-all flex items-center justify-center gap-3 active:scale-[0.98] group/btn"
                   >
-                    Establish Secure Link
+                    Save Selection
                     <Plus size={14} className="group-hover/btn:rotate-90 transition-transform" />
                   </button>
                </div>
@@ -802,7 +802,7 @@ export default function UnifiedSidebar({
              <SlidersHorizontal size={18} />
           </div>
           <div className="flex flex-col">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500 leading-none">CONFIG_COCKPIT</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500 leading-none">COMPONENT_EDITOR</span>
             <span className="text-[12px] font-black italic tracking-tighter text-foreground uppercase mt-1">
               {formatLabel(node.data.label)}
             </span>

@@ -143,7 +143,7 @@ export function RunDetailsModal({ run, onClose }: { run: RunRecord, onClose: () 
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-end p-6">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-background/80 backdrop-blur-md" onClick={onClose} />
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-background/90" onClick={onClose} />
       <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} className="relative w-full max-w-2xl h-full bg-card border-l border-border shadow-2xl overflow-hidden flex flex-col">
         <div className="p-8 border-b border-border/40 flex justify-between items-center bg-foreground/[0.02]">
           <div className="space-y-1">

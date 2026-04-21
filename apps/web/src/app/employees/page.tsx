@@ -1,10 +1,10 @@
 import SidebarLayout from '@/components/SidebarLayout';
-import EmployeeDashboard from '@/components/EmployeeDashboard';
+import WorkforceRegistry from '@/components/WorkforceRegistry';
 
 export default function EmployeesPage() {
   return (
     <SidebarLayout title="Employees">
-      <EmployeeDashboard />
+      <WorkforceRegistry />
     </SidebarLayout>
   );
 }

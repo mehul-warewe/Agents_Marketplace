@@ -30,6 +30,7 @@ interface SchemaProperty {
   required?: boolean;
   items?: any;
   properties?: Record<string, any>;
+  options?: any[];
 }
 
 /**

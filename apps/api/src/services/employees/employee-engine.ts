@@ -41,19 +41,22 @@ export const employeeEngine = {
 
       // Incrementally update DB
       await db.update(employeeRuns).set({
-        steps: currentSteps,
-        updatedAt: new Date()
+        steps: currentSteps
       }).where(eq(employeeRuns.id, run.id));
     };
 
     // Run the graph asynchronously (fire-and-forget, DB tracks status)
     (async () => {
       try {
-        // Import and build the ReAct reasoning graph
+        // Update status to running immediately
+        await db.update(employeeRuns).set({ status: 'running' }).where(eq(employeeRuns.id, run.id));
+
+        if (!process.env.OPENROUTER_API_KEY) {
+          throw new Error('OPENROUTER_API_KEY is missing from environment.');
+        }
+
         const { buildEmployeeGraph } = await import('./employee-graph.js');
-
         const graph = buildEmployeeGraph(employee, userId, wrappedOnStep);
-
         const result = await graph.invoke({
           task,
           userId,
@@ -62,9 +65,9 @@ export const employeeEngine = {
           messages: [],
           steps: [],
           result: null,
-          status: 'pending'
+          status: 'pending' // Initial state for the reasoner node
         }, { recursionLimit: 25 });
-
+        
         // Update with final result
         await db.update(employeeRuns).set({
           status: result.status === 'completed' ? 'completed' : 'failed',

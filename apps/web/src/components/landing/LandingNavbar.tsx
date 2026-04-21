@@ -26,8 +26,8 @@ export default function LandingNavbar() {
               <Bot size={24} strokeWidth={2.5} />
             </div>
             <div className="flex flex-col hidden sm:flex pt-1.5">
-                <span className="font-bold text-[15px] font-display tracking-tight leading-none text-foreground">AgentsHub</span>
-                <span className="text-[9px] font-bold text-primary uppercase tracking-widest mt-0.5 opacity-60">Digital Workforce</span>
+                <span className="font-bold text-[15px] font-display tracking-tight leading-none text-foreground">WorkforceHub</span>
+                <span className="text-[9px] font-bold text-primary uppercase tracking-widest mt-0.5 opacity-60">Digital Workforce Mesh</span>
             </div>
           </Link>
         </div>

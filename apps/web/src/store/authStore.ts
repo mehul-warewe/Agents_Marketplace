@@ -29,18 +29,18 @@ export const useAuthStore = create<AuthState>()(
     devtools(
       (set) => ({
         user: null,
-        token: typeof window !== 'undefined' ? localStorage.getItem('agent_token') : null,
+        token: typeof window !== 'undefined' ? localStorage.getItem('workforce_token') : null,
         isLoading: true,
         isAuthModalOpen: false,
         login: (token, user) => {
           if (typeof window !== 'undefined') {
-            localStorage.setItem('agent_token', token);
+            localStorage.setItem('workforce_token', token);
           }
           set({ token, user, isLoading: false, isAuthModalOpen: false });
         },
         logout: () => {
           if (typeof window !== 'undefined') {
-            localStorage.removeItem('agent_token');
+            localStorage.removeItem('workforce_token');
           }
           set({ token: null, user: null, isLoading: false });
         },

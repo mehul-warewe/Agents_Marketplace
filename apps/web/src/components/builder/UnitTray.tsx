@@ -9,11 +9,11 @@ interface UnitTrayProps {
 
 export default function UnitTray({ onDragStart }: UnitTrayProps) {
   const categories = [
-    { id: 'agent', label: 'Operative', icon: Bot, color: 'text-primary-foreground bg-primary border-primary/20' },
+    { id: 'agent', label: 'Employee', icon: Bot, color: 'text-primary-foreground bg-primary border-primary/20' },
     { id: 'tool', label: 'Capability', icon: Zap, color: 'text-foreground bg-secondary border-border/10' },
-    { id: 'trigger', label: 'Signal', icon: Activity, color: 'text-foreground bg-secondary border-border/10' },
+    { id: 'trigger', label: 'Event', icon: Activity, color: 'text-foreground bg-secondary border-border/10' },
     { id: 'condition', label: 'Gateway', icon: Shield, color: 'text-foreground bg-secondary border-border/10' },
-    { id: 'note', label: 'Directive', icon: MessageSquare, color: 'text-foreground bg-secondary border-border/10' },
+    { id: 'note', label: 'Documentation', icon: MessageSquare, color: 'text-foreground bg-secondary border-border/10' },
   ];
 
   return (

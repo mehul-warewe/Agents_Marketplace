@@ -49,7 +49,7 @@ const INITIAL_NODES = [
     id: 'manager_hub',
     type: 'hub',
     position: { x: 400, y: 300 },
-    data: { name: 'New Strategic Manager', goal: 'Define strategic objectives...' },
+    data: { name: 'New Project Manager', goal: 'Define strategic objectives...' },
     dragHandle: '.drag-handle',
   },
 ];
@@ -59,7 +59,7 @@ function ManagerBuilderInner() {
   const searchParams = useSearchParams();
   const managerId = searchParams.get('id');
   const toast = useToast();
-  const { data: employeeFleet, isLoading: isFleetLoading } = useEmployees();
+  const { data: employeeRegistry, isLoading: isFleetLoading } = useEmployees();
   const { data: existingManager, isLoading: isManagerLoading } = useManager(managerId);
   const { mutateAsync: createManager, isPending: isCreating } = useCreateManager();
   const { mutateAsync: updateManager, isPending: isUpdating } = useUpdateManager();
@@ -74,7 +74,7 @@ function ManagerBuilderInner() {
 
   // Sync with existing manager data
   useEffect(() => {
-    if (existingManager && !isInitialized && employeeFleet) {
+    if (existingManager && !isInitialized && employeeRegistry) {
       const hubNode = {
         ...INITIAL_NODES[0],
         data: { name: existingManager.name, goal: existingManager.goal },
@@ -82,7 +82,7 @@ function ManagerBuilderInner() {
       };
 
       const employeeNodes = (existingManager.employeeIds || []).map((id: string, idx: number) => {
-        const employee = employeeFleet.find((w: any) => w.id === id);
+        const employee = employeeRegistry.find((w: any) => w.id === id);
         if (!employee) return null;
         return {
           id: `employee-${id}`,
@@ -105,7 +105,7 @@ function ManagerBuilderInner() {
       setEdges(assignmentEdges);
       setIsInitialized(true);
     }
-  }, [existingManager, employeeFleet, isInitialized, setNodes, setEdges]);
+  }, [existingManager, employeeRegistry, isInitialized, setNodes, setEdges]);
 
   const onConnect = useCallback((params: Connection) => {
     const newEdge = {
@@ -136,9 +136,9 @@ function ManagerBuilderInner() {
         type: type === 'agent' ? 'employee' : type,
         position,
         data: { 
-          name: `Unconfigured Employee`, 
+          name: `New Employee`, 
           isPlaceholder: true,
-          workerDescription: 'Select a specialized operative from the fleet to configure strategy.'
+          workerDescription: 'Select a specialized employee from the registry to configure workflow.'
         },
         dragHandle: '.drag-handle',
       };
@@ -213,14 +213,14 @@ function ManagerBuilderInner() {
     try {
       if (managerId) {
         await updateManager({ id: managerId, data: payload });
-        toast.success('Strategy protocol updated.');
+        toast.success('Manager configuration updated.');
       } else {
         await createManager(payload);
-        toast.success('Strategic Manager initialized.');
+        toast.success('Manager created successfully.');
       }
       router.push('/managers');
     } catch (err) {
-      toast.error('Failed to sync strategy registry.');
+      toast.error('Failed to sync manager data.');
     }
   };
 
@@ -256,7 +256,7 @@ function ManagerBuilderInner() {
               <div className="flex items-center gap-2.5">
                  <div className="flex flex-col">
                     <h1 className="text-[11px] font-black tracking-tighter text-indigo-500 uppercase leading-none">
-                      {managerData?.name || 'New Orchestrator'}
+                      {managerData?.name || 'New Manager'}
                     </h1>
                  </div>
               </div>
@@ -304,7 +304,7 @@ function ManagerBuilderInner() {
       </header>
 
       <div className="flex-1 flex gap-1.5 p-1.5 overflow-hidden relative bg-secondary/5">
-         {/* THE STRATEGIC MESH SHEET */}
+         {/* THE Workflow Canvas */}
          <div className="flex-1 bg-card rounded-2xl border border-border overflow-hidden shadow-sm relative">
             <ReactFlow
               nodes={nodes}
@@ -337,7 +337,7 @@ function ManagerBuilderInner() {
             onUpdateNode={handleUpdateNode}
             onUpdateEdge={handleUpdateEdge}
             onDelete={handleDeleteItem}
-            workerFleet={employeeFleet || []}
+            workerFleet={employeeRegistry || []}
             isFleetLoading={isFleetLoading}
           />
       </div>

@@ -126,9 +126,9 @@ export default function EmployeeDetail() {
                     <Bot size={14} strokeWidth={2.5} />
                  </div>
                  <div className="flex flex-col">
-                    <span className="text-[7px] font-bold uppercase tracking-widest text-foreground/30 leading-none">Config</span>
+                     <span className="text-[7px] font-bold uppercase tracking-widest text-foreground/30 leading-none">Configuration</span>
                     <h1 className="text-[11px] font-bold tracking-tight text-foreground leading-none">
-                      {isNew ? 'New Agent' : localEmployee?.name}
+                      {isNew ? 'New Employee' : localEmployee?.name}
                     </h1>
                  </div>
               </div>
@@ -137,8 +137,8 @@ export default function EmployeeDetail() {
 
         <nav className="flex items-center bg-secondary/50 rounded-lg p-0.5 border border-border/10 relative">
            {[
-             { id: 'train', label: 'Train', icon: Hammer },
-             { id: 'talk', label: 'Talk', icon: MessageSquare },
+              { id: 'train', label: 'Configure', icon: Hammer },
+             { id: 'talk', label: 'Chat', icon: MessageSquare },
              { id: 'history', label: 'History', icon: Activity }
            ].map(tab => {
              const active = activeTab === tab.id;
@@ -176,7 +176,7 @@ export default function EmployeeDetail() {
                 onClick={() => publishEmployee({ id, published: !localEmployee?.isPublished })}
                 className="h-7 px-4 bg-indigo-600 text-white rounded-lg text-[8px] font-bold uppercase tracking-widest shadow-lg shadow-indigo-500/20 hover:scale-[1.05] active:scale-95 transition-all flex items-center gap-1.5 border-none"
               >
-                 {localEmployee?.isPublished ? 'Draft' : 'Deploy'} 
+                 {localEmployee?.isPublished ? 'Draft' : 'Publish'} 
                  <Rocket size={10} strokeWidth={2.5} />
               </button>
             )}
@@ -301,7 +301,7 @@ function TalkTabContent({ localEmployee }: { localEmployee: any }) {
       setMessages(prev => [...prev, { id: assistantMessageId, role: 'assistant', content: '', steps: [] }]);
 
       // Establish SSE connection
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('workforce_token');
       const eventSource = new EventSource(`${api.defaults.baseURL}/employees/runs/${data.id}/stream?token=${token}`);
 
       eventSource.onmessage = (event) => {
@@ -363,16 +363,16 @@ function TalkTabContent({ localEmployee }: { localEmployee: any }) {
                 <div className="size-12 rounded-xl bg-secondary/50 border border-border flex items-center justify-center text-2xl shadow-sm">
                    {localEmployee?.avatar || '🤖'}
                 </div>
-                <div className="space-y-1">
-                   <h2 className="text-2xl font-bold tracking-tight text-foreground">
-                     {localEmployee?.name || 'Untitled agent'}
-                   </h2>
-                   <div className="flex flex-col items-center gap-1.5 px-6">
-                      <p className="max-w-md text-[9px] font-bold uppercase tracking-widest text-foreground/20 leading-relaxed text-center">
-                         {localEmployee?.description || 'Active protocol ready for deployment.'}
-                      </p>
-                   </div>
-                </div>
+                    <div className="space-y-1">
+                       <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                         {localEmployee?.name || 'New Employee'}
+                       </h2>
+                       <div className="flex flex-col items-center gap-1.5 px-6">
+                          <p className="max-w-md text-[9px] font-bold uppercase tracking-widest text-foreground/20 leading-relaxed text-center">
+                             {localEmployee?.description || 'Ready for professional assignment.'}
+                          </p>
+                       </div>
+                    </div>
              </div>
           </div>
         ) : (
@@ -454,7 +454,7 @@ function TalkTabContent({ localEmployee }: { localEmployee: any }) {
                             handleSend();
                          }
                       }}
-                      placeholder={`Protocol for ${localEmployee?.name || 'agent'}...`}
+                      placeholder={`Interface with ${localEmployee?.name || 'employee'}...`}
                       className="w-full bg-transparent border-none text-[13px] font-medium text-foreground outline-none resize-none pt-1.5 placeholder:text-foreground/5 leading-relaxed no-scrollbar"
                     />
                  </div>

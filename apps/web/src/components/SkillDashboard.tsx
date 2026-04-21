@@ -4,8 +4,8 @@ import React, { useEffect } from 'react';
 import { Zap, Bot, ArrowUpRight, Search, Plus, Terminal, Activity, Layers, Play, Settings, Trash2, Globe, List, LayoutGrid, MoreHorizontal, RefreshCw } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'next/navigation';
-import { useSkills, useDeleteSkill } from '@/hooks/useSkills';
-import { usePublishAgent, useUpdateSkillFromOriginal, useTools, usePipedreamAppDetails } from '@/hooks/useApi';
+import { useSkills, useDeleteSkill, usePublishSkill, useUpdateSkillFromOriginal, usePipedreamAppDetails } from '@/hooks/useSkills';
+import { useTools } from '@/hooks/useApi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo } from 'react';
 import { cn } from '@/components/ui/utils';
@@ -20,7 +20,7 @@ export default function SkillDashboard() {
   
   const { data: skills, isLoading: skillsLoading } = useSkills();
   const { mutate: deleteSkill } = useDeleteSkill();
-  const { mutate: publishSkill, isPending: isPublishing } = usePublishAgent();
+  const { mutate: publishSkill, isPending: isPublishing } = usePublishSkill();
   const { mutate: updateFromOriginal } = useUpdateSkillFromOriginal();
   const { data: toolRegistry = [] } = useTools();
 

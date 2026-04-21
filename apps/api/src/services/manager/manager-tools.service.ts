@@ -23,7 +23,7 @@ export const createManagerTools = (
           id: e.id,
           name: e.name,
           role: e.description,
-          assigned_skills: e.skillIds?.length || 0
+          assigned_skills: (e.skillIds as string[])?.length || 0
         })));
       }
     }),
@@ -44,8 +44,7 @@ export const createManagerTools = (
               onProgress({ 
                 type: 'employee_called', 
                 employeeId: employee_id, 
-                runId: res.runId,
-                thought: `Operative is analyzing the request. Protocol established: ${res.message}`
+                runId: res.runId
               });
            }
 

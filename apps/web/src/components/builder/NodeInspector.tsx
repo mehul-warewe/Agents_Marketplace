@@ -14,8 +14,8 @@ interface NodeInspectorProps {
   onUpdateNode: (id: string, data: any) => void;
   onUpdateEdge: (id: string, data: any) => void;
   onDelete: (id: string, type: 'node' | 'edge') => void;
-  workerFleet: any[];
-  isFleetLoading: boolean;
+  employeeRegistry: any[];
+  isRegistryLoading: boolean;
 }
 
 export default function NodeInspector({ 
@@ -25,8 +25,8 @@ export default function NodeInspector({
   onUpdateNode, 
   onUpdateEdge,
   onDelete,
-  workerFleet,
-  isFleetLoading
+  employeeRegistry,
+  isRegistryLoading
 }: NodeInspectorProps) {
   const [activeTab, setActiveTab] = useState('Prompt');
   const [search, setSearch] = useState('');
@@ -48,7 +48,7 @@ export default function NodeInspector({
 
   const tabs = isEdge ? ['Instructions'] : ['Prompts', 'Skills', 'Knowledge', 'State'];
 
-  const filteredFleet = workerFleet?.filter(w => 
+  const filteredFleet = employeeRegistry?.filter(w => 
     w.name.toLowerCase().includes(search.toLowerCase()) ||
     w.workerDescription?.toLowerCase().includes(search.toLowerCase())
   );
@@ -235,7 +235,7 @@ export default function NodeInspector({
                     <Search size={14} className="absolute left-5 top-1/2 -translate-y-1/2 text-foreground/20" />
                     <input 
                       type="text"
-                      placeholder="Search agents..."
+                      placeholder="Search employees..."
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       className="w-full bg-card border border-border rounded-2xl pl-12 pr-6 py-4 outline-none focus:border-indigo-500/40 transition-all font-bold text-[10px] uppercase tracking-widest text-foreground placeholder:text-foreground/10"
@@ -243,7 +243,7 @@ export default function NodeInspector({
                   </div>
 
                   <div className="space-y-4">
-                     {isFleetLoading ? (
+                     {isRegistryLoading ? (
                         <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-primary" size={24} /></div>
                      ) : (
                         <div className="grid grid-cols-1 gap-3">
@@ -306,7 +306,7 @@ export default function NodeInspector({
                         value={isManager ? selectedNode?.data.goal : selectedNode?.data.description}
                         onChange={(e) => isManager ? onUpdateNode(selectedNode.id, { ...selectedNode.data, goal: e.target.value }) : null}
                         className="w-full h-80 bg-card border border-border rounded-2xl px-6 py-6 outline-none focus:border-indigo-500/40 transition-all font-bold text-[11px] italic resize-none text-foreground/70 leading-relaxed shadow-sm"
-                        placeholder="Define agent behavior and objectives..."
+                        placeholder="Define employee behavior and objectives..."
                       />
                   </div>
                 )}
