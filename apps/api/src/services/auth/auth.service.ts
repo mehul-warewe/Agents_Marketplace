@@ -44,7 +44,7 @@ export const authService = {
     if (!user) {
       const newUsers = await db.insert(users).values({
         email,
-        name: email.split('@')[0],
+        name: email.split('@')[0] || 'User',
         provider: 'local',
       }).returning();
       user = newUsers[0]!;

@@ -55,8 +55,9 @@ export const DropdownMenuContent = ({ children, isOpen, setIsOpen, align = 'end'
         >
           {React.Children.map(children, (child) => {
             if (React.isValidElement(child)) {
-              return React.cloneElement(child as React.ReactElement<any>, { onClick: (e: React.MouseEvent) => {
-                if (child.props.onClick) child.props.onClick(e);
+              const childElement = child as React.ReactElement<any>;
+              return React.cloneElement(childElement, { onClick: (e: React.MouseEvent) => {
+                if (childElement.props.onClick) childElement.props.onClick(e);
                 setIsOpen(false);
               }});
             }
@@ -85,6 +86,6 @@ export const DropdownMenuItem = ({ children, onClick, className }: any) => {
   );
 };
 
-export const DropdownMenuSeparator = () => (
-    <div className="-mx-1 my-1 h-px bg-border/40" />
+export const DropdownMenuSeparator = ({ className }: { className?: string }) => (
+    <div className={cn("-mx-1 my-1 h-px bg-border/40", className)} />
 );

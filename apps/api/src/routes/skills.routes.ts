@@ -72,13 +72,13 @@ router.post('/architect', async (req, res, next) => {
 router.get('/pipedream/apps', async (req, res, next) => {
   try {
     const { q, search, limit, offset, cursor } = req.query;
-    const { results, total, next_cursor } = await pipedreamAppsService.searchApps(
+    const { results, total } = await pipedreamAppsService.searchApps(
       (search as string) || (q as string),
       limit ? parseInt(limit as string, 10) : 100,
       offset ? parseInt(offset as string, 10) : 0
     );
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    res.json({ results, total, next_cursor });
+    res.json({ results, total });
   } catch (err) { next(err); }
 });
 

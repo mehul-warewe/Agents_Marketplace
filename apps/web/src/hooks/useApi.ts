@@ -235,3 +235,27 @@ export function usePipedreamTriggers(appSlug: string | null | undefined) {
     enabled: !!appSlug,
   });
 }
+
+// ── Templates ─────────────────────────────────────────────────────────────
+export function useTemplates() {
+  return useQuery({
+    queryKey: ['templates'],
+    queryFn: async () => {
+      const { data } = await api.get('/templates');
+      return data;
+    },
+  });
+}
+
+export function useUseTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (templateId: string) => {
+      const { data } = await api.post(`/templates/${templateId}/use`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['skills'] });
+    },
+  });
+}

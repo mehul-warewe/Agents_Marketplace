@@ -41,7 +41,7 @@ export function PublishModal({
 }: PublishModalProps) {
   const [isPublic, setIsPublic] = React.useState(initialPublished);
   const [price, setPrice] = React.useState(initialPrice);
-  const [category, setCategory] = React.useState(initialCategory || CATEGORIES[0]);
+  const [category, setCategory] = React.useState<string>(initialCategory ?? CATEGORIES[0]!);
 
   const handlePriceChange = (val: string) => {
     const num = parseInt(val);

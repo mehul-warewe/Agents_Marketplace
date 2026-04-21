@@ -6,7 +6,9 @@ import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/api';
 import { Loader2 } from 'lucide-react';
 
-export default function LoginCallback() {
+import { Suspense } from 'react';
+
+function LoginCallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuthStore();
@@ -15,28 +17,18 @@ export default function LoginCallback() {
     const token = searchParams.get('token');
 
     if (token) {
-      // 1. Set the token in global API instance immediately
-      // Actually our api helper should pick it up from localStorage in its interceptor,
-      // but we need to fetch the user profile now to complete the login.
-      
       const fetchProfile = async () => {
         try {
-          // Temporarily set the token for this request
           const { data: user } = await api.get('/auth/me', {
             headers: { Authorization: `Bearer ${token}` }
           });
-
-          // 2. Complete login in store
           login(token, user);
-
-          // 3. Redirect to dashboard
           router.push('/dashboard');
         } catch (err) {
           console.error('Failed to fetch user profile during callback:', err);
           router.push('/?error=auth_failed');
         }
       };
-
       fetchProfile();
     } else {
       router.push('/?error=missing_token');
@@ -54,5 +46,13 @@ export default function LoginCallback() {
         <p className="text-white/40 text-[10px] uppercase font-medium mt-1">Establishing Secure Session</p>
       </div>
     </div>
+  );
+}
+
+export default function LoginCallback() {
+  return (
+    <Suspense fallback={null}>
+       <LoginCallbackHandler />
+    </Suspense>
   );
 }
